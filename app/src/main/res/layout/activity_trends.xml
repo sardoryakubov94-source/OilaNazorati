@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📈 Trendlar"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp"/>
+
+    <TextView
+        android:id="@+id/trendsStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Qachon eng ko'p gaplashadi (soat bo'yicha, 7 kunlik)"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <com.github.mikephil.charting.charts.BarChart
+        android:id="@+id/hourlyCallChart"
+        android:layout_width="match_parent"
+        android:layout_height="240dp"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Qachon eng ko'p SMS yozishadi (soat bo'yicha, 7 kunlik)"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <com.github.mikephil.charting.charts.BarChart
+        android:id="@+id/hourlySmsChart"
+        android:layout_width="match_parent"
+        android:layout_height="240dp"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Eng ko'p mashg'ul bo'lgan ilovalar (7 kunlik jami)"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <com.github.mikephil.charting.charts.BarChart
+        android:id="@+id/topAppsChart"
+        android:layout_width="match_parent"
+        android:layout_height="260dp"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Kunlik: necha xil kontakt bilan gaplashgan (30 kunlik)"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/dailyContactCountChart"
+        android:layout_width="match_parent"
+        android:layout_height="220dp"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Kunlik: jami necha daqiqa gaplashgan (30 kunlik)"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/dailyCallMinutesChart"
+        android:layout_width="match_parent"
+        android:layout_height="220dp"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="30 kun ichida eng ko'p gaplashgan kontaktlar"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp"/>
+
+    <TextView
+        android:id="@+id/topContactSummary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/topContactsList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#DDDDDD"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Kunlik: necha xil kontakt bilan SMS yozishgan (30 kunlik)"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/dailySmsContactCountChart"
+        android:layout_width="match_parent"
+        android:layout_height="220dp"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Kunlik: jami necha SMS yozilgan (30 kunlik)"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <com.github.mikephil.charting.charts.LineChart
+        android:id="@+id/dailySmsCountChart"
+        android:layout_width="match_parent"
+        android:layout_height="220dp"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="30 kun ichida eng ko'p SMS yozishilgan kontaktlar"
+        android:textStyle="bold"
+        android:layout_marginBottom="4dp"/>
+
+    <TextView
+        android:id="@+id/topSmsContactSummary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/topSmsContactsList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"/>
+
+</LinearLayout>
+</ScrollView>

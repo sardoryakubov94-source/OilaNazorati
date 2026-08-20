@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /families/{familyCode} {
+
+      match /children/{childId} {
+        // Faqat autentifikatsiya qilingan (hatto anonim) foydalanuvchilar
+        // o'qiy/yoza oladi. Ishlab chiqarishga chiqarishdan oldin buni
+        // albatta kuchaytiring — masalan familyCode faqat egasi
+        // (custom claim yoki alohida "owners" kolleksiyasi) bilan
+        // tekshirilishi kerak, aks holda kodni bilgan har kim
+        // ma'lumotni o'qiy oladi.
+        allow read, write: if request.auth != null;
+
+        match /{subcollection}/{docId} {
+          allow read, write: if request.auth != null;
+        }
+      }
+    }
+  }
+}

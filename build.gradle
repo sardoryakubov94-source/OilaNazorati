@@ -1,0 +1,22 @@
+// Root build.gradle
+buildscript {
+    ext.kotlin_version = "1.9.22"
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath "com.android.tools.build:gradle:8.2.2"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        // Firebase (google-services.json fayli talab qilinadi — pastdagi README'ga qarang)
+        classpath "com.google.gms:google-services:4.4.1"
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' } // MPAndroidChart shu yerdan olinadi
+    }
+}

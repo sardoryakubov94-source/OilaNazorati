@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="1) Ota-ona kodini kiriting"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <EditText
+        android:id="@+id/inputFamilyCode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Masalan: 4F9K21"
+        android:maxLength="6"
+        android:inputType="textCapCharacters"/>
+
+    <Button
+        android:id="@+id/btnPair"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bog'lash"/>
+
+    <TextView
+        android:id="@+id/pairStatusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="24dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="2) Kerakli ruxsatlarni bering"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnGrantPermissions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Asosiy ruxsatlarni berish"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnUsageAccess"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ilova ishlatilishi ruxsatini yoqish"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnDefaultPhone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Qo'ng'iroq kuzatuvini yoqish"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnDefaultSms"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="SMS kuzatuvini yoqish"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnSyncContacts"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Kontaktlarni hoziroq sinxronlash (avtomatik ham ishlaydi)"
+        android:layout_marginBottom="24dp"/>
+
+    <Button
+        android:id="@+id/btnFinish"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="✅ Sozlashni yakunlash va boshlash"/>
+
+</LinearLayout>
+</ScrollView>

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <EditText
+            android:id="@+id/inputFamilyCode"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Oila kodi"
+            android:inputType="textCapCharacters"/>
+
+        <Button
+            android:id="@+id/btnLoadFamily"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Yuklash"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/locationSummary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📍 Joylashuv: —"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bugungi qo'ng'iroqlar"
+        android:textStyle="bold"/>
+    <TextView
+        android:id="@+id/callsSummary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bugungi SMS"
+        android:textStyle="bold"/>
+    <TextView
+        android:id="@+id/smsSummary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Qo'ng'iroqlar vaqt jadvali"
+        android:textStyle="bold"/>
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/timelineList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Kontaktlar bo'yicha (raqamsiz, faqat rang bilan)"
+        android:textStyle="bold"/>
+    <TextView
+        android:id="@+id/contactCountSummary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="4dp"/>
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/contactSummaryList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ilovalarda o'tkazilgan vaqt"
+        android:textStyle="bold"/>
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/appUsageList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/btnTrends"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📈 Haftalik trendlarni ko'rish"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnSavedContacts"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="👨‍👩‍👧 Saqlangan kontaktlar (ism + rang)"/>
+
+</LinearLayout>
+</ScrollView>
