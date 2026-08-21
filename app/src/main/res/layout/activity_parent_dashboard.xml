@@ -7,89 +7,92 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="24dp">
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <EditText
+            android:id="@+id/inputFamilyCode"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Oila kodi"
+            android:inputType="textCapCharacters"/>
+
+        <Button
+            android:id="@+id/btnLoadFamily"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Yuklash"/>
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnGenerateCode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🔑 Yangi oila kodi yaratish"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnChooseChild"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="👶 Farzandlar (tanlash / almashtirish)"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:id="@+id/locationSummary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📍 Joylashuv: —"
+        android:layout_marginBottom="16dp"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="1) Ota-ona kodini kiriting"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp"/>
-
-    <EditText
-        android:id="@+id/inputChildName"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Farzand ismi (masalan: Anvar) — ixtiyoriy"
-        android:layout_marginBottom="8dp"/>
-
-    <EditText
-        android:id="@+id/inputFamilyCode"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Masalan: 4F9K21"
-        android:maxLength="6"
-        android:inputType="textCapCharacters"/>
-
-    <Button
-        android:id="@+id/btnPair"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Bog'lash"/>
-
+        android:text="Bugungi qo'ng'iroqlar"
+        android:textStyle="bold"/>
     <TextView
-        android:id="@+id/pairStatusText"
+        android:id="@+id/callsSummary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp"/>
+        android:layout_marginBottom="16dp"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="2) Kerakli ruxsatlarni bering"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp"/>
+        android:text="Bugungi SMS"
+        android:textStyle="bold"/>
+    <TextView
+        android:id="@+id/smsSummary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"/>
 
-    <Button
-        android:id="@+id/btnGrantPermissions"
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Qo'ng'iroqlar vaqt jadvali"
+        android:textStyle="bold"/>
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/timelineList"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Asosiy ruxsatlarni berish"
-        android:layout_marginBottom="8dp"/>
+        android:layout_marginBottom="16dp"/>
 
-    <Button
-        android:id="@+id/btnUsageAccess"
-        android:layout_width="match_parent"
+    <TextView
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Ilova ishlatilishi ruxsatini yoqish"
-        android:layout_marginBottom="8dp"/>
-
-    <Button
-        android:id="@+id/btnDefaultPhone"
-        android:layout_width="match_parent"
+        android:text="Kontaktlar bo'yicha (raqamsiz, faqat rang bilan)"
+        android:textStyle="bold"/>
+    <TextView
+        android:id="@+id/contactCountSummary"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Qo'ng'iroq kuzatuvini yoqish"
-        android:layout_marginBottom="8dp"/>
-
-    <Button
-        android:id="@+id/btnDefaultSms"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="SMS kuzatuvini yoqish"
-        android:layout_marginBottom="8dp"/>
-
-    <Button
-        android:id="@+id/btnSyncContacts"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Kontaktlarni hoziroq sinxronlash (avtomatik ham ishlaydi)"
-        android:layout_marginBottom="24dp"/>
-
-    <Button
-        android:id="@+id/btnFinish"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="✅ Sozlashni yakunlash va boshlash"/>
-
-</LinearLayout>
-</ScrollView>
+        android:layout_marginBottom="4dp"/>
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="
