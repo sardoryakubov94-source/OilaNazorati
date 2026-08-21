@@ -3,8 +3,10 @@ package uz.oilanazorati.parentcontrol.repo
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import uz.oilanazorati.parentcontrol.model.AppUsageEvent
 import uz.oilanazorati.parentcontrol.model.CallEvent
+import uz.oilanazorati.parentcontrol.model.ChildProfile
 import uz.oilanazorati.parentcontrol.model.ContactMapping
 import uz.oilanazorati.parentcontrol.model.LocationEvent
 import uz.oilanazorati.parentcontrol.model.SmsEvent
@@ -52,6 +54,46 @@ object FirebaseRepo {
 
     fun logLocation(event: LocationEvent) {
         childCollection("locations").add(event)
+    }
+
+    /**
+     * Bola qurilmasi oila kodiga ULANGANDA (pairing paytida) chaqiriladi.
+     * Ota-ona kiritgan ismni families/{code}/children/{childId} hujjatiga
+     * yozadi — shu orqali BITTA oila kodiga bir nechta farzand ulansa ham,
+     * ota-ona ularni ismi bo'yicha farqlab, ekranda tanlay oladi.
+     */
+    fun saveChildProfile(name: String) {
+        val code = familyCode ?: return
+        val cid = childId ?: return
+        db.collection("families").document(code)
+            .collection("children").document(cid)
+            .set(
+                mapOf(
+                    "nomi" to name,
+                    "yaratilganMs" to System.currentTimeMillis()
+                ),
+                SetOptions.merge()
+            )
+    }
+
+    /**
+     * Berilgan oila kodiga ulangan BARCHA farzandlar ro'yxatini
+     * (childId + ism) bir martalik o'qiydi — ota-ona ekranida
+     * "qaysi farzand?" tanlovi uchun ishlatiladi.
+     */
+    fun fetchChildren(code: String, onResult: (List<Pair<String, String>>) -> Unit) {
+        db.collection("families").document(code)
+            .collection("children")
+            .get()
+            .addOnSuccessListener { snap ->
+                val list = snap.documents.map { doc ->
+                    val name = doc.getString("nomi")?.takeIf { it.isNotBlank() }
+                        ?: "Farzand (${doc.id.take(5)})"
+                    doc.id to name
+                }
+                onResult(list)
+            }
+            .addOnFailureListener { onResult(emptyList()) }
     }
 
     /**
