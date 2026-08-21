@@ -90,7 +90,12 @@ class ChildSetupActivity : AppCompatActivity() {
             .putString("family_code", code)
             .putString("child_id", uid)
             .apply()
-        binding.pairStatusText.text = "✅ Ulandi: $code"
+
+        val childName = binding.inputChildName.text?.toString()?.trim().orEmpty()
+        FirebaseRepo.saveChildProfile(childName)
+
+        binding.pairStatusText.text = "✅ Ulandi: $code" +
+            if (childName.isNotBlank()) " ($childName sifatida)" else ""
     }
 
     // ---------------- Standart Telefon/SMS ilovasi rolini so'rash ----------------
