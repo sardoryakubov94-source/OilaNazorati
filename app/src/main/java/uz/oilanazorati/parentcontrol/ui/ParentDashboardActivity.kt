@@ -51,6 +51,17 @@ class ParentDashboardActivity : AppCompatActivity() {
             loadFamily(newCode)
             showGeneratedCodeDialog(newCode)
         }
+        binding.btnChooseChild.setOnClickListener {
+            val code = FirebaseRepo.familyCode
+                ?: binding.inputFamilyCode.text?.toString()?.trim()?.uppercase()
+            if (code.isNullOrBlank()) {
+                android.widget.Toast.makeText(
+                    this, "Avval oila kodini kiriting yoki yarating", android.widget.Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+            showChildPickerDialog(code)
+        }
         binding.btnTrends.setOnClickListener {
             startActivity(Intent(this, TrendsActivity::class.java))
         }
@@ -85,16 +96,40 @@ class ParentDashboardActivity : AppCompatActivity() {
         getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
             .putString("family_code", code).apply()
 
-        FirebaseFirestore.getInstance()
-            .collection("families").document(code)
-            .collection("children")
-            .limit(1)
-            .get()
-            .addOnSuccessListener { snap ->
-                val firstChild = snap.documents.firstOrNull()?.id ?: return@addOnSuccessListener
-                FirebaseRepo.childId = firstChild
-                loadTodayStats()
+        FirebaseRepo.fetchChildren(code) { children ->
+            when {
+                children.isEmpty() -> {
+                    android.widget.Toast.makeText(
+                        this, "Bu kodga hali birorta farzand ulanmagan", android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+                children.size == 1 -> {
+                    FirebaseRepo.childId = children.first().first
+                    loadTodayStats()
+                }
+                else -> showChildPickerDialog(code, children)
             }
+        }
+    }
+
+    private fun showChildPickerDialog(code: String, preloaded: List<Pair<String, String>>? = null) {
+        val show: (List<Pair<String, String>>) -> Unit = { children ->
+            if (children.isEmpty()) {
+                android.widget.Toast.makeText(
+                    this, "Bu kodga hali birorta farzand ulanmagan", android.widget.Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                val names = children.map { it.second }.toTypedArray()
+                AlertDialog.Builder(this)
+                    .setTitle("Qaysi farzand?")
+                    .setItems(names) { _, index ->
+                        FirebaseRepo.childId = children[index].first
+                        loadTodayStats()
+                    }
+                    .show()
+            }
+        }
+        if (preloaded != null) show(preloaded) else FirebaseRepo.fetchChildren(code, show)
     }
 
     private fun loadTodayStats() {
