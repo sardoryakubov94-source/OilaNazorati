@@ -34,21 +34,21 @@
         android:id="@+id/btnGenerateCode"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="🔑 Yangi oila kodi yaratish"
+        android:text="Yangi oila kodi yaratish"
         android:layout_marginBottom="8dp"/>
 
     <Button
         android:id="@+id/btnChooseChild"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="👶 Farzandlar (tanlash / almashtirish)"
+        android:text="Farzandlar (tanlash / almashtirish)"
         android:layout_marginBottom="16dp"/>
 
     <TextView
         android:id="@+id/locationSummary"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="📍 Joylashuv: —"
+        android:text="Joylashuv: -"
         android:layout_marginBottom="16dp"/>
 
     <TextView
@@ -95,4 +95,34 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="4dp"/>
     <androidx.recyclerview.widget.RecyclerView
-        android:id="
+        android:id="@+id/contactSummaryList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ilovalarda o'tkazilgan vaqt"
+        android:textStyle="bold"/>
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/appUsageList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/btnTrends"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Haftalik trendlarni ko'rish"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnSavedContacts"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Saqlangan kontaktlar (ism + rang)"/>
+
+</LinearLayout>
+</ScrollView>
