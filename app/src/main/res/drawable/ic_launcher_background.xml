@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Neytral, texnik ko'rinishdagi fon rangi (Google/boshqa brendlar palitrasiga
-     o'xshamaydigan sokin ko'k-kulrang) — adaptive icon uchun. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillColor="#37474F"
+        android:fillColor="#29B6F6"
         android:pathData="M0,0h108v108h-108z"/>
 </vector>
