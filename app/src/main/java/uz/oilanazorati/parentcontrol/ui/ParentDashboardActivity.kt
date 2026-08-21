@@ -58,7 +58,8 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding.btnSavedContacts.setOnClickListener {
             startActivity(Intent(this, SavedContactsActivity::class.java))
         }
-       
+    }
+
     private fun ensureAuth() {
         val auth = FirebaseAuth.getInstance()
         if (auth.currentUser == null) auth.signInAnonymously()
