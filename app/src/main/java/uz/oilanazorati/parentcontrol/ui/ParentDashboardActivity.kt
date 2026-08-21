@@ -58,12 +58,7 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding.btnSavedContacts.setOnClickListener {
             startActivity(Intent(this, SavedContactsActivity::class.java))
         }
-
-        FirebaseRepo.listenSavedContacts { contacts ->
-            contactSummaryAdapter.setNames(contacts.associate { it.kontaktHash to it.nomi })
-        }
-    }
-
+       
     private fun ensureAuth() {
         val auth = FirebaseAuth.getInstance()
         if (auth.currentUser == null) auth.signInAnonymously()
@@ -98,6 +93,9 @@ class ParentDashboardActivity : AppCompatActivity() {
 
         val timeFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
 
+        FirebaseRepo.listenSavedContacts { contacts ->
+            contactSummaryAdapter.setNames(contacts.associate { it.kontaktHash to it.nomi })
+        }
         FirebaseRepo.listenCallsForDay(dayStart, dayEnd) { calls ->
             val incoming = calls.count { it.turi == "kiruvchi" }
             val outgoing = calls.count { it.turi == "chiquvchi" }
