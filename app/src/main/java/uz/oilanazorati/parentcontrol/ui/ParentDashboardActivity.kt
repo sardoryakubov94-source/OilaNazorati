@@ -3,6 +3,7 @@ package uz.oilanazorati.parentcontrol.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
@@ -12,14 +13,6 @@ import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import java.text.SimpleDateFormat
 import java.util.*
 
-/**
- * Ota-ona ekrani: bugungi kun bo'yicha
- *  - qo'ng'iroqlar (kiruvchi/chiquvchi/javobsiz soni va daqiqasi)
- *  - SMS (yuborilgan/qabul qilingan soni)
- *  - ilovalarda o'tkazilgan vaqt (ro'yxat, eng ko'p vaqt sarflangani tepada)
- *  - so'nggi ma'lum joylashuv
- * ko'rsatiladi. Barchasi soat/daqiqa aniqligida, lekin kontakt/matn yo'q.
- */
 class ParentDashboardActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityParentDashboardBinding
@@ -52,6 +45,12 @@ class ParentDashboardActivity : AppCompatActivity() {
             val code = binding.inputFamilyCode.text?.toString()?.trim()?.uppercase()
             if (!code.isNullOrBlank()) loadFamily(code)
         }
+        binding.btnGenerateCode.setOnClickListener {
+            val newCode = generateFamilyCode()
+            binding.inputFamilyCode.setText(newCode)
+            loadFamily(newCode)
+            showGeneratedCodeDialog(newCode)
+        }
         binding.btnTrends.setOnClickListener {
             startActivity(Intent(this, TrendsActivity::class.java))
         }
@@ -65,14 +64,27 @@ class ParentDashboardActivity : AppCompatActivity() {
         if (auth.currentUser == null) auth.signInAnonymously()
     }
 
+    private fun generateFamilyCode(): String {
+        val chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        return (1..6).map { chars.random() }.joinToString("")
+    }
+
+    private fun showGeneratedCodeDialog(code: String) {
+        AlertDialog.Builder(this)
+            .setTitle("Yangi oila kodi yaratildi")
+            .setMessage(
+                "$code\n\nBu kodni bola qurilmasidagi \"Bu farzandimning telefoni\" " +
+                "ekranidagi \"Ota-onaning kodini kiriting\" maydoniga kiriting."
+            )
+            .setPositiveButton("Tushunarli", null)
+            .show()
+    }
+
     private fun loadFamily(code: String) {
         FirebaseRepo.familyCode = code
         getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
             .putString("family_code", code).apply()
 
-        // Oddiy holatda oilada bitta bola bo'ladi; agar bir nechta bo'lsa,
-        // bu yerga bolalar ro'yxatini tanlash UI qo'shiladi. Hozircha
-        // birinchi topilgan bola avtomatik tanlanadi.
         FirebaseFirestore.getInstance()
             .collection("families").document(code)
             .collection("children")
@@ -97,6 +109,7 @@ class ParentDashboardActivity : AppCompatActivity() {
         FirebaseRepo.listenSavedContacts { contacts ->
             contactSummaryAdapter.setNames(contacts.associate { it.kontaktHash to it.nomi })
         }
+
         FirebaseRepo.listenCallsForDay(dayStart, dayEnd) { calls ->
             val incoming = calls.count { it.turi == "kiruvchi" }
             val outgoing = calls.count { it.turi == "chiquvchi" }
@@ -111,9 +124,6 @@ class ParentDashboardActivity : AppCompatActivity() {
 
             timelineAdapter.setCalls(calls, timeFmt)
 
-            // Anonim kontaktlar bo'yicha yig'indi: raqamlar ko'rinmaydi,
-            // faqat "necha xil odam bilan gaplashgan" va har birining
-            // rangi/soni/daqiqasi ko'rinadi.
             val stats = buildContactStats(calls)
             val distinctCount = stats.count { it.kontaktHash != "noma_lum" }
             binding.contactCountSummary.text =
