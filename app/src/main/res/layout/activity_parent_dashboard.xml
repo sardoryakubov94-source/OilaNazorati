@@ -29,6 +29,12 @@
             android:layout_height="wrap_content"
             android:text="Yuklash"/>
     </LinearLayout>
+    <Button
+        android:id="@+id/btnGenerateCode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🔑 Yangi oila kodi yaratish"
+        android:layout_marginBottom="16dp"/>
 
     <TextView
         android:id="@+id/locationSummary"
