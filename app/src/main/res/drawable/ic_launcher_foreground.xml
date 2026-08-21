@@ -1,17 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Sodda qalqon belgisi — adaptive icon "safe zone" (66dp markazda) ichida,
-     shunda turli qurilma shakllarida (dumaloq, kvadrat, damla) kesilib
-     ketmaydi. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:fillColor="#ECEFF1"
-        android:pathData="M54,21 L74,29 V52 C74,66.5 65.8,78.8 54,83 C42.2,78.8 34,66.5 34,52 V29 Z"/>
-    <path
-        android:fillColor="#37474F"
-        android:pathData="M54,29 L69,35 V52 C69,63 62.8,72.1 54,75.6 V29 Z"
-        android:fillAlpha="0.25"/>
+        android:fillColor="#FFFFFF"
+        android:pathData="M74.21,48.61 C72.34,39.12 64.01,32 54,32 C46.05,32 39.15,36.51 35.71,43.11 C27.44,43.99 21,51 21,59.5 C21,68.6 28.4,76 37.5,76 H73.25 C80.84,76 87,69.84 87,62.25 C87,55 81.36,49.11 74.21,48.61 Z"/>
 </vector>
