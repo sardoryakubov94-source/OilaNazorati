@@ -33,6 +33,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
+        android:name=".App"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -60,6 +61,15 @@
         <activity
             android:name=".ui.TrendsActivity"
             android:exported="false" />
+
+        <!-- Kun/oy bo'yicha joylashuv tarixini Google Xaritada ko'rsatadigan ekran -->
+        <activity
+            android:name=".ui.LocationHistoryActivity"
+            android:exported="false" />
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/google_maps_key" />
 
         <!-- Chiquvchi SMS yozish ekrani. Ilova standart SMS ilovasi (ROLE_SMS)
              bo'lishi uchun tizim ACTION_SENDTO/ACTION_SEND'ni ushlaydigan

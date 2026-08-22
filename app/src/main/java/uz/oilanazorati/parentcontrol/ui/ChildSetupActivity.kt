@@ -68,6 +68,38 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnDefaultSms.setOnClickListener { requestDefaultSmsRole() }
         binding.btnSyncContacts.setOnClickListener { syncContactsNow() }
         binding.btnFinish.setOnClickListener { finishSetupAndStartMonitoring() }
+
+        restoreSavedPairingIntoUi()
+    }
+
+    /**
+     * Bu qurilma avval allaqachon oila kodi bilan ulangan bo'lsa
+     * (SharedPreferences'da saqlangan bo'lsa), ekran qayta ochilganda
+     * kod va farzand ismi maydonlari BO'SH chiqmasligi uchun ularni
+     * shu yerdan tiklaymiz. Aks holda foydalanuvchi "ulanish uzilib
+     * qoldimi" deb chalkashishi mumkin, garchi aslida hech narsa
+     * o'zgarmagan bo'lsa ham.
+     */
+    private fun restoreSavedPairingIntoUi() {
+        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        val savedCode = prefs.getString("family_code", null)
+        val isChildDevice = prefs.getBoolean("is_child_device", false)
+
+        if (savedCode != null) {
+            binding.inputFamilyCode.setText(savedCode)
+            prefs.getString("child_name", null)?.let { binding.inputChildName.setText(it) }
+            // Xotirada bo'lmasa (masalan jarayon qayta boshlangan), FirebaseRepo'ga ham joylaymiz
+            if (FirebaseRepo.familyCode == null) FirebaseRepo.familyCode = savedCode
+            if (FirebaseRepo.childId == null) {
+                FirebaseRepo.childId = prefs.getString("child_id", null)
+                    ?: FirebaseAuth.getInstance().currentUser?.uid
+            }
+            binding.pairStatusText.text = if (isChildDevice) {
+                "✅ Ulandi: $savedCode (nazorat ishga tushirilgan)"
+            } else {
+                "✅ Ulandi: $savedCode"
+            }
+        }
     }
 
     override fun onResume() {
@@ -86,12 +118,14 @@ class ChildSetupActivity : AppCompatActivity() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         FirebaseRepo.familyCode = code
         FirebaseRepo.childId = uid
+
+        val childName = binding.inputChildName.text?.toString()?.trim().orEmpty()
         getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
             .putString("family_code", code)
             .putString("child_id", uid)
+            .putString("child_name", childName)
             .apply()
 
-        val childName = binding.inputChildName.text?.toString()?.trim().orEmpty()
         FirebaseRepo.saveChildProfile(childName)
 
         binding.pairStatusText.text = "✅ Ulandi: $code" +

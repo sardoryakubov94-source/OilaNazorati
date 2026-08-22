@@ -1,4 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
  <string name="app_name">Google cervis</string>
+
+ <!-- ==========================================================
+      MUHIM: bu yerga O'ZINGIZNING Google Maps API kalitingizni
+      qo'ying. Kalitni olish:
+      1) console.cloud.google.com ga kiring (Firebase loyihangiz
+         bilan BOG'LANGAN GCP loyihasini tanlang — odatda Firebase
+         loyihasi bilan bir xil nomda avtomatik yaratilgan bo'ladi)
+      2) "APIs & Services" -> "Library" -> "Maps SDK for Android"ni
+         yoqing (Enable)
+      3) "APIs & Services" -> "Credentials" -> "Create credentials"
+         -> "API key"
+      4) Kalitni cheklang (Restrict key): Application restrictions ->
+         Android apps -> package nomi "uz.oilanazorati.parentcontrol"
+         + release/debug keystore SHA-1 barmoq izini qo'shing
+      ========================================================== -->
+ <string name="google_maps_key" translatable="false">YOUR_GOOGLE_MAPS_API_KEY_HERE</string>
 </resources>

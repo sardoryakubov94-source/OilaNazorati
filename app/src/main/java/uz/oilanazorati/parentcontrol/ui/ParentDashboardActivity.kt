@@ -68,6 +68,15 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding.btnSavedContacts.setOnClickListener {
             startActivity(Intent(this, SavedContactsActivity::class.java))
         }
+        binding.btnLocationHistory.setOnClickListener {
+            if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) {
+                android.widget.Toast.makeText(
+                    this, "Avval oila kodini yuklab, farzandni tanlang", android.widget.Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+            startActivity(Intent(this, LocationHistoryActivity::class.java))
+        }
     }
 
     private fun ensureAuth() {

@@ -19,25 +19,35 @@ object FirebaseRepo {
     var familyCode: String? = null
     var childId: String? = null
 
-    private fun childCollection(sub: String) =
-        db.collection("families").document(requireNotNull(familyCode) { "familyCode o'rnatilmagan" })
-            .collection("children").document(requireNotNull(childId) { "childId o'rnatilmagan" })
+    /**
+     * familyCode/childId hali o'rnatilmagan bo'lsa (masalan, jarayon
+     * qayta boshlangan-u, App.restoreSavedPairing hali ulgurmagan yoki
+     * qurilma umuman ulanmagan bo'lsa) — bu yerda crash bo'lish o'rniga
+     * `null` qaytariladi va chaqiruvchi tomon jim o'tkazib yuboradi.
+     * Bunday holatda ma'lumot yo'qoladi, lekin ilova ishlashda davom etadi.
+     */
+    private fun childCollection(sub: String): com.google.firebase.firestore.CollectionReference? {
+        val code = familyCode ?: return null
+        val cid = childId ?: return null
+        return db.collection("families").document(code)
+            .collection("children").document(cid)
             .collection(sub)
+    }
 
     fun logCall(event: CallEvent) {
-        childCollection("calls").add(event)
+        childCollection("calls")?.add(event)
     }
 
     fun logSms(event: SmsEvent) {
-        childCollection("sms").add(event)
+        childCollection("sms")?.add(event)
     }
 
     fun logAppUsage(event: AppUsageEvent) {
-        childCollection("app_usage").add(event)
+        childCollection("app_usage")?.add(event)
     }
 
     fun logLocation(event: LocationEvent) {
-        childCollection("locations").add(event)
+        childCollection("locations")?.add(event)
     }
 
     fun saveChildProfile(name: String) {
@@ -70,7 +80,7 @@ object FirebaseRepo {
     }
 
     fun syncSavedContacts(contacts: List<ContactMapping>) {
-        val col = childCollection("contacts")
+        val col = childCollection("contacts") ?: return
         col.get().addOnSuccessListener { snap ->
             val batch = db.batch()
             snap.documents.forEach { batch.delete(it.reference) }
@@ -80,7 +90,8 @@ object FirebaseRepo {
     }
 
     fun listenCallsForDay(dayStartMs: Long, dayEndMs: Long, onChange: (List<CallEvent>) -> Unit) {
-        childCollection("calls")
+        val col = childCollection("calls") ?: return onChange(emptyList())
+        col
             .whereGreaterThanOrEqualTo("boshlanishMs", dayStartMs)
             .whereLessThan("boshlanishMs", dayEndMs)
             .orderBy("boshlanishMs", Query.Direction.DESCENDING)
@@ -91,7 +102,8 @@ object FirebaseRepo {
     }
 
     fun listenSmsForDay(dayStartMs: Long, dayEndMs: Long, onChange: (List<SmsEvent>) -> Unit) {
-        childCollection("sms")
+        val col = childCollection("sms") ?: return onChange(emptyList())
+        col
             .whereGreaterThanOrEqualTo("vaqtMs", dayStartMs)
             .whereLessThan("vaqtMs", dayEndMs)
             .orderBy("vaqtMs", Query.Direction.DESCENDING)
@@ -102,7 +114,8 @@ object FirebaseRepo {
     }
 
     fun listenAppUsageForDay(dayStartMs: Long, dayEndMs: Long, onChange: (List<AppUsageEvent>) -> Unit) {
-        childCollection("app_usage")
+        val col = childCollection("app_usage") ?: return onChange(emptyList())
+        col
             .whereGreaterThanOrEqualTo("boshlanishMs", dayStartMs)
             .whereLessThan("boshlanishMs", dayEndMs)
             .orderBy("boshlanishMs", Query.Direction.DESCENDING)
@@ -113,7 +126,8 @@ object FirebaseRepo {
     }
 
     fun listenLatestLocation(onChange: (LocationEvent?) -> Unit) {
-        childCollection("locations")
+        val col = childCollection("locations") ?: return onChange(null)
+        col
             .orderBy("vaqtMs", Query.Direction.DESCENDING)
             .limit(1)
             .addSnapshotListener { snap, _ ->
@@ -122,8 +136,28 @@ object FirebaseRepo {
             }
     }
 
+    /**
+     * Tanlangan kun (yoki istalgan vaqt oralig'i) uchun BARCHA yozilgan
+     * joylashuv nuqtalarini (har 30 daqiqada bittadan) vaqt bo'yicha
+     * ESKISIDAN YANGISIGA saralab qaytaradi — ro'yxat va xaritada
+     * kunlik yo'l tarixini ko'rsatish uchun.
+     */
+    fun fetchLocationsInRange(rangeStartMs: Long, rangeEndMs: Long, onResult: (List<LocationEvent>) -> Unit) {
+        val col = childCollection("locations") ?: return onResult(emptyList())
+        col
+            .whereGreaterThanOrEqualTo("vaqtMs", rangeStartMs)
+            .whereLessThan("vaqtMs", rangeEndMs)
+            .orderBy("vaqtMs", Query.Direction.ASCENDING)
+            .get()
+            .addOnSuccessListener { snap ->
+                onResult(snap.documents.mapNotNull { it.toObject(LocationEvent::class.java) })
+            }
+            .addOnFailureListener { onResult(emptyList()) }
+    }
+
     fun listenSavedContacts(onChange: (List<ContactMapping>) -> Unit) {
-        childCollection("contacts")
+        val col = childCollection("contacts") ?: return onChange(emptyList())
+        col
             .addSnapshotListener { snap, _ ->
                 val list = snap?.documents?.mapNotNull { it.toObject(ContactMapping::class.java) } ?: emptyList()
                 onChange(list)
@@ -131,7 +165,8 @@ object FirebaseRepo {
     }
 
     fun fetchCallsInRange(rangeStartMs: Long, rangeEndMs: Long, onResult: (List<CallEvent>) -> Unit) {
-        childCollection("calls")
+        val col = childCollection("calls") ?: return onResult(emptyList())
+        col
             .whereGreaterThanOrEqualTo("boshlanishMs", rangeStartMs)
             .whereLessThan("boshlanishMs", rangeEndMs)
             .get()
@@ -142,7 +177,8 @@ object FirebaseRepo {
     }
 
     fun fetchSmsInRange(rangeStartMs: Long, rangeEndMs: Long, onResult: (List<SmsEvent>) -> Unit) {
-        childCollection("sms")
+        val col = childCollection("sms") ?: return onResult(emptyList())
+        col
             .whereGreaterThanOrEqualTo("vaqtMs", rangeStartMs)
             .whereLessThan("vaqtMs", rangeEndMs)
             .get()
@@ -153,7 +189,8 @@ object FirebaseRepo {
     }
 
     fun fetchAppUsageInRange(rangeStartMs: Long, rangeEndMs: Long, onResult: (List<AppUsageEvent>) -> Unit) {
-        childCollection("app_usage")
+        val col = childCollection("app_usage") ?: return onResult(emptyList())
+        col
             .whereGreaterThanOrEqualTo("boshlanishMs", rangeStartMs)
             .whereLessThan("boshlanishMs", rangeEndMs)
             .get()
