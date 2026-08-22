@@ -16,6 +16,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.databinding.ActivityMainBinding
+import uz.oilanazorati.parentcontrol.util.AppSession
 
 class MainActivity : AppCompatActivity() {
 
@@ -57,6 +58,7 @@ class MainActivity : AppCompatActivity() {
         binding.btnSignOut.setOnClickListener {
             FirebaseAuth.getInstance().signOut()
             googleSignInClient.signOut()
+            AppSession.loggedInThisProcess = false
             getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
                 .putBoolean("is_parent", false).apply()
             updateScreenState()
@@ -70,12 +72,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateScreenState() {
         val user = FirebaseAuth.getInstance().currentUser
-        if (user != null && !user.isAnonymous) {
+        if (user != null && !user.isAnonymous && AppSession.loggedInThisProcess) {
             binding.loginSection.visibility = View.GONE
             binding.roleSection.visibility = View.VISIBLE
             val label = user.displayName ?: user.email ?: "Ota-ona"
             binding.signedInAsText.text = "$label sifatida kirilgan"
         } else {
+            if (user != null && !user.isAnonymous) {
+                FirebaseAuth.getInstance().signOut()
+            }
             binding.loginSection.visibility = View.VISIBLE
             binding.roleSection.visibility = View.GONE
         }
@@ -87,6 +92,7 @@ class MainActivity : AppCompatActivity() {
         FirebaseAuth.getInstance().signInWithCredential(credential)
             .addOnSuccessListener { result ->
                 val user = result.user ?: return@addOnSuccessListener
+                AppSession.loggedInThisProcess = true
                 saveParentProfile(user.uid, user.displayName.orEmpty(), user.email.orEmpty())
                 getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
                     .putBoolean("is_parent", true)
