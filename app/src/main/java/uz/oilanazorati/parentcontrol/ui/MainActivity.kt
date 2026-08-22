@@ -75,4 +75,45 @@ class MainActivity : AppCompatActivity() {
         if (user != null && !user.isAnonymous && AppSession.loggedInThisProcess) {
             binding.loginSection.visibility = View.GONE
             binding.roleSection.visibility = View.VISIBLE
-            val label = user.displayName ?
+            val label = user.displayName ?: user.email ?: "Ota-ona"
+            binding.signedInAsText.text = label + " sifatida kirilgan"
+        } else {
+            if (user != null && !user.isAnonymous) {
+                FirebaseAuth.getInstance().signOut()
+            }
+            binding.loginSection.visibility = View.VISIBLE
+            binding.roleSection.visibility = View.GONE
+        }
+    }
+
+    private fun firebaseAuthWithGoogle(idToken: String?) {
+        if (idToken == null) return
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        FirebaseAuth.getInstance().signInWithCredential(credential)
+            .addOnSuccessListener { result ->
+                val user = result.user ?: return@addOnSuccessListener
+                AppSession.loggedInThisProcess = true
+                saveParentProfile(user.uid, user.displayName.orEmpty(), user.email.orEmpty())
+                getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
+                    .putBoolean("is_parent", true)
+                    .apply()
+                updateScreenState()
+            }
+            .addOnFailureListener {
+                binding.loginStatusText.text = "Kirishda xato yuz berdi, qayta urinib ko'ring"
+            }
+    }
+
+    private fun saveParentProfile(uid: String, name: String, email: String) {
+        FirebaseFirestore.getInstance()
+            .collection("parents").document(uid)
+            .set(
+                mapOf(
+                    "ismi" to name,
+                    "email" to email,
+                    "oxirgiKirishMs" to System.currentTimeMillis()
+                ),
+                SetOptions.merge()
+            )
+    }
+}
