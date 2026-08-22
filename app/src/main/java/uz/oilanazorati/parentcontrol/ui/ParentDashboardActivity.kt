@@ -77,6 +77,24 @@ class ParentDashboardActivity : AppCompatActivity() {
             }
             startActivity(Intent(this, LocationHistoryActivity::class.java))
         }
+        binding.btnCallHistory.setOnClickListener {
+            if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) {
+                android.widget.Toast.makeText(
+                    this, "Avval oila kodini yuklab, farzandni tanlang", android.widget.Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+            startActivity(Intent(this, CallHistoryActivity::class.java))
+        }
+        binding.btnSmsHistory.setOnClickListener {
+            if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) {
+                android.widget.Toast.makeText(
+                    this, "Avval oila kodini yuklab, farzandni tanlang", android.widget.Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+            startActivity(Intent(this, SmsHistoryActivity::class.java))
+        }
     }
 
     private fun ensureAuth() {

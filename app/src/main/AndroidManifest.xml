@@ -67,6 +67,14 @@
             android:name=".ui.LocationHistoryActivity"
             android:exported="false" />
 
+        <!-- Kunlik qo'ng'iroqlar/SMS ro'yxati — har bir kontakt rang bilan ajratilgan -->
+        <activity
+            android:name=".ui.CallHistoryActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.SmsHistoryActivity"
+            android:exported="false" />
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key" />

@@ -56,6 +56,20 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="📍 Joylashuv tarixini xaritada ko'rish"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnCallHistory"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📞 Qo'ng'iroqlar ro'yxati (kun bo'yicha)"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnSmsHistory"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="✉️ SMS ro'yxati (kun bo'yicha)"
         android:layout_marginBottom="16dp"/>
 
     <TextView
