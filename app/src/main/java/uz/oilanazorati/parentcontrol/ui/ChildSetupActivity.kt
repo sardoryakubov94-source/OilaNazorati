@@ -146,25 +146,49 @@ class ChildSetupActivity : AppCompatActivity() {
     }
 
     private fun requestDefaultSmsRole() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = getSystemService(RoleManager::class.java)
-            if (roleManager.isRoleAvailable(RoleManager.ROLE_SMS)) {
-                roleLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_SMS))
-            }
+        // MUHIM: bu endi ROLE_SMS (standart SMS ilova) SO'RAMAYDI —
+        // chunki bu bolaning butun SMS tajribasini bizning ilovamizga
+        // o'tkazib yuborar edi (yozish/o'qish ishlamay qolardi).
+        // SMS_RECEIVED_ACTION orqali kuzatuv uchun oddiy RECEIVE_SMS/
+        // READ_SMS runtime ruxsatlari YETARLI — ular "Asosiy ruxsatlarni
+        // berish" tugmasi bosilganda allaqachon so'raladi. Bu tugma
+        // endi faqat o'sha ruxsatlar hali berilmagan bo'lsa, qayta
+        // so'rash uchun qoladi.
+        val granted = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.RECEIVE_SMS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(
+                this, android.Manifest.permission.READ_SMS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+        if (!granted) {
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(android.Manifest.permission.RECEIVE_SMS, android.Manifest.permission.READ_SMS),
+                1003
+            )
         } else {
-            val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
-            startActivity(intent)
+            updateRoleStatusUi()
         }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int, permissions: Array<out String>, grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        updateRoleStatusUi()
     }
 
     private fun updateRoleStatusUi() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val roleManager = getSystemService(RoleManager::class.java)
             val hasPhone = roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
-            val hasSms = roleManager.isRoleHeld(RoleManager.ROLE_SMS)
             binding.btnDefaultPhone.text = if (hasPhone) "✅ Qo'ng'iroq kuzatuvi yoqilgan" else "Qo'ng'iroq kuzatuvini yoqish"
-            binding.btnDefaultSms.text = if (hasSms) "✅ SMS kuzatuvi yoqilgan" else "SMS kuzatuvini yoqish"
         }
+        val hasSms = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.RECEIVE_SMS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        binding.btnDefaultSms.text = if (hasSms) "✅ SMS kuzatuvi yoqilgan" else "SMS kuzatuvini yoqish"
     }
 
     // ---------------- Fon lokatsiya ruxsati (alohida so'ralishi shart, Android 10+) ----------------

@@ -47,6 +47,7 @@ class MonitorForegroundService : Service() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var lastUsageQueryMs = System.currentTimeMillis() - 60_000
     private var contactsObserver: ContentObserver? = null
+    private var smsSentObserver: ContentObserver? = null
 
     companion object {
         const val CHANNEL_ID = "oila_nazorati_monitor"
@@ -62,6 +63,7 @@ class MonitorForegroundService : Service() {
         startForeground(NOTIF_ID, buildNotification())
         registerCallStateListener()
         registerContactsObserver()
+        registerSmsSentObserver()
         schedulePeriodicWork()
     }
 
@@ -150,6 +152,21 @@ class MonitorForegroundService : Service() {
             ContactsContract.Contacts.CONTENT_URI, true, observer
         )
         contactsObserver = observer
+    }
+
+    // ---------------- Yuborilgan SMS'larni kuzatish (default rolsiz) ----------------
+
+    private fun registerSmsSentObserver() {
+        val granted = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.READ_SMS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) return
+
+        val observer = SmsSentObserver(applicationContext, handler)
+        contentResolver.registerContentObserver(
+            android.provider.Telephony.Sms.CONTENT_URI, true, observer
+        )
+        smsSentObserver = observer
     }
 
     // ---------------- Lokatsiya ----------------
@@ -254,5 +271,6 @@ class MonitorForegroundService : Service() {
         super.onDestroy()
         handler.removeCallbacksAndMessages(null)
         contactsObserver?.let { contentResolver.unregisterContentObserver(it) }
+        smsSentObserver?.let { contentResolver.unregisterContentObserver(it) }
     }
 }
