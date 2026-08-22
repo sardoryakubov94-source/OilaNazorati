@@ -1,44 +1,110 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="32dp">
+    android:background="#0F1B2D">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Oila Nazorati"
-        android:textSize="26sp"
-        android:textStyle="bold"
-        android:layout_marginBottom="8dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Shaffof va oshkora nazorat - farzandingiz biladi va rozi."
-        android:textAlignment="center"
-        android:layout_marginBottom="40dp"/>
-
-    <Button
-        android:id="@+id/btnChildDevice"
+    <LinearLayout
+        android:id="@+id/loginSection"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Bu farzandimning telefoni"
-        android:layout_marginBottom="16dp"/>
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp">
 
-    <Button
-        android:id="@+id/btnParentGoogleSignIn"
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🛡️"
+            android:textSize="56sp"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Oila Nazorati"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Davom etish uchun ota-onaning Google hisobi bilan kiring"
+            android:textColor="#AEB8C4"
+            android:textAlignment="center"
+            android:layout_marginBottom="40dp"/>
+
+        <Button
+            android:id="@+id/btnGoogleSignIn"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="G   Google bilan kirish"
+            android:textAllCaps="false"
+            android:textColor="#1F2937"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:background="#FFFFFF"/>
+
+        <TextView
+            android:id="@+id/loginStatusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#AEB8C4"
+            android:textAlignment="center"
+            android:layout_marginTop="20dp"/>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/roleSection"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Google orqali kirish (Ota-ona)"/>
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp"
+        android:visibility="gone">
 
-    <TextView
-        android:id="@+id/signedInAsText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textAlignment="center"
-        android:layout_marginTop="16dp"/>
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🛡️ Oila Nazorati"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="8dp"/>
 
-</LinearLayout>
+        <TextView
+            android:id="@+id/signedInAsText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#AEB8C4"
+            android:textAlignment="center"
+            android:layout_marginBottom="40dp"/>
+
+        <Button
+            android:id="@+id/btnChildDevice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Bu farzandimning telefoni"
+            android:layout_marginBottom="16dp"/>
+
+        <Button
+            android:id="@+id/btnOpenParentDashboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ota-ona panelini ochish"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:id="@+id/btnSignOut"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Chiqish (boshqa hisobga o'tish)"
+            android:textColor="#AEB8C4"
+            android:padding="12dp"/>
+
+    </LinearLayout>
+
+</FrameLayout>
