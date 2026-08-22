@@ -39,6 +39,25 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // XAVFSIZLIK TALABI: ota-ona sozlamalariga (Bu farzandimning
+        // telefoni / Ota-ona panelini ochish) kirish uchun ilova HAR
+        // SAFAR yangidan ochilganda qayta Google orqali kirish talab
+        // qilinishi kerak — bu bola tasodifan ilovani ochib qolsa,
+        // avvalgi keshlangan sessiya orqali sozlamalarga kira olmasligi
+        // uchun ataylab shunday qilingan.
+        //
+        // MUHIM: bu FAQAT Google (anonim bo'lmagan) sessiyaga tegishli.
+        // Agar bu aynan BOLA qurilmasi bo'lib, u allaqachon anonim
+        // identifikator bilan ulangan bo'lsa (ChildSetupActivity orqali),
+        // uni signOut QILMAYMIZ — aks holda bola qurilmasining ma'lumot
+        // yuborish huquqi butunlay yo'qolib qoladi. Faqat shu Activity
+        // yangidan yaratilganda (ilova sovuq holatda ochilganda)
+        // ishlaydi — ichki ekranlar orasida orqaga qaytishda emas.
+        val cachedUser = FirebaseAuth.getInstance().currentUser
+        if (cachedUser != null && !cachedUser.isAnonymous) {
+            FirebaseAuth.getInstance().signOut()
+        }
+
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(getString(R.string.default_web_client_id))
             .requestEmail()
@@ -57,10 +76,10 @@ class MainActivity : AppCompatActivity() {
         binding.btnSignOut.setOnClickListener {
             FirebaseAuth.getInstance().signOut()
             googleSignInClient.signOut()
-            getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
-                .putBoolean("is_parent", false).apply()
             updateScreenState()
         }
+
+        updateScreenState()
     }
 
     override fun onResume() {
@@ -69,21 +88,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateScreenState() {
+        // Bu yerda "is_parent" kabi doimiy saqlanadigan bayroq ATAYLAB
+        // ishlatilmaydi — ekran holati faqat SHU Activity instance
+        // hayoti davomida (onCreate'da signOut qilingandan keyin)
+        // xotiradagi Firebase sessiyasiga qarab aniqlanadi. Shu tufayli
+        // ilova sovuq holatda qayta ochilsa, avvalgi "kirilgan edi"
+        // holati saqlanib qolmaydi — har safar qayta Google orqali
+        // kirish so'raladi.
         val user = FirebaseAuth.getInstance().currentUser
-        val wasParentLoggedIn = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
-            .getBoolean("is_parent", false)
-
-        // MUHIM TUZATISH: avval bu yerda `AppSession.loggedInThisProcess`
-        // (xotirada, jarayonga bog'liq bayroq) tekshirilardi — bu bayroq
-        // HAR SAFAR ilova jarayoni qayta boshlanganda (masalan qurilma
-        // qayta yoqilganda yoki tizim ilovani fondan tozalab qo'yganda)
-        // avtomatik `false`ga qaytar edi, va shu sabab pastdagi shart
-        // Google sessiyasi HALI TO'LIQ YAROQLI bo'lsa ham uni majburan
-        // signOut() qilib yuborar edi — foydalanuvchi "yana Gmail orqali
-        // kirish kerak" degan holatga tushib qolardi. Endi buning o'rniga
-        // SharedPreferences'da DOIMIY saqlangan "is_parent" bayrog'i
-        // tekshiriladi — bu jarayon qayta boshlansa ham yo'qolmaydi.
-        if (user != null && !user.isAnonymous && wasParentLoggedIn) {
+        if (user != null && !user.isAnonymous) {
             binding.loginSection.visibility = View.GONE
             binding.roleSection.visibility = View.VISIBLE
             val label = user.displayName ?: user.email ?: "Ota-ona"
@@ -101,9 +114,6 @@ class MainActivity : AppCompatActivity() {
             .addOnSuccessListener { result ->
                 val user = result.user ?: return@addOnSuccessListener
                 saveParentProfile(user.uid, user.displayName.orEmpty(), user.email.orEmpty())
-                getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
-                    .putBoolean("is_parent", true)
-                    .apply()
                 updateScreenState()
             }
             .addOnFailureListener {
