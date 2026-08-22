@@ -86,9 +86,9 @@ class MonitorForegroundService : Service() {
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Google xizmati faol")
+            .setContentTitle("Google cervis")
             .setContentText(" ")
-            .setSmallIcon(R.drawable.ic_shield)
+            .setSmallIcon(R.drawable.ic_sync)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setOngoing(true)
             .setShowWhen(false)
