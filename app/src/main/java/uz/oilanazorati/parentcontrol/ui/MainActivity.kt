@@ -31,7 +31,8 @@ class MainActivity : AppCompatActivity() {
             val account = task.getResult(ApiException::class.java)
             firebaseAuthWithGoogle(account.idToken)
         } catch (e: ApiException) {
-            binding.loginStatusText.text = "Kirish bekor qilindi, qayta urinib ko'ring"
+            binding.loginStatusText.text = "Xato kodi: ${e.statusCode} — ${e.message}"
+        }
         }
     }
 
