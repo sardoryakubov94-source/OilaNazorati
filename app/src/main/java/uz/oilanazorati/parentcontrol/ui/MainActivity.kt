@@ -16,7 +16,6 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.databinding.ActivityMainBinding
-import uz.oilanazorati.parentcontrol.util.AppSession
 
 class MainActivity : AppCompatActivity() {
 
@@ -58,7 +57,6 @@ class MainActivity : AppCompatActivity() {
         binding.btnSignOut.setOnClickListener {
             FirebaseAuth.getInstance().signOut()
             googleSignInClient.signOut()
-            AppSession.loggedInThisProcess = false
             getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
                 .putBoolean("is_parent", false).apply()
             updateScreenState()
@@ -72,15 +70,25 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateScreenState() {
         val user = FirebaseAuth.getInstance().currentUser
-        if (user != null && !user.isAnonymous && AppSession.loggedInThisProcess) {
+        val wasParentLoggedIn = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+            .getBoolean("is_parent", false)
+
+        // MUHIM TUZATISH: avval bu yerda `AppSession.loggedInThisProcess`
+        // (xotirada, jarayonga bog'liq bayroq) tekshirilardi — bu bayroq
+        // HAR SAFAR ilova jarayoni qayta boshlanganda (masalan qurilma
+        // qayta yoqilganda yoki tizim ilovani fondan tozalab qo'yganda)
+        // avtomatik `false`ga qaytar edi, va shu sabab pastdagi shart
+        // Google sessiyasi HALI TO'LIQ YAROQLI bo'lsa ham uni majburan
+        // signOut() qilib yuborar edi — foydalanuvchi "yana Gmail orqali
+        // kirish kerak" degan holatga tushib qolardi. Endi buning o'rniga
+        // SharedPreferences'da DOIMIY saqlangan "is_parent" bayrog'i
+        // tekshiriladi — bu jarayon qayta boshlansa ham yo'qolmaydi.
+        if (user != null && !user.isAnonymous && wasParentLoggedIn) {
             binding.loginSection.visibility = View.GONE
             binding.roleSection.visibility = View.VISIBLE
             val label = user.displayName ?: user.email ?: "Ota-ona"
             binding.signedInAsText.text = label + " sifatida kirilgan"
         } else {
-            if (user != null && !user.isAnonymous) {
-                FirebaseAuth.getInstance().signOut()
-            }
             binding.loginSection.visibility = View.VISIBLE
             binding.roleSection.visibility = View.GONE
         }
@@ -92,7 +100,6 @@ class MainActivity : AppCompatActivity() {
         FirebaseAuth.getInstance().signInWithCredential(credential)
             .addOnSuccessListener { result ->
                 val user = result.user ?: return@addOnSuccessListener
-                AppSession.loggedInThisProcess = true
                 saveParentProfile(user.uid, user.displayName.orEmpty(), user.email.orEmpty())
                 getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
                     .putBoolean("is_parent", true)

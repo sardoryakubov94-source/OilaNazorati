@@ -110,7 +110,33 @@ class ChildSetupActivity : AppCompatActivity() {
             binding.inputFamilyCode.error = "6 xonali kodni kiriting (ota-ona ekranidan oling)"
             return
         }
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser != null && currentUser.isAnonymous) {
+            // Bu qurilma allaqachon o'zining mustaqil (Google'ga bog'liq
+            // bo'lmagan) identifikatoriga ega — shu bilan davom etamiz.
+            finishPairing(code, currentUser.uid)
+        } else {
+            // MUHIM: bola qurilmasi uchun Google/Gmail hisobiga BUTUNLAY
+            // BOG'LIQ BO'LMAGAN, mustaqil "anonim" Firebase identifikator
+            // yaratamiz. Shu tufayli keyinchalik ota-ona shu qurilmada
+            // (yoki umuman istalgan qurilmada) Gmail hisobidan chiqib
+            // ketsa ham, bola qurilmasining ma'lumot yuborish huquqi
+            // (Firestore uchun request.auth) DAVOM ETADI — chunki bu
+            // huquq endi Gmail sessiyasiga emas, shu mustaqil
+            // identifikatorga bog'langan, va u qurilmada doimiy saqlanadi.
+            FirebaseAuth.getInstance().signInAnonymously()
+                .addOnSuccessListener { result ->
+                    val uid = result.user?.uid ?: return@addOnSuccessListener
+                    finishPairing(code, uid)
+                }
+                .addOnFailureListener {
+                    binding.pairStatusText.text = "Ulanishda xato yuz berdi, qayta urinib ko'ring"
+                }
+        }
+    }
+
+    private fun finishPairing(code: String, uid: String) {
         FirebaseRepo.familyCode = code
         FirebaseRepo.childId = uid
 
