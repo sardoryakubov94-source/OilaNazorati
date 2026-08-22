@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<device-admin xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-policies>
+        <!-- Bizga maxsus siyosat (parol qoidasi, kamera o'chirish va h.k.)
+             kerak emas — faqat "admin" maqomining o'zi, shu orqali
+             ilovani o'chirishdan oldin avval bu maqomni bekor qilish
+             talab qilinadi. -->
+        <limit-password />
+        <watch-login />
+    </uses-policies>
+</device-admin>

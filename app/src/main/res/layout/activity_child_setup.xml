@@ -83,6 +83,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Kontaktlarni hoziroq sinxronlash (avtomatik ham ishlaydi)"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
+        android:id="@+id/btnDeviceAdmin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🔒 Ilovani o'chirishdan himoyalash"
         android:layout_marginBottom="24dp"/>
 
     <Button

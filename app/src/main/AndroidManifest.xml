@@ -98,6 +98,22 @@
              kuzatiladi — bu oddiy READ_CALL_LOG runtime ruxsati bilan
              ishlaydi, alohida servis/rol e'lon qilishning hojati yo'q. -->
 
+        <!-- Ilovani tasodifan/ruxsatsiz o'chirib tashlashdan qo'shimcha
+             to'siq — to'liq himoya emas, batafsili AppDeviceAdminReceiver
+             ichidagi izohda tushuntirilgan. -->
+        <receiver
+            android:name=".service.AppDeviceAdminReceiver"
+            android:label="Oila Nazorati himoyasi"
+            android:permission="android.permission.BIND_DEVICE_ADMIN"
+            android:exported="true">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin_policies" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Kiruvchi SMS'ni kuzatish — SMS_RECEIVED orqali, standart
              SMS ilovasi bo'lish SHART EMAS (RECEIVE_SMS ruxsati yetarli) -->
         <receiver
