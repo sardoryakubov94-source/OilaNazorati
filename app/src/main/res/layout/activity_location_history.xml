@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- ---------- Filtr qatori: sana tanlash ---------- -->
+    <!-- Filtr qatori: sana tanlash -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -35,13 +35,13 @@
 
     </LinearLayout>
 
-    <!-- ---------- Xarita ---------- -->
+    <!-- Xarita -->
     <FrameLayout
         android:id="@+id/mapContainer"
         android:layout_width="match_parent"
         android:layout_height="280dp"/>
 
-    <!-- ---------- Ro'yxat sarlavhasi ---------- -->
+    <!-- Royxat sarlavhasi -->
     <TextView
         android:id="@+id/listTitle"
         android:layout_width="match_parent"
@@ -60,7 +60,7 @@
         android:text="Bu kun uchun joylashuv ma'lumoti topilmadi"
         android:visibility="gone"/>
 
-    <!-- ---------- Ro'yxat ---------- -->
+    <!-- Royxat -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/locationList"
         android:layout_width="match_parent"

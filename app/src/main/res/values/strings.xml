@@ -16,5 +16,5 @@
          Android apps -> package nomi "uz.oilanazorati.parentcontrol"
          + release/debug keystore SHA-1 barmoq izini qo'shing
       ========================================================== -->
- <string name="google_maps_key" translatable="false">YOUR_GOOGLE_MAPS_API_KEY_HERE</string>
+ <string name="google_maps_key" translatable="false">AIzaSyDdXAtUZA0S_VdajxztxjGP6BEBeMPLJyU</string>
 </resources>
