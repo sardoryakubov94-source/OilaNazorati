@@ -31,7 +31,7 @@ class MainActivity : AppCompatActivity() {
             val account = task.getResult(ApiException::class.java)
             firebaseAuthWithGoogle(account.idToken)
         } catch (e: ApiException) {
-            binding.loginStatusText.text = "Xato kodi: ${e.statusCode} — ${e.message}"
+            binding.loginStatusText.text = "Xato kodi: " + e.statusCode + " - " + e.message
         }
     }
 
