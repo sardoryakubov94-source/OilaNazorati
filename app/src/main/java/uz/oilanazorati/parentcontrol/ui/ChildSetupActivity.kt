@@ -1,6 +1,5 @@
 package uz.oilanazorati.parentcontrol.ui
 
-import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -47,10 +46,6 @@ class ChildSetupActivity : AppCompatActivity() {
             showExplanationDialog()
         }
     }
-
-    private val roleLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { updateRoleStatusUi() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -132,16 +127,26 @@ class ChildSetupActivity : AppCompatActivity() {
             if (childName.isNotBlank()) " ($childName sifatida)" else ""
     }
 
-    // ---------------- Standart Telefon/SMS ilovasi rolini so'rash ----------------
-    // Android'da READ_CALL_LOG/READ_SMS to'liq ishlashi uchun ilova shu
-    // rollarni egallashi SHART — bu Google Play siyosati talabi.
+    // ---------------- Qo'ng'iroq/SMS kuzatuvi uchun runtime ruxsatlar ----------------
+    // MUHIM: qo'ng'iroqlar endi CallLogObserver orqali (tizimning o'z
+    // "Qo'ng'iroqlar tarixi" jadvalini o'qish) kuzatiladi — bu oddiy
+    // READ_CALL_LOG runtime ruxsati bilan ishlaydi, ROLE_CALL_SCREENING
+    // (standart Telefon ilovasi) bo'lish SHART EMAS. Bu qaror bola
+    // qurilmasida odatdagi qo'ng'iroq/spam-himoya tajribasini
+    // (masalan Samsung'ning o'z "АОН и защита от спама" xizmatini)
+    // buzmasligi uchun ataylab tanlangan — xuddi SMS uchun qilinganidek.
 
     private fun requestDefaultPhoneRole() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = getSystemService(RoleManager::class.java)
-            if (roleManager.isRoleAvailable(RoleManager.ROLE_CALL_SCREENING)) {
-                roleLauncher.launch(roleManager.createRequestRoleIntent(RoleManager.ROLE_CALL_SCREENING))
-            }
+        val granted = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.READ_CALL_LOG
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+        if (!granted) {
+            ActivityCompat.requestPermissions(
+                this, arrayOf(android.Manifest.permission.READ_CALL_LOG), 1004
+            )
+        } else {
+            updateRoleStatusUi()
         }
     }
 
@@ -180,11 +185,11 @@ class ChildSetupActivity : AppCompatActivity() {
     }
 
     private fun updateRoleStatusUi() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val roleManager = getSystemService(RoleManager::class.java)
-            val hasPhone = roleManager.isRoleHeld(RoleManager.ROLE_CALL_SCREENING)
-            binding.btnDefaultPhone.text = if (hasPhone) "✅ Qo'ng'iroq kuzatuvi yoqilgan" else "Qo'ng'iroq kuzatuvini yoqish"
-        }
+        val hasPhone = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.READ_CALL_LOG
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        binding.btnDefaultPhone.text = if (hasPhone) "✅ Qo'ng'iroq kuzatuvi yoqilgan" else "Qo'ng'iroq kuzatuvini yoqish"
+
         val hasSms = ContextCompat.checkSelfPermission(
             this, android.Manifest.permission.RECEIVE_SMS
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED

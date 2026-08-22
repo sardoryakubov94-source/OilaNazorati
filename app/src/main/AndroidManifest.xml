@@ -86,16 +86,9 @@
             android:name=".ui.SavedContactsActivity"
             android:exported="false" />
 
-        <!-- Qo'ng'iroqlarni skrinlash — ROLE_CALL_SCREENING orqali,
-             standart Phone ilovasi bo'lish shart EMAS -->
-        <service
-            android:name=".service.CallMonitorService"
-            android:permission="android.permission.BIND_SCREENING_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.telecom.CallScreeningService" />
-            </intent-filter>
-        </service>
+        <!-- Qo'ng'iroqlar tarixi CallLogObserver (ContentObserver) orqali
+             kuzatiladi — bu oddiy READ_CALL_LOG runtime ruxsati bilan
+             ishlaydi, alohida servis/rol e'lon qilishning hojati yo'q. -->
 
         <!-- Kiruvchi SMS'ni kuzatish — SMS_RECEIVED orqali, standart
              SMS ilovasi bo'lish SHART EMAS (RECEIVE_SMS ruxsati yetarli) -->

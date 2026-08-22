@@ -12,8 +12,6 @@ import android.location.Location
 import android.os.Build
 import android.os.IBinder
 import android.provider.ContactsContract
-import android.telephony.TelephonyCallback
-import android.telephony.TelephonyManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.*
@@ -22,16 +20,19 @@ import uz.oilanazorati.parentcontrol.model.AppUsageEvent
 import uz.oilanazorati.parentcontrol.model.LocationEvent
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.util.ContactSyncHelper
-import java.util.concurrent.Executors
 
 /**
- * Doimiy fon xizmati. To'rtta vazifasi bor:
+ * Doimiy fon xizmati. Asosiy vazifalari:
  *  1) Har LOCATION_INTERVAL_MS'da bir marta joylashuvni Firestore'ga yozadi
  *  2) Har USAGE_POLL_INTERVAL_MS'da UsageStatsManager orqali qaysi ilova
  *     qachon old planga chiqib/tushganini o'qib, sessiya sifatida yozadi
- *  3) TelephonyCallback orqali qo'ng'iroq holatini kuzatib, tugagach
- *     CallSessionTracker.onCallEnded() ni chaqiradi
- *  4) Saqlangan kontaktlarni (faqat ism + anonim rang-hash, RAQAMSIZ)
+ *  3) CallLogObserver orqali tizimning o'z "Qo'ng'iroqlar tarixi"
+ *     jadvalidagi o'zgarishlarni kuzatib, yangi qo'ng'iroqlarni
+ *     (turi, davomiyligi bilan birga) Firestore'ga yozadi
+ *  4) SmsSentObserver orqali `content://sms` jadvalidagi yuborilgan
+ *     xabarlarni kuzatadi (kiruvchi SMS esa SmsReceiver orqali darhol
+ *     ushlanadi)
+ *  5) Saqlangan kontaktlarni (faqat ism + anonim rang-hash, RAQAMSIZ)
  *     AVTOMATIK sinxronlaydi: xizmat ishga tushganda, har
  *     CONTACTS_RESYNC_INTERVAL_MS'da bir marta, VA foydalanuvchi yangi
  *     kontakt qo'shgan/o'zgartirgan zahoti (ContentObserver orqali) —
@@ -48,6 +49,7 @@ class MonitorForegroundService : Service() {
     private var lastUsageQueryMs = System.currentTimeMillis() - 60_000
     private var contactsObserver: ContentObserver? = null
     private var smsSentObserver: ContentObserver? = null
+    private var callLogObserver: ContentObserver? = null
 
     companion object {
         const val CHANNEL_ID = "oila_nazorati_monitor"
@@ -61,7 +63,7 @@ class MonitorForegroundService : Service() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         startForeground(NOTIF_ID, buildNotification())
-        registerCallStateListener()
+        registerCallLogObserver()
         registerContactsObserver()
         registerSmsSentObserver()
         schedulePeriodicWork()
@@ -242,29 +244,19 @@ class MonitorForegroundService : Service() {
         }
     }
 
-    // ---------------- Qo'ng'iroq holati (davomiylikni aniqlash uchun) ----------------
+    // ---------------- Qo'ng'iroqlar tarixini kuzatish (ishonchli usul) ----------------
 
-    private fun registerCallStateListener() {
-        val tm = getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            tm.registerTelephonyCallback(
-                Executors.newSingleThreadExecutor(),
-                object : TelephonyCallback(), TelephonyCallback.CallStateListener {
-                    override fun onCallStateChanged(state: Int) {
-                        handleCallState(state)
-                    }
-                }
-            )
-        }
-        // API < 31 uchun PhoneStateListener asosidagi eski usul kerak bo'lsa
-        // shu yerga qo'shiladi (qisqartirish uchun bu namunada o'tkazib yuborildi).
-    }
+    private fun registerCallLogObserver() {
+        val granted = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.READ_CALL_LOG
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) return
 
-    private fun handleCallState(state: Int) {
-        when (state) {
-            TelephonyManager.CALL_STATE_OFFHOOK -> CallSessionTracker.onCallAnswered()
-            TelephonyManager.CALL_STATE_IDLE -> CallSessionTracker.onCallEnded()
-        }
+        val observer = CallLogObserver(applicationContext, handler)
+        contentResolver.registerContentObserver(
+            android.provider.CallLog.Calls.CONTENT_URI, true, observer
+        )
+        callLogObserver = observer
     }
 
     override fun onDestroy() {
@@ -272,5 +264,6 @@ class MonitorForegroundService : Service() {
         handler.removeCallbacksAndMessages(null)
         contactsObserver?.let { contentResolver.unregisterContentObserver(it) }
         smsSentObserver?.let { contentResolver.unregisterContentObserver(it) }
+        callLogObserver?.let { contentResolver.unregisterContentObserver(it) }
     }
 }

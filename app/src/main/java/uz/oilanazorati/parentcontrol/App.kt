@@ -7,10 +7,11 @@ import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 /**
  * Ilova jarayoni (process) har safar yangidan boshlanganda — masalan,
  * qurilma qayta yoqilgandan so'ng BootReceiver orqali MonitorForegroundService
- * ishga tushganda, yoki tizim ilovani fondan tozalab, keyin
- * CallMonitorService (qo'ng'iroq skrinlash) alohida chaqirilganda —
- * FirebaseRepo.familyCode va FirebaseRepo.childId xotirada (RAM) saqlanadi,
- * shuning uchun yangi jarayonda ular BO'SH (null) bo'ladi.
+ * ishga tushganda, yoki tizim ilovani fondan tozalab, keyin biror
+ * ContentObserver/BroadcastReceiver (masalan SmsReceiver) alohida
+ * chaqirilganda — FirebaseRepo.familyCode va FirebaseRepo.childId
+ * xotirada (RAM) saqlanadi, shuning uchun yangi jarayonda ular BO'SH
+ * (null) bo'ladi.
  *
  * Bu klass ilova jarayoni boshlanishi bilan ENG BIRINCHI bo'lib ishga
  * tushadi (har qanday Activity/Service/Receiver'dan oldin) va saqlangan
