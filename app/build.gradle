@@ -16,6 +16,15 @@ android {
         versionName "1.0"
     }
 
+    signingConfigs {
+        debug {
+            storeFile file("release.keystore")
+            storePassword "OilaNazorati2026"
+            keyAlias "oila_nazorati"
+            keyPassword "OilaNazorati2026"
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
