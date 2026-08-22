@@ -3,7 +3,7 @@ package uz.oilanazorati.parentcontrol.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
+import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
             val account = task.getResult(ApiException::class.java)
             firebaseAuthWithGoogle(account.idToken)
         } catch (e: ApiException) {
-            Toast.makeText(this, "Google orqali kirish bekor qilindi", Toast.LENGTH_SHORT).show()
+            binding.loginStatusText.text = "Kirish bekor qilindi, qayta urinib ko'ring"
         }
     }
 
@@ -45,37 +45,39 @@ class MainActivity : AppCompatActivity() {
             .build()
         googleSignInClient = GoogleSignIn.getClient(this, gso)
 
-        binding.btnChildDevice.setOnClickListener {
-            ensureAnonymousAuth()
-            startActivity(Intent(this, ChildSetupActivity::class.java))
-        }
-        binding.btnParentGoogleSignIn.setOnClickListener {
+        binding.btnGoogleSignIn.setOnClickListener {
             googleSignInLauncher.launch(googleSignInClient.signInIntent)
         }
-
-        updateSignedInUi()
+        binding.btnChildDevice.setOnClickListener {
+            startActivity(Intent(this, ChildSetupActivity::class.java))
+        }
+        binding.btnOpenParentDashboard.setOnClickListener {
+            startActivity(Intent(this, ParentDashboardActivity::class.java))
+        }
+        binding.btnSignOut.setOnClickListener {
+            FirebaseAuth.getInstance().signOut()
+            googleSignInClient.signOut()
+            getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
+                .putBoolean("is_parent", false).apply()
+            updateScreenState()
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        updateSignedInUi()
+        updateScreenState()
     }
 
-    private fun updateSignedInUi() {
+    private fun updateScreenState() {
         val user = FirebaseAuth.getInstance().currentUser
         if (user != null && !user.isAnonymous) {
+            binding.loginSection.visibility = View.GONE
+            binding.roleSection.visibility = View.VISIBLE
             val label = user.displayName ?: user.email ?: "Ota-ona"
-            binding.signedInAsText.text = "$label sifatida kirilgan - Ota-ona panelini ochish uchun bosing"
-            binding.btnParentGoogleSignIn.text = "Ota-ona panelini ochish"
-            binding.btnParentGoogleSignIn.setOnClickListener {
-                startActivity(Intent(this, ParentDashboardActivity::class.java))
-            }
+            binding.signedInAsText.text = "$label sifatida kirilgan"
         } else {
-            binding.signedInAsText.text = ""
-            binding.btnParentGoogleSignIn.text = "Google orqali kirish (Ota-ona)"
-            binding.btnParentGoogleSignIn.setOnClickListener {
-                googleSignInLauncher.launch(googleSignInClient.signInIntent)
-            }
+            binding.loginSection.visibility = View.VISIBLE
+            binding.roleSection.visibility = View.GONE
         }
     }
 
@@ -89,10 +91,10 @@ class MainActivity : AppCompatActivity() {
                 getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
                     .putBoolean("is_parent", true)
                     .apply()
-                startActivity(Intent(this, ParentDashboardActivity::class.java))
+                updateScreenState()
             }
             .addOnFailureListener {
-                Toast.makeText(this, "Kirishda xato yuz berdi, qayta urinib ko'ring", Toast.LENGTH_SHORT).show()
+                binding.loginStatusText.text = "Kirishda xato yuz berdi, qayta urinib ko'ring"
             }
     }
 
@@ -107,12 +109,5 @@ class MainActivity : AppCompatActivity() {
                 ),
                 SetOptions.merge()
             )
-    }
-
-    private fun ensureAnonymousAuth() {
-        val auth = FirebaseAuth.getInstance()
-        if (auth.currentUser == null) {
-            auth.signInAnonymously()
-        }
     }
 }
