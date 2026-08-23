@@ -75,13 +75,6 @@
             android:layout_marginBottom="40dp"/>
 
         <Button
-            android:id="@+id/btnChildDevice"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Bu farzandimning telefoni"
-            android:layout_marginBottom="16dp"/>
-
-        <Button
             android:id="@+id/btnOpenParentDashboard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -97,5 +90,24 @@
             android:padding="12dp"/>
 
     </LinearLayout>
+
+    <!-- MUHIM: bu tugma ATAYLAB har ikkala bo'limdan (login/role)
+         TASHQARIDA joylashtirilgan va HAR DOIM ko'rinadi — Google
+         orqali kirilgan-kirilmaganidan qat'i nazar. Sabab: bola
+         qurilmasini sozlash uchun Google hisobi UMUMAN kerak emas —
+         ChildSetupActivity o'zining PIN himoyasi bilan mustaqil
+         ishlaydi va ma'lumot yozish uchun anonim (Google'ga bog'liq
+         bo'lmagan) identifikator ishlatadi. Google talabi faqat Ota-ona
+         panelini ochish uchun qoladi, chunki u yerda haqiqiy shaxsni
+         tasdiqlash muhim. -->
+    <Button
+        android:id="@+id/btnChildDevice"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_margin="32dp"
+        android:text="Bu farzandimning telefoni (Google shart emas)"
+        android:backgroundTint="#3A4B63"
+        android:textColor="#FFFFFF"/>
 
 </FrameLayout>
