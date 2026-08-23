@@ -16,7 +16,26 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.databinding.ActivityMainBinding
+import uz.oilanazorati.parentcontrol.util.AppPasswordUtil
 
+/**
+ * Ilovaning kirish nuqtasi. Uch bosqichli oqim:
+ *
+ * 1) UMUMIY PAROL (passwordSection) — bank ilovalaridagi kabi, ilova
+ *    HAR safar sovuq holatda ochilganda birinchi shu ekran ko'rinadi.
+ *    Bu yerda Google UMUMAN ishtirok etmaydi — faqat oddiy parol.
+ *    Bola telefonida FAQAT shu bitta parol turadi (avval
+ *    ChildSetupActivity'da alohida PIN bor edi — u olib tashlandi,
+ *    chunki endi shu umumiy parol uni almashtiradi).
+ *
+ * 2) ROL TANLASH (roleSection) — parol to'g'ri kiritilgandan keyin.
+ *    "Bu farzandimning telefoni" to'g'ridan-to'g'ri o'tadi (Google
+ *    kerak emas). "Ota-ona panelini ochish" esa 3-bosqichga o'tkazadi.
+ *
+ * 3) GOOGLE KIRISH (loginSection) — FAQAT Ota-ona panelini ochish
+ *    uchun kerak, chunki Firestore qoidalari ma'lumotni faqat kodni
+ *    yaratgan Google hisobiga ko'rsatadi (xavfsizlik uchun).
+ */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
@@ -39,20 +58,9 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // XAVFSIZLIK TALABI: ota-ona sozlamalariga (Bu farzandimning
-        // telefoni / Ota-ona panelini ochish) kirish uchun ilova HAR
-        // SAFAR yangidan ochilganda qayta Google orqali kirish talab
-        // qilinishi kerak — bu bola tasodifan ilovani ochib qolsa,
-        // avvalgi keshlangan sessiya orqali sozlamalarga kira olmasligi
-        // uchun ataylab shunday qilingan.
-        //
-        // MUHIM: bu FAQAT Google (anonim bo'lmagan) sessiyaga tegishli.
-        // Agar bu aynan BOLA qurilmasi bo'lib, u allaqachon anonim
-        // identifikator bilan ulangan bo'lsa (ChildSetupActivity orqali),
-        // uni signOut QILMAYMIZ — aks holda bola qurilmasining ma'lumot
-        // yuborish huquqi butunlay yo'qolib qoladi. Faqat shu Activity
-        // yangidan yaratilganda (ilova sovuq holatda ochilganda)
-        // ishlaydi — ichki ekranlar orasida orqaga qaytishda emas.
+        // Ota-ona paneli uchun Google talabi hamon "har safar qayta
+        // kirish" tartibida qoladi — faqat anonim (bola) sessiyaga
+        // tegilmaydi, uni signOut qilmaymiz.
         val cachedUser = FirebaseAuth.getInstance().currentUser
         if (cachedUser != null && !cachedUser.isAnonymous) {
             FirebaseAuth.getInstance().signOut()
@@ -64,47 +72,81 @@ class MainActivity : AppCompatActivity() {
             .build()
         googleSignInClient = GoogleSignIn.getClient(this, gso)
 
-        binding.btnGoogleSignIn.setOnClickListener {
-            googleSignInLauncher.launch(googleSignInClient.signInIntent)
-        }
+        binding.btnPasswordSubmit.setOnClickListener { onPasswordSubmit() }
         binding.btnChildDevice.setOnClickListener {
             startActivity(Intent(this, ChildSetupActivity::class.java))
         }
         binding.btnOpenParentDashboard.setOnClickListener {
-            startActivity(Intent(this, ParentDashboardActivity::class.java))
+            if (FirebaseAuth.getInstance().currentUser?.isAnonymous == false) {
+                startActivity(Intent(this, ParentDashboardActivity::class.java))
+            } else {
+                showGoogleLoginSection()
+            }
         }
-        binding.btnSignOut.setOnClickListener {
-            FirebaseAuth.getInstance().signOut()
-            googleSignInClient.signOut()
-            updateScreenState()
+        binding.btnGoogleSignIn.setOnClickListener {
+            googleSignInLauncher.launch(googleSignInClient.signInIntent)
         }
+        binding.btnBackFromLogin.setOnClickListener { showRoleSection() }
 
-        updateScreenState()
+        showPasswordSection()
     }
 
-    override fun onResume() {
-        super.onResume()
-        updateScreenState()
-    }
+    // ---------------- 1-bosqich: umumiy parol ----------------
 
-    private fun updateScreenState() {
-        // Bu yerda "is_parent" kabi doimiy saqlanadigan bayroq ATAYLAB
-        // ishlatilmaydi — ekran holati faqat SHU Activity instance
-        // hayoti davomida (onCreate'da signOut qilingandan keyin)
-        // xotiradagi Firebase sessiyasiga qarab aniqlanadi. Shu tufayli
-        // ilova sovuq holatda qayta ochilsa, avvalgi "kirilgan edi"
-        // holati saqlanib qolmaydi — har safar qayta Google orqali
-        // kirish so'raladi.
-        val user = FirebaseAuth.getInstance().currentUser
-        if (user != null && !user.isAnonymous) {
-            binding.loginSection.visibility = View.GONE
-            binding.roleSection.visibility = View.VISIBLE
-            val label = user.displayName ?: user.email ?: "Ota-ona"
-            binding.signedInAsText.text = label + " sifatida kirilgan"
+    private fun showPasswordSection() {
+        binding.passwordSection.visibility = View.VISIBLE
+        binding.roleSection.visibility = View.GONE
+        binding.loginSection.visibility = View.GONE
+
+        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        val hasPassword = prefs.contains("app_password_hash")
+        binding.passwordPromptText.text = if (hasPassword) {
+            "Davom etish uchun parolni kiriting"
         } else {
-            binding.loginSection.visibility = View.VISIBLE
-            binding.roleSection.visibility = View.GONE
+            "Ilova uchun parol o'rnating (kamida 4 ta belgi)"
         }
+        binding.inputAppPassword.setText("")
+        binding.passwordStatusText.text = ""
+    }
+
+    private fun onPasswordSubmit() {
+        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        val savedHash = prefs.getString("app_password_hash", null)
+        val entered = binding.inputAppPassword.text?.toString().orEmpty()
+
+        if (savedHash == null) {
+            // Birinchi marta — parol o'rnatilmoqda
+            if (entered.length < 4) {
+                binding.passwordStatusText.text = "Kamida 4 ta belgi kiriting"
+                return
+            }
+            prefs.edit().putString("app_password_hash", AppPasswordUtil.hash(entered)).apply()
+            showRoleSection()
+        } else {
+            if (AppPasswordUtil.hash(entered) == savedHash) {
+                showRoleSection()
+            } else {
+                binding.passwordStatusText.text = "Parol noto'g'ri"
+                binding.inputAppPassword.setText("")
+            }
+        }
+    }
+
+    // ---------------- 2-bosqich: rol tanlash ----------------
+
+    private fun showRoleSection() {
+        binding.passwordSection.visibility = View.GONE
+        binding.roleSection.visibility = View.VISIBLE
+        binding.loginSection.visibility = View.GONE
+    }
+
+    // ---------------- 3-bosqich: faqat Ota-ona paneli uchun Google ----------------
+
+    private fun showGoogleLoginSection() {
+        binding.passwordSection.visibility = View.GONE
+        binding.roleSection.visibility = View.GONE
+        binding.loginSection.visibility = View.VISIBLE
+        binding.loginStatusText.text = ""
     }
 
     private fun firebaseAuthWithGoogle(idToken: String?) {
@@ -114,7 +156,7 @@ class MainActivity : AppCompatActivity() {
             .addOnSuccessListener { result ->
                 val user = result.user ?: return@addOnSuccessListener
                 saveParentProfile(user.uid, user.displayName.orEmpty(), user.email.orEmpty())
-                updateScreenState()
+                startActivity(Intent(this, ParentDashboardActivity::class.java))
             }
             .addOnFailureListener {
                 binding.loginStatusText.text = "Kirishda xato yuz berdi, qayta urinib ko'ring"

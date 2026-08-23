@@ -4,14 +4,10 @@ import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.text.InputType
-import android.widget.EditText
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -23,7 +19,6 @@ import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.service.AppDeviceAdminReceiver
 import uz.oilanazorati.parentcontrol.service.MonitorForegroundService
 import uz.oilanazorati.parentcontrol.util.ContactSyncHelper
-import java.security.MessageDigest
 
 /**
  * Bu ekran BOLA qurilmasida, ota-ona (yoki bola o'zi, ota-onasi ko'magida)
@@ -60,13 +55,11 @@ class ChildSetupActivity : AppCompatActivity() {
         binding = ActivityChildSetupBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // XAVFSIZLIK: bu ekran nazoratni yoqish/o'chirish, aloqani
-        // uzish kabi jiddiy amallarni o'z ichiga oladi. MainActivity'dagi
-        // Google-login talabi asosiy to'siq, lekin agar qurilmada Google
-        // hisobi allaqachon faol bo'lsa, "Google bilan kirish" bir bosishda
-        // o'tib ketishi mumkin. Shuning uchun BU YERGA alohida, faqat
-        // ota-onaga ma'lum PIN-kod bilan qo'shimcha himoya qo'yiladi.
-        enforcePinGate()
+        // MUHIM: bu ekranga kirish endi MainActivity'dagi UMUMIY PAROL
+        // orqali himoyalanadi (ilova ochilishidan boshlab). Shuning uchun
+        // bu yerda alohida PIN so'ralmaydi — ikkita alohida parol o'rniga
+        // bola telefonida FAQAT bitta umumiy parol bo'lishi uchun ataylab
+        // olib tashlangan.
 
         binding.btnPair.setOnClickListener { pairWithFamilyCode() }
         binding.btnGrantPermissions.setOnClickListener {
@@ -82,73 +75,6 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnFinish.setOnClickListener { finishSetupAndStartMonitoring() }
 
         restoreSavedPairingIntoUi()
-    }
-
-    // ---------------- PIN himoyasi ----------------
-    // Bu ekranga kirish uchun faqat ota-onaga ma'lum PIN talab qilinadi.
-    // Birinchi marta kirilganda PIN o'rnatish so'raladi; keyingi safar
-    // shu PIN kiritilishi shart — noto'g'ri kiritilsa yoki bekor
-    // qilinsa, ekran darhol yopiladi (finish()).
-
-    private fun enforcePinGate() {
-        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
-        val savedHash = prefs.getString("setup_pin_hash", null)
-        if (savedHash == null) {
-            promptSetNewPin(prefs)
-        } else {
-            promptVerifyPin(savedHash)
-        }
-    }
-
-    private fun promptSetNewPin(prefs: SharedPreferences) {
-        val input = EditText(this).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            hint = "Kamida 4 xonali PIN"
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Himoya PIN kodini o'rnating")
-            .setMessage(
-                "Bu sozlash ekraniga keyingi safar kirish uchun shu PIN " +
-                    "so'raladi. PIN faqat SIZGA (ota-onaga) ma'lum bo'lishi kerak."
-            )
-            .setView(input)
-            .setCancelable(false)
-            .setPositiveButton("Saqlash") { _, _ ->
-                val pin = input.text?.toString().orEmpty()
-                if (pin.length < 4) {
-                    Toast.makeText(this, "Kamida 4 ta raqam kiriting", Toast.LENGTH_SHORT).show()
-                    promptSetNewPin(prefs)
-                } else {
-                    prefs.edit().putString("setup_pin_hash", sha256(pin)).apply()
-                    Toast.makeText(this, "PIN saqlandi", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .show()
-    }
-
-    private fun promptVerifyPin(savedHash: String) {
-        val input = EditText(this).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD
-            hint = "PIN kodini kiriting"
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Himoya PIN kodi")
-            .setView(input)
-            .setCancelable(false)
-            .setPositiveButton("Kirish") { _, _ ->
-                val pin = input.text?.toString().orEmpty()
-                if (sha256(pin) != savedHash) {
-                    Toast.makeText(this, "PIN noto'g'ri", Toast.LENGTH_SHORT).show()
-                    finish()
-                }
-            }
-            .setNegativeButton("Bekor qilish") { _, _ -> finish() }
-            .show()
-    }
-
-    private fun sha256(text: String): String {
-        val bytes = MessageDigest.getInstance("SHA-256").digest(text.toByteArray())
-        return bytes.joinToString("") { "%02x".format(it) }
     }
 
     // ---------------- Ilovani o'chirishdan himoyalash (Device Admin) ----------------

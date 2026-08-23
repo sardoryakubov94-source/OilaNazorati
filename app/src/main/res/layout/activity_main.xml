@@ -4,13 +4,111 @@
     android:layout_height="match_parent"
     android:background="#0F1B2D">
 
+    <!-- ========== 1-BOSQICH: umumiy kirish paroli ==========
+         Bank ilovalaridagi kabi — ilova HAR safar ochilganda shu
+         ekran birinchi ko'rinadi, hech qanday Google talab qilinmaydi.
+         Bola telefonida FAQAT shu bitta parol turadi. -->
+    <LinearLayout
+        android:id="@+id/passwordSection"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔒"
+            android:textSize="56sp"
+            android:layout_marginBottom="24dp"/>
+
+        <TextView
+            android:id="@+id/passwordPromptText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Davom etish uchun parolni kiriting"
+            android:textColor="#AEB8C4"
+            android:textAlignment="center"
+            android:layout_marginBottom="24dp"/>
+
+        <EditText
+            android:id="@+id/inputAppPassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberPassword"
+            android:hint="Parol"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#6B7A90"
+            android:layout_marginBottom="20dp"/>
+
+        <Button
+            android:id="@+id/btnPasswordSubmit"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="Kirish"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            android:textStyle="bold"/>
+
+        <TextView
+            android:id="@+id/passwordStatusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="#E57373"
+            android:textAlignment="center"
+            android:layout_marginTop="16dp"/>
+
+    </LinearLayout>
+
+    <!-- ========== 2-BOSQICH: rol tanlash ==========
+         Parol to'g'ri kiritilgandan keyin ko'rinadi. Bu yerda hali
+         ham Google talab qilinmaydi. -->
+    <LinearLayout
+        android:id="@+id/roleSection"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="32dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🛡️ Oila Nazorati"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#FFFFFF"
+            android:layout_marginBottom="40dp"/>
+
+        <Button
+            android:id="@+id/btnChildDevice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Bu farzandimning telefoni"
+            android:layout_marginBottom="16dp"/>
+
+        <Button
+            android:id="@+id/btnOpenParentDashboard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Ota-ona panelini ochish"
+            android:layout_marginBottom="16dp"/>
+
+    </LinearLayout>
+
+    <!-- ========== 3-BOSQICH: faqat Ota-ona paneli uchun Google ==========
+         "Ota-ona panelini ochish" bosilganda, agar hali Google orqali
+         kirilmagan bo'lsa, shu ekran ko'rinadi. -->
     <LinearLayout
         android:id="@+id/loginSection"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:gravity="center"
-        android:padding="32dp">
+        android:padding="32dp"
+        android:visibility="gone">
 
         <TextView
             android:layout_width="wrap_content"
@@ -22,7 +120,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Davom etish uchun ota-onaning Google hisobi bilan kiring"
+            android:text="Ota-ona panelini ochish uchun Google hisobi bilan kiring"
             android:textColor="#AEB8C4"
             android:textAlignment="center"
             android:layout_marginBottom="40dp"/>
@@ -46,68 +144,14 @@
             android:textAlignment="center"
             android:layout_marginTop="20dp"/>
 
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/roleSection"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="32dp"
-        android:visibility="gone">
-
         <TextView
+            android:id="@+id/btnBackFromLogin"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="🛡️ Oila Nazorati"
-            android:textSize="26sp"
-            android:textStyle="bold"
-            android:textColor="#FFFFFF"
-            android:layout_marginBottom="8dp"/>
-
-        <TextView
-            android:id="@+id/signedInAsText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:text="← Orqaga"
             android:textColor="#AEB8C4"
-            android:textAlignment="center"
-            android:layout_marginBottom="40dp"/>
-
-        <Button
-            android:id="@+id/btnOpenParentDashboard"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Ota-ona panelini ochish"
-            android:layout_marginBottom="16dp"/>
-
-        <TextView
-            android:id="@+id/btnSignOut"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Chiqish (boshqa hisobga o'tish)"
-            android:textColor="#AEB8C4"
-            android:padding="12dp"/>
+            android:padding="16dp"/>
 
     </LinearLayout>
-
-    <!-- MUHIM: bu tugma ATAYLAB har ikkala bo'limdan (login/role)
-         TASHQARIDA joylashtirilgan va HAR DOIM ko'rinadi — Google
-         orqali kirilgan-kirilmaganidan qat'i nazar. Sabab: bola
-         qurilmasini sozlash uchun Google hisobi UMUMAN kerak emas —
-         ChildSetupActivity o'zining PIN himoyasi bilan mustaqil
-         ishlaydi va ma'lumot yozish uchun anonim (Google'ga bog'liq
-         bo'lmagan) identifikator ishlatadi. Google talabi faqat Ota-ona
-         panelini ochish uchun qoladi, chunki u yerda haqiqiy shaxsni
-         tasdiqlash muhim. -->
-    <Button
-        android:id="@+id/btnChildDevice"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:layout_margin="32dp"
-        android:text="Bu farzandimning telefoni (Google shart emas)"
-        android:backgroundTint="#3A4B63"
-        android:textColor="#FFFFFF"/>
 
 </FrameLayout>
