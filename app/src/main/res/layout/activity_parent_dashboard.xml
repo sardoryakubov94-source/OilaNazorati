@@ -1,19 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#0D1117">
 
 <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="20dp">
+    android:padding="16dp">
 
+    <!-- ========== Oila kodi qatori ========== -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:layout_marginBottom="16dp">
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
 
         <EditText
             android:id="@+id/inputFamilyCode"
@@ -21,129 +24,373 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:hint="Oila kodi"
-            android:inputType="textCapCharacters"/>
+            android:textColor="#FFFFFF"
+            android:textColorHint="#6B7A90"
+            android:inputType="textCapCharacters"
+            android:layout_marginEnd="8dp"/>
 
         <Button
             android:id="@+id/btnLoadFamily"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Yuklash"/>
+            android:text="YUKLASH"
+            android:textAllCaps="true"
+            android:textColor="#0D1117"
+            android:background="@drawable/bg_button_primary"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"/>
     </LinearLayout>
 
     <Button
         android:id="@+id/btnGenerateCode"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Yangi oila kodi yaratish"
-        android:layout_marginBottom="8dp"/>
+        android:text="YANGI OILA KODI YARATISH"
+        android:textColor="#0D1117"
+        android:background="@drawable/bg_button_primary"
+        android:layout_marginBottom="10dp"/>
 
     <Button
         android:id="@+id/btnChooseChild"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Farzandlar (tanlash / almashtirish)"
+        android:text="FARZANDLAR (TANLASH / ALMASHTIRISH)"
+        android:textColor="#0D1117"
+        android:background="@drawable/bg_button_primary"
         android:layout_marginBottom="16dp"/>
 
-    <TextView
-        android:id="@+id/locationSummary"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Joylashuv: -"
-        android:layout_marginBottom="8dp"/>
-
-    <Button
-        android:id="@+id/btnLocationHistory"
+    <!-- ========== Joylashuv kartasi ========== -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="📍 Joylashuv tarixini xaritada ko'rish"
-        android:layout_marginBottom="8dp"/>
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_card_green"
+        android:padding="16dp"
+        android:layout_marginBottom="20dp">
 
-    <Button
-        android:id="@+id/btnCallHistory"
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📍"
+            android:textSize="22sp"
+            android:layout_marginEnd="12dp"/>
+
+        <TextView
+            android:id="@+id/locationSummary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#B7F5CE"
+            android:text="Joylashuv: -"/>
+
+        <TextView
+            android:id="@+id/btnLocationHistory"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Xaritada →"
+            android:textColor="#2ECC71"
+            android:textStyle="bold"
+            android:padding="8dp"/>
+    </LinearLayout>
+
+    <!-- ========== Asosiy funksiyalar (2x2 grid) ========== -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Asosiy funksiyalar"
+        android:textColor="#8B96A5"
+        android:textSize="13sp"
+        android:layout_marginBottom="10dp"/>
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="📞 Qo'ng'iroqlar ro'yxati (kun bo'yicha)"
-        android:layout_marginBottom="8dp"/>
+        android:orientation="horizontal"
+        android:layout_marginBottom="10dp">
 
-    <Button
-        android:id="@+id/btnSmsHistory"
+        <LinearLayout
+            android:id="@+id/btnCallHistory"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_card_clickable"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📞"
+                android:textSize="26sp"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Qo'ng'iroqlar"
+                android:textColor="#E6E9EF"
+                android:textSize="13sp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Faol"
+                android:textColor="#2ECC71"
+                android:textSize="11sp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/btnSmsHistory"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_card_clickable"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✉️"
+                android:textSize="26sp"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="SMS"
+                android:textColor="#E6E9EF"
+                android:textSize="13sp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Faol"
+                android:textColor="#2ECC71"
+                android:textSize="11sp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="✉️ SMS ro'yxati (kun bo'yicha)"
-        android:layout_marginBottom="16dp"/>
+        android:orientation="horizontal"
+        android:layout_marginBottom="20dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Bugungi qo'ng'iroqlar"
-        android:textStyle="bold"/>
-    <TextView
-        android:id="@+id/callsSummary"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"/>
+        <LinearLayout
+            android:id="@+id/btnSavedContacts"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_card_clickable"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="18dp">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Bugungi SMS"
-        android:textStyle="bold"/>
-    <TextView
-        android:id="@+id/smsSummary"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="👤"
+                android:textSize="26sp"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Kontaktlar"
+                android:textColor="#E6E9EF"
+                android:textSize="13sp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Faol"
+                android:textColor="#2ECC71"
+                android:textSize="11sp"/>
+        </LinearLayout>
 
+        <LinearLayout
+            android:id="@+id/btnTrends"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_card_clickable"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔲"
+                android:textSize="26sp"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ilovalar"
+                android:textColor="#E6E9EF"
+                android:textSize="13sp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Faol"
+                android:textColor="#2ECC71"
+                android:textSize="11sp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ========== Bugungi aktivlik ========== -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="BUGUNGI AKTIVLIK"
+        android:textColor="#8B96A5"
+        android:textSize="12sp"
+        android:layout_marginBottom="10dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="20dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📞 Qo'ng'iroqlar"
+                android:textColor="#E6E9EF"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:id="@+id/callsSummary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#B7C0CC"
+                android:textSize="13sp"
+                android:lineSpacingExtra="4dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✉️ SMS"
+                android:textColor="#E6E9EF"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:id="@+id/smsSummary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#B7C0CC"
+                android:textSize="13sp"
+                android:lineSpacingExtra="4dp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ========== Qo'ng'iroqlar vaqt jadvali ========== -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Qo'ng'iroqlar vaqt jadvali"
-        android:textStyle="bold"/>
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/timelineList"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Kontaktlar bo'yicha (raqamsiz, faqat rang bilan)"
-        android:textStyle="bold"/>
-    <TextView
-        android:id="@+id/contactCountSummary"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="4dp"/>
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/contactSummaryList"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"/>
-
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Ilovalarda o'tkazilgan vaqt"
-        android:textStyle="bold"/>
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/appUsageList"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"/>
-
-    <Button
-        android:id="@+id/btnTrends"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Haftalik trendlarni ko'rish"
+        android:textColor="#E6E9EF"
+        android:textStyle="bold"
+        android:textSize="14sp"
         android:layout_marginBottom="8dp"/>
-
-    <Button
-        android:id="@+id/btnSavedContacts"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Saqlangan kontaktlar (ism + rang)"/>
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:padding="8dp"
+        android:layout_marginBottom="20dp">
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/timelineList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+    <!-- ========== Kontaktlar bo'yicha ========== -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="KONTAKTLAR BO'YICHA"
+        android:textColor="#8B96A5"
+        android:textSize="12sp"
+        android:layout_marginBottom="8dp"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:padding="16dp"
+        android:layout_marginBottom="20dp">
+
+        <TextView
+            android:id="@+id/contactCountSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#8B96A5"
+            android:textSize="12sp"
+            android:layout_marginBottom="8dp"/>
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/contactSummaryList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+    <!-- ========== Ilovalarda o'tkazilgan vaqt ========== -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ILOVALARDA O'TKAZILGAN VAQT"
+        android:textColor="#8B96A5"
+        android:textSize="12sp"
+        android:layout_marginBottom="8dp"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:padding="16dp"
+        android:layout_marginBottom="20dp">
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/appUsageList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
 
 </LinearLayout>
 </ScrollView>
