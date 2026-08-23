@@ -191,9 +191,9 @@ class ParentDashboardActivity : AppCompatActivity() {
             val outgoingMin = calls.filter { it.turi == "chiquvchi" }.sumOf { it.davomiylikSoniya } / 60
 
             binding.callsSummary.text =
-                "📞 Kiruvchi: $incoming ta ($incomingMin daq)\n" +
-                "📞 Chiquvchi: $outgoing ta ($outgoingMin daq)\n" +
-                "📵 Javobsiz: $missed ta"
+                "Kiruvchi: $incoming ta ($incomingMin daq)\n" +
+                "Chiquvchi: $outgoing ta ($outgoingMin daq)\n" +
+                "Javobsiz: $missed ta"
 
             timelineAdapter.setCalls(calls, timeFmt)
 
@@ -208,7 +208,7 @@ class ParentDashboardActivity : AppCompatActivity() {
         FirebaseRepo.listenSmsForDay(dayStart, dayEnd) { sms ->
             val sent = sms.count { it.turi == "yuborilgan" }
             val received = sms.count { it.turi == "qabul_qilingan" }
-            binding.smsSummary.text = "💬 Yuborilgan: $sent ta\n💬 Qabul qilingan: $received ta"
+            binding.smsSummary.text = "Yuborilgan: $sent ta\nQabul qilingan: $received ta"
         }
 
         FirebaseRepo.listenAppUsageForDay(dayStart, dayEnd) { usage ->
