@@ -87,9 +87,14 @@ class MonitorForegroundService : Service() {
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Google cervis")
-            .setContentText(" ")
-            .setSmallIcon(R.drawable.ic_sync)
+            // MUHIM: contentText YO'Q (avval bo'sh joy " " qo'yilgan edi —
+            // bu ikkinchi bo'sh qatorni band qilib, bildirishnomani
+            // kerakidan balandroq/kattaroq ko'rsatib turardi). Endi faqat
+            // sarlavha bitta qator sifatida ko'rinadi — pastdagi ob-havo
+            // bildirishnomasi kabi ixcham.
+            .setSmallIcon(R.drawable.ic_blank)
             .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setOngoing(true)
             .setShowWhen(false)
             .build()
