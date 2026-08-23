@@ -100,10 +100,13 @@ class MainActivity : AppCompatActivity() {
 
         val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
         val hasPassword = prefs.contains("app_password_hash")
-        binding.passwordPromptText.text = if (hasPassword) {
-            "Davom etish uchun parolni kiriting"
+        if (hasPassword) {
+            // Keyingi kirishlarda hech qanday izoh yozuv ko'rsatilmaydi —
+            // faqat tepada bulut belgisi va pastda parol maydoni.
+            binding.passwordPromptText.visibility = View.GONE
         } else {
-            "Ilova uchun parol o'rnating (kamida 4 ta belgi)"
+            binding.passwordPromptText.visibility = View.VISIBLE
+            binding.passwordPromptText.text = "Ilova uchun parol o'rnating (kamida 4 ta belgi)"
         }
         binding.inputAppPassword.setText("")
         binding.passwordStatusText.text = ""
