@@ -26,12 +26,12 @@ object FirebaseRepo {
      * (anonim bo'lmagan) foydalanuvchi bosishi mumkin bo'lgan tugmadan
      * chaqirilishi kerak — aks holda Firestore qoidasi yozishni rad etadi.
      */
-    fun createFamily(code: String, onResult: (Boolean) -> Unit) {
-        val uid = auth.currentUser?.uid ?: return onResult(false)
+    fun createFamily(code: String, onResult: (Boolean, String?) -> Unit) {
+        val uid = auth.currentUser?.uid ?: return onResult(false, "Tizimga kirilmagan")
         db.collection("families").document(code)
             .set(mapOf("ownerUid" to uid, "yaratilganMs" to System.currentTimeMillis()))
-            .addOnSuccessListener { onResult(true) }
-            .addOnFailureListener { onResult(false) }
+            .addOnSuccessListener { onResult(true, null) }
+            .addOnFailureListener { e -> onResult(false, e.message) }
     }
 
     /**
