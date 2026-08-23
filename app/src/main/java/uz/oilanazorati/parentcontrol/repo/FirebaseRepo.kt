@@ -20,6 +20,21 @@ object FirebaseRepo {
     var childId: String? = null
 
     /**
+     * Yangi oila kodi yaratilganda chaqiriladi. `ownerUid` maydonini
+     * yozadi — Firestore qoidalarida shu maydon orqali "bu kodni
+     * ANIQ SHU Google hisobi yaratganmi" tekshiriladi. Faqat haqiqiy
+     * (anonim bo'lmagan) foydalanuvchi bosishi mumkin bo'lgan tugmadan
+     * chaqirilishi kerak — aks holda Firestore qoidasi yozishni rad etadi.
+     */
+    fun createFamily(code: String, onResult: (Boolean) -> Unit) {
+        val uid = auth.currentUser?.uid ?: return onResult(false)
+        db.collection("families").document(code)
+            .set(mapOf("ownerUid" to uid, "yaratilganMs" to System.currentTimeMillis()))
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
+
+    /**
      * familyCode/childId hali o'rnatilmagan bo'lsa (masalan, jarayon
      * qayta boshlangan-u, App.restoreSavedPairing hali ulgurmagan yoki
      * qurilma umuman ulanmagan bo'lsa) — bu yerda crash bo'lish o'rniga

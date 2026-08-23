@@ -47,9 +47,18 @@ class ParentDashboardActivity : AppCompatActivity() {
         }
         binding.btnGenerateCode.setOnClickListener {
             val newCode = generateFamilyCode()
-            binding.inputFamilyCode.setText(newCode)
-            loadFamily(newCode)
-            showGeneratedCodeDialog(newCode)
+            FirebaseRepo.familyCode = newCode
+            FirebaseRepo.createFamily(newCode) { success ->
+                if (success) {
+                    binding.inputFamilyCode.setText(newCode)
+                    loadFamily(newCode)
+                    showGeneratedCodeDialog(newCode)
+                } else {
+                    android.widget.Toast.makeText(
+                        this, "Kod yaratishda xato yuz berdi, qayta urinib ko'ring", android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
         }
         binding.btnChooseChild.setOnClickListener {
             val code = FirebaseRepo.familyCode

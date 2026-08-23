@@ -4,17 +4,44 @@ service cloud.firestore {
 
     match /families/{familyCode} {
 
+      // Oila hujjatining o'zi ("ownerUid" maydonini saqlaydi — kim bu
+      // kodni birinchi bo'lib yaratgan bo'lsa, o'sha).
+      function isRealOwner() {
+        return request.auth != null &&
+          request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+          exists(/databases/$(database)/documents/families/$(familyCode)) &&
+          get(/databases/$(database)/documents/families/$(familyCode)).data.ownerUid == request.auth.uid;
+      }
+
+      // Kod birinchi marta yaratilganda: FAQAT haqiqiy (anonim bo'lmagan,
+      // ya'ni Google orqali kirgan) foydalanuvchi, va faqat O'ZINING
+      // UID'ini ownerUid sifatida yozsa bo'ladi — boshqa birovning
+      // UID'ini yoza olmaydi.
+      allow create: if request.auth != null &&
+        request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+        request.resource.data.ownerUid == request.auth.uid;
+
+      // MUHIM: bu qoidaning o'zagi shu yerda — endi shunchaki "kimdir
+      // kirganmi" emas, balki "bu ANIQ SHU kodni yaratgan Google
+      // hisobimi" tekshiriladi. Kodni bilib qolgan begona Google
+      // hisobi (ownerUid mos kelmasa) hech narsani o'qiy olmaydi.
+      allow read, update, delete: if isRealOwner();
+
       match /children/{childId} {
-        // Faqat autentifikatsiya qilingan (hatto anonim) foydalanuvchilar
-        // o'qiy/yoza oladi. Ishlab chiqarishga chiqarishdan oldin buni
-        // albatta kuchaytiring — masalan familyCode faqat egasi
-        // (custom claim yoki alohida "owners" kolleksiyasi) bilan
-        // tekshirilishi kerak, aks holda kodni bilgan har kim
-        // ma'lumotni o'qiy oladi.
-        allow read, write: if request.auth != null;
+        // Bola qurilmasi ChildSetupActivity'da signInAnonymously()
+        // orqali oladigan identifikatori — Google hisobiga BUTUNLAY
+        // bog'liq emas (shu tufayli ota-ona Gmail'dan chiqib ketsa ham
+        // bola qurilmasining yozish huquqi davom etadi). Bola FAQAT
+        // o'zining childId'siga mos hujjatga yoza oladi — boshqa
+        // childId'ga emas.
+        function isThisChildsOwnSession() {
+          return request.auth != null && request.auth.uid == childId;
+        }
+
+        allow read, write: if isRealOwner() || isThisChildsOwnSession();
 
         match /{subcollection}/{docId} {
-          allow read, write: if request.auth != null;
+          allow read, write: if isRealOwner() || isThisChildsOwnSession();
         }
       }
     }
