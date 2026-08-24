@@ -59,6 +59,7 @@ class CallHistoryAdapter : RecyclerView.Adapter<CallHistoryAdapter.VH>() {
         holder.contactLabel.text = when {
             hash == "noma_lum" -> "Noma'lum raqam"
             names.containsKey(hash) -> names[hash]
+            item.raqam.isNotBlank() -> item.raqam
             else -> "Saqlanmagan kontakt"
         }
 

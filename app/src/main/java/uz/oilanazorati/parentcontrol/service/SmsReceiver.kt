@@ -43,7 +43,8 @@ class SmsReceiver : BroadcastReceiver() {
             SmsEvent(
                 turi = "qabul_qilingan",
                 vaqtMs = System.currentTimeMillis(),
-                kontaktHash = kontaktHash
+                kontaktHash = kontaktHash,
+                raqam = rawSender.orEmpty()
             )
         )
 
@@ -98,7 +99,7 @@ class SmsSentObserver(
                     val dateMs = it.getLong(dateIdx)
                     val kontaktHash = ContactAnonymizer.hash(context, address)
                     FirebaseRepo.logSms(
-                        SmsEvent(turi = "yuborilgan", vaqtMs = dateMs, kontaktHash = kontaktHash)
+                        SmsEvent(turi = "yuborilgan", vaqtMs = dateMs, kontaktHash = kontaktHash, raqam = address.orEmpty())
                     )
                     if (dateMs > newestMs) newestMs = dateMs
                 }

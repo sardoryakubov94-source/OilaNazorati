@@ -5,13 +5,15 @@ data class CallEvent(
     val boshlanishMs: Long = 0L,
     val tugashMs: Long = 0L,
     val davomiylikSoniya: Long = 0L,
-    val kontaktHash: String = ""
+    val kontaktHash: String = "",
+    val raqam: String = ""
 )
 
 data class SmsEvent(
     val turi: String = "",
     val vaqtMs: Long = 0L,
-    val kontaktHash: String = ""
+    val kontaktHash: String = "",
+    val raqam: String = ""
 )
 
 data class AppUsageEvent(

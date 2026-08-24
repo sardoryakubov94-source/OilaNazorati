@@ -81,7 +81,8 @@ class CallLogObserver(
                             boshlanishMs = startMs,
                             tugashMs = startMs + durationSec * 1000,
                             davomiylikSoniya = if (turi == "javobsiz") 0 else durationSec,
-                            kontaktHash = kontaktHash
+                            kontaktHash = kontaktHash,
+                            raqam = number.orEmpty()
                         )
                     )
 

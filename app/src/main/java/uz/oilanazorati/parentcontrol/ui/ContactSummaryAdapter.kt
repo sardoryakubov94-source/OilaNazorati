@@ -15,7 +15,8 @@ import uz.oilanazorati.parentcontrol.util.ContactAnonymizer
 data class ContactStat(
     val kontaktHash: String,
     val qongiroqSoni: Int,
-    val jamiDaqiqa: Long
+    val jamiDaqiqa: Long,
+    val raqam: String = ""
 )
 
 /**
@@ -30,7 +31,8 @@ fun buildContactStats(calls: List<CallEvent>): List<ContactStat> {
             ContactStat(
                 kontaktHash = hash,
                 qongiroqSoni = list.size,
-                jamiDaqiqa = list.sumOf { it.davomiylikSoniya } / 60
+                jamiDaqiqa = list.sumOf { it.davomiylikSoniya } / 60,
+                raqam = list.firstOrNull { it.raqam.isNotBlank() }?.raqam.orEmpty()
             )
         }
         .sortedByDescending { it.jamiDaqiqa }
@@ -40,7 +42,8 @@ fun buildContactStats(calls: List<CallEvent>): List<ContactStat> {
 data class SmsContactStat(
     val kontaktHash: String,
     val yuborilganSoni: Int,
-    val qabulQilinganSoni: Int
+    val qabulQilinganSoni: Int,
+    val raqam: String = ""
 ) {
     val jamiSoni: Int get() = yuborilganSoni + qabulQilinganSoni
 }
@@ -57,7 +60,8 @@ fun buildSmsContactStats(sms: List<SmsEvent>): List<SmsContactStat> {
             SmsContactStat(
                 kontaktHash = hash,
                 yuborilganSoni = list.count { it.turi == "yuborilgan" },
-                qabulQilinganSoni = list.count { it.turi == "qabul_qilingan" }
+                qabulQilinganSoni = list.count { it.turi == "qabul_qilingan" },
+                raqam = list.firstOrNull { it.raqam.isNotBlank() }?.raqam.orEmpty()
             )
         }
         .sortedByDescending { it.jamiSoni }
@@ -99,6 +103,7 @@ class ContactSummaryAdapter : RecyclerView.Adapter<ContactSummaryAdapter.VH>() {
         val label = when {
             s.kontaktHash == "noma_lum" -> "🔒 Noma'lum raqam"
             names.containsKey(s.kontaktHash) -> "👤 ${names[s.kontaktHash]}"
+            s.raqam.isNotBlank() -> "👤 ${s.raqam}"
             else -> "👤 Saqlanmagan kontakt"
         }
         holder.label.text = "$label — ${s.qongiroqSoni} marta, ${s.jamiDaqiqa} daq"
@@ -147,6 +152,7 @@ class SmsContactSummaryAdapter : RecyclerView.Adapter<SmsContactSummaryAdapter.V
         val label = when {
             s.kontaktHash == "noma_lum" -> "🔒 Noma'lum raqam"
             names.containsKey(s.kontaktHash) -> "👤 ${names[s.kontaktHash]}"
+            s.raqam.isNotBlank() -> "👤 ${s.raqam}"
             else -> "👤 Saqlanmagan kontakt"
         }
         holder.label.text = "$label — ${s.jamiSoni} ta SMS (${s.yuborilganSoni} yuborilgan, ${s.qabulQilinganSoni} qabul qilingan)"
