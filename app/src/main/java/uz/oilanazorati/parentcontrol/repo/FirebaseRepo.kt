@@ -9,6 +9,7 @@ import uz.oilanazorati.parentcontrol.model.CallEvent
 import uz.oilanazorati.parentcontrol.model.ChildProfile
 import uz.oilanazorati.parentcontrol.model.ContactMapping
 import uz.oilanazorati.parentcontrol.model.LocationEvent
+import uz.oilanazorati.parentcontrol.model.NotificationEvent
 import uz.oilanazorati.parentcontrol.model.SmsEvent
 
 object FirebaseRepo {
@@ -211,6 +212,24 @@ object FirebaseRepo {
             .get()
             .addOnSuccessListener { snap ->
                 onResult(snap.documents.mapNotNull { it.toObject(AppUsageEvent::class.java) })
+            }
+            .addOnFailureListener { onResult(emptyList()) }
+    }
+
+    // ---------------- Ijtimoiy tarmoq/messenjer bildirishnomalari ----------------
+
+    fun logNotification(event: NotificationEvent) {
+        childCollection("notifications")?.add(event)
+    }
+
+    fun fetchNotificationsInRange(rangeStartMs: Long, rangeEndMs: Long, onResult: (List<NotificationEvent>) -> Unit) {
+        val col = childCollection("notifications") ?: return onResult(emptyList())
+        col
+            .whereGreaterThanOrEqualTo("vaqtMs", rangeStartMs)
+            .whereLessThan("vaqtMs", rangeEndMs)
+            .get()
+            .addOnSuccessListener { snap ->
+                onResult(snap.documents.mapNotNull { it.toObject(NotificationEvent::class.java) })
             }
             .addOnFailureListener { onResult(emptyList()) }
     }

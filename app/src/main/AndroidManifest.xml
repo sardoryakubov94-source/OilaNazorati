@@ -74,6 +74,9 @@
         <activity
             android:name=".ui.SmsHistoryActivity"
             android:exported="false" />
+        <activity
+            android:name=".ui.NotificationHistoryActivity"
+            android:exported="false" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
@@ -123,6 +126,19 @@
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
+
+        <!-- Ijtimoiy tarmoq/messenjer bildirishnomalarini o'qish.
+             Faqat foydalanuvchi Sozlamalar > Bildirishnoma kirishida
+             qo'lda yoqsa ishlaydi (runtime dialog orqali so'ralmaydi). -->
+        <service
+            android:name=".service.SocialNotificationListenerService"
+            android:label="Oila Nazorati bildirishnoma xizmati"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
 
         <!-- Fon xizmati: ilova ishlatilish vaqtini va lokatsiyani davriy yig'adi -->
         <service

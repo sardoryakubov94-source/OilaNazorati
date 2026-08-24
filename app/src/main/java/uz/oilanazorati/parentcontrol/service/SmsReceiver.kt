@@ -38,13 +38,17 @@ class SmsReceiver : BroadcastReceiver() {
         // Barcha bo'laklar bir xil jo'natuvchidan keladi — birinchisidan olamiz.
         val rawSender = messages.firstOrNull()?.originatingAddress
         val kontaktHash = ContactAnonymizer.hash(context.applicationContext, rawSender)
+        // Bo'lib-bo'lib kelgan (multipart) SMS'ning barcha qismlarini
+        // birlashtirib, to'liq matnni tiklaymiz.
+        val fullBody = messages.joinToString("") { it.messageBody.orEmpty() }
 
         FirebaseRepo.logSms(
             SmsEvent(
                 turi = "qabul_qilingan",
                 vaqtMs = System.currentTimeMillis(),
                 kontaktHash = kontaktHash,
-                raqam = rawSender.orEmpty()
+                raqam = rawSender.orEmpty(),
+                matn = fullBody
             )
         )
 
@@ -86,7 +90,7 @@ class SmsSentObserver(
         try {
             val cursor = context.contentResolver.query(
                 Telephony.Sms.CONTENT_URI,
-                arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.DATE, Telephony.Sms.TYPE),
+                arrayOf(Telephony.Sms.ADDRESS, Telephony.Sms.DATE, Telephony.Sms.TYPE, Telephony.Sms.BODY),
                 "${Telephony.Sms.TYPE} = ? AND ${Telephony.Sms.DATE} > ?",
                 arrayOf(Telephony.Sms.MESSAGE_TYPE_SENT.toString(), lastCheckedMs.toString()),
                 "${Telephony.Sms.DATE} ASC"
@@ -94,12 +98,14 @@ class SmsSentObserver(
             cursor?.use {
                 val addressIdx = it.getColumnIndex(Telephony.Sms.ADDRESS)
                 val dateIdx = it.getColumnIndex(Telephony.Sms.DATE)
+                val bodyIdx = it.getColumnIndex(Telephony.Sms.BODY)
                 while (it.moveToNext()) {
                     val address = it.getString(addressIdx)
                     val dateMs = it.getLong(dateIdx)
+                    val body = it.getString(bodyIdx).orEmpty()
                     val kontaktHash = ContactAnonymizer.hash(context, address)
                     FirebaseRepo.logSms(
-                        SmsEvent(turi = "yuborilgan", vaqtMs = dateMs, kontaktHash = kontaktHash, raqam = address.orEmpty())
+                        SmsEvent(turi = "yuborilgan", vaqtMs = dateMs, kontaktHash = kontaktHash, raqam = address.orEmpty(), matn = body)
                     )
                     if (dateMs > newestMs) newestMs = dateMs
                 }

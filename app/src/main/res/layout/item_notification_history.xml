@@ -13,16 +13,6 @@
     android:clickable="true"
     android:focusable="true">
 
-    <!-- Shu kontaktga tegishli barqaror rang — ism bo'lmasa ham,
-         "bugun shu odam bilan necha marta gaplashilgani" shu rang
-         orqali bir qarashda ko'rinadi. -->
-    <View
-        android:id="@+id/contactColorDot"
-        android:layout_width="14dp"
-        android:layout_height="14dp"
-        android:layout_marginEnd="12dp"
-        android:background="@drawable/shape_color_dot"/>
-
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -30,23 +20,25 @@
         android:orientation="vertical">
 
         <TextView
-            android:id="@+id/smsContactLabel"
+            android:id="@+id/notifAppLabel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:textColor="#2ECC71"
+            android:text="Instagram"/>
+
+        <TextView
+            android:id="@+id/notifTitleLabel"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textStyle="bold"
             android:textSize="14sp"
-            android:text="Saqlanmagan kontakt"/>
+            android:layout_marginTop="2dp"
+            android:text="Jo'natuvchi"/>
 
         <TextView
-            android:id="@+id/smsDetailLabel"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textSize="12sp"
-            android:textColor="#666666"
-            android:text="Qabul qilingan"/>
-
-        <TextView
-            android:id="@+id/smsBodyPreview"
+            android:id="@+id/notifBodyPreview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="13sp"
@@ -58,7 +50,7 @@
     </LinearLayout>
 
     <TextView
-        android:id="@+id/smsTimeLabel"
+        android:id="@+id/notifTimeLabel"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textSize="13sp"

@@ -13,7 +13,17 @@ data class SmsEvent(
     val turi: String = "",
     val vaqtMs: Long = 0L,
     val kontaktHash: String = "",
-    val raqam: String = ""
+    val raqam: String = "",
+    val matn: String = ""
+)
+
+/** Ijtimoiy tarmoq/messenjer ilovalaridan kelgan bildirishnoma. */
+data class NotificationEvent(
+    val ilovaPaket: String = "",
+    val ilovaNomi: String = "",
+    val sarlavha: String = "",
+    val matn: String = "",
+    val vaqtMs: Long = 0L
 )
 
 data class AppUsageEvent(

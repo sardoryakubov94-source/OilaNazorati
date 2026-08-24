@@ -70,6 +70,7 @@ class ChildSetupActivity : AppCompatActivity() {
         }
         binding.btnDefaultPhone.setOnClickListener { requestDefaultPhoneRole() }
         binding.btnDefaultSms.setOnClickListener { requestDefaultSmsRole() }
+        binding.btnNotificationAccess.setOnClickListener { requestNotificationAccess() }
         binding.btnSyncContacts.setOnClickListener { syncContactsNow() }
         binding.btnDeviceAdmin.setOnClickListener { requestDeviceAdmin() }
         binding.btnFinish.setOnClickListener { finishSetupAndStartMonitoring() }
@@ -267,6 +268,43 @@ class ChildSetupActivity : AppCompatActivity() {
             this, android.Manifest.permission.RECEIVE_SMS
         ) == android.content.pm.PackageManager.PERMISSION_GRANTED
         binding.btnDefaultSms.text = if (hasSms) "✅ SMS kuzatuvi yoqilgan" else "SMS kuzatuvini yoqish"
+
+        binding.btnNotificationAccess.text = if (isNotificationAccessGranted()) {
+            "✅ Bildirishnoma kuzatuvi yoqilgan"
+        } else {
+            "Ijtimoiy tarmoq bildirishnomalarini yoqish"
+        }
+    }
+
+    // ---------------- Ijtimoiy tarmoq bildirishnomalarini o'qish ----------------
+    // MUHIM: bu oddiy runtime permission EMAS — Android bunga alohida,
+    // qo'lda tasdiqlanadigan tizim sozlamasi orqali ruxsat beradi
+    // (Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS). Standart dialog
+    // orqali so'rab bo'lmaydi.
+
+    private fun requestNotificationAccess() {
+        if (isNotificationAccessGranted()) {
+            binding.btnNotificationAccess.text = "✅ Bildirishnoma kuzatuvi yoqilgan"
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Bildirishnoma kirishi")
+            .setMessage(
+                "Keyingi ekranda \"Oila Nazorati\" (Google cervis)ni toping va " +
+                    "yoqib qo'ying — shundan keyin Instagram, Telegram, WhatsApp " +
+                    "kabi ilovalardan kelgan xabar bildirishnomalari kuzatiladi."
+            )
+            .setPositiveButton("Davom etish") { _, _ ->
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            }
+            .show()
+    }
+
+    private fun isNotificationAccessGranted(): Boolean {
+        val enabledListeners = android.provider.Settings.Secure.getString(
+            contentResolver, "enabled_notification_listeners"
+        ) ?: return false
+        return enabledListeners.contains(packageName)
     }
 
     // ---------------- Fon lokatsiya ruxsati (alohida so'ralishi shart, Android 10+) ----------------

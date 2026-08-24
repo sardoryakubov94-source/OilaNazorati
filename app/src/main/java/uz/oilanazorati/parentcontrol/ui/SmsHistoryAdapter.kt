@@ -1,5 +1,6 @@
 package uz.oilanazorati.parentcontrol.ui
 
+import android.app.AlertDialog
 import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.View
@@ -14,9 +15,10 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Tanlangan kun uchun HAR BIR SMS'ni alohida qator qilib ko'rsatadi.
- * CallHistoryAdapter bilan bir xil g'oya: rang orqali "shu odam",
- * saqlangan bo'lsa ism bilan, aks holda faqat rang bilan.
+ * Tanlangan kun uchun HAR BIR SMS'ni alohida qator qilib ko'rsatadi —
+ * jo'natuvchi/qabul qiluvchi (ism yoki raqam), vaqti va MATN oldindan
+ * ko'rinishi (bitta qator, uzun bo'lsa "..."). Qatorga bosilganda —
+ * to'liq matn va raqam alohida oynada ko'rsatiladi.
  */
 class SmsHistoryAdapter : RecyclerView.Adapter<SmsHistoryAdapter.VH>() {
 
@@ -40,6 +42,7 @@ class SmsHistoryAdapter : RecyclerView.Adapter<SmsHistoryAdapter.VH>() {
         val contactLabel: TextView = view.findViewById(R.id.smsContactLabel)
         val detailLabel: TextView = view.findViewById(R.id.smsDetailLabel)
         val timeLabel: TextView = view.findViewById(R.id.smsTimeLabel)
+        val bodyPreview: TextView = view.findViewById(R.id.smsBodyPreview)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -66,18 +69,34 @@ class SmsHistoryAdapter : RecyclerView.Adapter<SmsHistoryAdapter.VH>() {
 
         holder.timeLabel.text = timeFmt.format(Date(item.vaqtMs))
 
+        if (item.matn.isNotBlank()) {
+            holder.bodyPreview.visibility = View.VISIBLE
+            holder.bodyPreview.text = item.matn
+        } else {
+            holder.bodyPreview.visibility = View.GONE
+        }
+
         val color = ContactAnonymizer.colorFor(hash)
         (holder.colorDot.background as? GradientDrawable)?.mutate()?.let {
             (it as GradientDrawable).setColor(color)
         }
 
-        // Saqlangan kontakt bo'lsa, ism ko'rinadi-yu, raqam yashirin
-        // qoladi — shu qatorga bosilganda raqamning o'zi ham ko'rsatiladi.
+        // Qatorga bosilganda — to'liq matn va raqam (agar saqlangan
+        // kontakt bo'lsa, ism ustiga qo'shimcha) alohida oynada ko'rinadi.
         holder.root.setOnClickListener {
-            if (item.raqam.isNotBlank()) {
-                val message = if (savedName != null) "$savedName — ${item.raqam}" else item.raqam
-                android.widget.Toast.makeText(holder.root.context, message, android.widget.Toast.LENGTH_LONG).show()
+            val who = if (savedName != null && item.raqam.isNotBlank()) {
+                "$savedName (${item.raqam})"
+            } else if (item.raqam.isNotBlank()) {
+                item.raqam
+            } else {
+                "Noma'lum raqam"
             }
+            val body = item.matn.ifBlank { "(matn mavjud emas)" }
+            AlertDialog.Builder(holder.root.context)
+                .setTitle(who)
+                .setMessage(body)
+                .setPositiveButton("Yopish", null)
+                .show()
         }
     }
 

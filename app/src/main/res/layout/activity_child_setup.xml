@@ -79,6 +79,13 @@
         android:layout_marginBottom="8dp"/>
 
     <Button
+        android:id="@+id/btnNotificationAccess"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Ijtimoiy tarmoq bildirishnomalarini yoqish"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
         android:id="@+id/btnSyncContacts"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
