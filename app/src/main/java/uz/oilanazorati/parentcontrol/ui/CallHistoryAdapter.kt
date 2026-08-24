@@ -41,6 +41,7 @@ class CallHistoryAdapter : RecyclerView.Adapter<CallHistoryAdapter.VH>() {
     }
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
+        val root: View = view.findViewById(R.id.itemRoot)
         val colorDot: View = view.findViewById(R.id.contactColorDot)
         val contactLabel: TextView = view.findViewById(R.id.callContactLabel)
         val detailLabel: TextView = view.findViewById(R.id.callDetailLabel)
@@ -55,10 +56,11 @@ class CallHistoryAdapter : RecyclerView.Adapter<CallHistoryAdapter.VH>() {
     override fun onBindViewHolder(holder: VH, position: Int) {
         val item = items[position]
         val hash = item.kontaktHash.ifBlank { "noma_lum" }
+        val savedName = names[hash]
 
         holder.contactLabel.text = when {
             hash == "noma_lum" -> "Noma'lum raqam"
-            names.containsKey(hash) -> names[hash]
+            savedName != null -> savedName
             item.raqam.isNotBlank() -> item.raqam
             else -> "Saqlanmagan kontakt"
         }
@@ -80,6 +82,15 @@ class CallHistoryAdapter : RecyclerView.Adapter<CallHistoryAdapter.VH>() {
         val color = ContactAnonymizer.colorFor(hash)
         (holder.colorDot.background as? GradientDrawable)?.mutate()?.let {
             (it as GradientDrawable).setColor(color)
+        }
+
+        // Saqlangan kontakt bo'lsa, ism ko'rinadi-yu, raqam yashirin
+        // qoladi — shu qatorga bosilganda raqamning o'zi ham ko'rsatiladi.
+        holder.root.setOnClickListener {
+            if (item.raqam.isNotBlank()) {
+                val message = if (savedName != null) "$savedName — ${item.raqam}" else item.raqam
+                android.widget.Toast.makeText(holder.root.context, message, android.widget.Toast.LENGTH_LONG).show()
+            }
         }
     }
 
