@@ -32,4 +32,17 @@
         android:textColor="#666666"
         android:text="0.0, 0.0"/>
 
+    <TextView
+        android:id="@+id/locDirections"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="🧭 Yo'nalish"
+        android:textColor="#2ECC71"
+        android:textStyle="bold"
+        android:textSize="12sp"
+        android:padding="8dp"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true"/>
+
 </LinearLayout>

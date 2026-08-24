@@ -1,12 +1,17 @@
 package uz.oilanazorati.parentcontrol.ui
 
 import android.app.DatePickerDialog
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -31,11 +36,13 @@ import java.util.Locale
  * Yuqorida — sana filtri (istalgan kunni tanlash mumkin).
  * O'rtada — Google Xarita: shu kun uchun yozilgan barcha nuqtalar
  *   marker sifatida, va ular orasidan chizilgan yo'l (polyline) bilan
- *   ko'rsatiladi.
- * Pastda — o'sha kunlik ro'yxat, har bir qator "soat:daqiqa — koordinata"
- *   ko'rinishida (yozuvlar MonitorForegroundService tomonidan har 30
- *   daqiqada bir marta qo'shiladi). Ro'yxatdan biror qatorga bosilsa,
- *   xarita o'sha nuqtaga kamerani ko'chiradi va markerni ko'rsatadi.
+ *   ko'rsatiladi. Xaritaning o'ng-pastki burchagida standart Google
+ *   Xarita "mening joylashuvim" tugmasi (ko'k nuqta + markazlashtirish)
+ *   ko'rinadi — bu ANIQ SHU (ota-ona) qurilmaning hozirgi joylashuvi,
+ *   bola bilan solishtirib, masofa/yo'nalishni ko'z bilan baholash uchun.
+ * Pastda — o'sha kunlik ro'yxat + har bir qatorda "🧭 Yo'nalish" tugmasi
+ *   — bosilsa, Google Xarita ilovasi ochilib, HOZIRGI joylashuvdan shu
+ *   nuqtagacha to'liq, bosqichma-bosqich yo'nalish (navigatsiya) beradi.
  */
 class LocationHistoryActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -45,12 +52,21 @@ class LocationHistoryActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var emptyStateText: TextView
     private lateinit var locationList: RecyclerView
 
-    private val adapter = LocationHistoryAdapter { event -> focusMapOn(event) }
+    private val adapter = LocationHistoryAdapter(
+        onItemClick = { event -> focusMapOn(event) },
+        onDirectionsClick = { event -> openDirections(event) }
+    )
     private var googleMap: GoogleMap? = null
     private var currentEvents: List<LocationEvent> = emptyList()
     private var markersByTimeMs: MutableMap<Long, com.google.android.gms.maps.model.Marker> = mutableMapOf()
 
     private val selectedCalendar: Calendar = Calendar.getInstance()
+
+    private val locationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) enableMyLocationOnMap()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -80,6 +96,51 @@ class LocationHistoryActivity : AppCompatActivity(), OnMapReadyCallback {
     override fun onMapReady(map: GoogleMap) {
         googleMap = map
         renderMapForCurrentEvents()
+
+        // "Mening joylashuvim" (ko'k nuqta + markazlashtirish tugmasi) —
+        // bu ANIQ SHU (ota-ona) qurilmaning joylashuv ruxsatiga bog'liq,
+        // bolaning joylashuviga hech qanday aloqasi yo'q.
+        val granted = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            enableMyLocationOnMap()
+        } else {
+            locationPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
+    private fun enableMyLocationOnMap() {
+        val granted = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) return
+        googleMap?.isMyLocationEnabled = true
+        googleMap?.uiSettings?.isMyLocationButtonEnabled = true
+    }
+
+    // ---------------- Yo'nalish olish ----------------
+
+    /**
+     * Google Xarita ilovasini "hozirgi joylashuvdan shu nuqtagacha
+     * yo'l ko'rsatish" rejimida ochadi. Agar Google Xarita o'rnatilmagan
+     * bo'lsa, brauzerdagi Google Maps'ga tushadi (standart Android
+     * xatti-harakati).
+     */
+    private fun openDirections(event: LocationEvent) {
+        val uri = Uri.parse("google.navigation:q=${event.lat},${event.lng}")
+        val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+            setPackage("com.google.android.apps.maps")
+        }
+        if (intent.resolveActivity(packageManager) != null) {
+            startActivity(intent)
+        } else {
+            // Google Xarita ilovasi topilmasa — brauzer orqali ochamiz
+            val webUri = Uri.parse(
+                "https://www.google.com/maps/dir/?api=1&destination=${event.lat},${event.lng}"
+            )
+            startActivity(Intent(Intent.ACTION_VIEW, webUri))
+        }
     }
 
     // ---------------- Sana filtri ----------------

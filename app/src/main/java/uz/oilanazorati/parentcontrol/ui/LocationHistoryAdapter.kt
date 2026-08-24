@@ -16,9 +16,13 @@ import java.util.Locale
  * "soat:daqiqa — koordinata" ko'rinishida ro'yxat qilib chiqadi.
  * Qatorga bosilganda [onItemClick] chaqiriladi — shu orqali
  * LocationHistoryActivity xaritani o'sha nuqtaga ko'chiradi.
+ * "🧭 Yo'nalish" tugmasi bosilganda [onDirectionsClick] chaqiriladi —
+ * bu ota-onaning HOZIRGI joylashuvidan shu nuqtagacha to'liq
+ * navigatsiyani Google Xarita ilovasida ochadi.
  */
 class LocationHistoryAdapter(
-    private val onItemClick: (LocationEvent) -> Unit
+    private val onItemClick: (LocationEvent) -> Unit,
+    private val onDirectionsClick: (LocationEvent) -> Unit
 ) : RecyclerView.Adapter<LocationHistoryAdapter.VH>() {
 
     private var items: List<LocationEvent> = emptyList()
@@ -42,6 +46,7 @@ class LocationHistoryAdapter(
         val root: View = view.findViewById(R.id.itemRoot)
         val time: TextView = view.findViewById(R.id.locTime)
         val coords: TextView = view.findViewById(R.id.locCoords)
+        val directionsBtn: TextView = view.findViewById(R.id.locDirections)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -61,6 +66,7 @@ class LocationHistoryAdapter(
             notifyDataSetChanged()
             onItemClick(item)
         }
+        holder.directionsBtn.setOnClickListener { onDirectionsClick(item) }
     }
 
     override fun getItemCount() = items.size
