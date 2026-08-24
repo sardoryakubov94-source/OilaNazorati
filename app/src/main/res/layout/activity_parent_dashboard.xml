@@ -281,14 +281,14 @@
                 android:text="📞 Qo'ng'iroqlar"
                 android:textColor="#E6E9EF"
                 android:textStyle="bold"
-                android:textSize="12sp"
+                android:textSize="11sp"
                 android:layout_marginBottom="8dp"/>
             <TextView
                 android:id="@+id/callsSummary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="#B7C0CC"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:lineSpacingExtra="5dp"/>
         </LinearLayout>
 
@@ -307,14 +307,14 @@
                 android:text="✉️ SMS"
                 android:textColor="#E6E9EF"
                 android:textStyle="bold"
-                android:textSize="12sp"
+                android:textSize="11sp"
                 android:layout_marginBottom="8dp"/>
             <TextView
                 android:id="@+id/smsSummary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="#B7C0CC"
-                android:textSize="11sp"
+                android:textSize="10sp"
                 android:lineSpacingExtra="5dp"/>
         </LinearLayout>
 
