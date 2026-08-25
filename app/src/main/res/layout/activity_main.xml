@@ -96,6 +96,13 @@
             android:text="Ota-ona panelini ochish"
             android:layout_marginBottom="16dp"/>
 
+        <Button
+            android:id="@+id/btnSupport"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="✍️ Yordam (Bizga yozing)"
+            android:layout_marginBottom="16dp"/>
+
     </LinearLayout>
 
     <!-- ========== 3-BOSQICH: faqat Ota-ona paneli uchun Google ==========

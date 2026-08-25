@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_card_green"
+    android:padding="16dp"
+    android:layout_marginBottom="10dp">
+
+    <TextView
+        android:id="@+id/cardTypeLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="UZCARD"
+        android:textColor="#B7F5CE"
+        android:textStyle="bold"
+        android:textSize="13sp"/>
+
+    <TextView
+        android:id="@+id/cardNumberLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="0000 0000 0000 0000"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:textSize="20sp"
+        android:layout_marginTop="6dp"/>
+
+    <TextView
+        android:id="@+id/cardHolderLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="EGASI"
+        android:textColor="#B7F5CE"
+        android:textSize="12sp"
+        android:layout_marginTop="6dp"/>
+
+</LinearLayout>

@@ -11,6 +11,9 @@ import uz.oilanazorati.parentcontrol.model.ContactMapping
 import uz.oilanazorati.parentcontrol.model.LocationEvent
 import uz.oilanazorati.parentcontrol.model.NotificationEvent
 import uz.oilanazorati.parentcontrol.model.SmsEvent
+import uz.oilanazorati.parentcontrol.model.SupportMessage
+import uz.oilanazorati.parentcontrol.model.PremiumRequest
+import uz.oilanazorati.parentcontrol.model.AdminCard
 
 object FirebaseRepo {
 
@@ -232,5 +235,147 @@ object FirebaseRepo {
                 onResult(snap.documents.mapNotNull { it.toObject(NotificationEvent::class.java) })
             }
             .addOnFailureListener { onResult(emptyList()) }
+    }
+
+    // ==================== Premium holati ====================
+
+    /**
+     * Joriy Google hisobi Premium'mi — `parents/{uid}` hujjatidagi
+     * `premium` maydoniga qarab tekshiradi. Standart holatda `false`
+     * (xatolik yoki ma'lumot topilmasa ham xavfsiz tomonga — cheklangan
+     * holatga — qaytadi).
+     */
+    fun checkIsPremium(onResult: (Boolean) -> Unit) {
+        val uid = auth.currentUser?.uid
+        if (uid == null) { onResult(false); return }
+        db.collection("parents").document(uid).get()
+            .addOnSuccessListener { doc -> onResult(doc.getBoolean("premium") == true) }
+            .addOnFailureListener { onResult(false) }
+    }
+
+    // ==================== Support (Bizga yozing) ====================
+
+    fun sendSupportMessage(matn: String, aloqaRaqami: String, onResult: (Boolean) -> Unit) {
+        val user = auth.currentUser ?: return onResult(false)
+        val msg = SupportMessage(
+            fromUid = user.uid,
+            fromEmail = user.email.orEmpty(),
+            matn = matn,
+            aloqaRaqami = aloqaRaqami,
+            createdAtMs = System.currentTimeMillis()
+        )
+        db.collection("support_messages").add(msg)
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
+
+    /** Faqat joriy foydalanuvchining o'z xabarlari (javoblarini kuzatish uchun). */
+    fun listenMySupportMessages(onChange: (List<Pair<String, SupportMessage>>) -> Unit) {
+        val uid = auth.currentUser?.uid ?: return onChange(emptyList())
+        db.collection("support_messages")
+            .whereEqualTo("fromUid", uid)
+            .addSnapshotListener { snap, _ ->
+                val list = snap?.documents?.mapNotNull { doc ->
+                    doc.toObject(SupportMessage::class.java)?.let { doc.id to it }
+                }?.sortedByDescending { it.second.createdAtMs } ?: emptyList()
+                onChange(list)
+            }
+    }
+
+    /** ADMIN uchun: barcha support xabarlarini kuzatish. */
+    fun listenAllSupportMessages(onChange: (List<Pair<String, SupportMessage>>) -> Unit) {
+        db.collection("support_messages")
+            .addSnapshotListener { snap, _ ->
+                val list = snap?.documents?.mapNotNull { doc ->
+                    doc.toObject(SupportMessage::class.java)?.let { doc.id to it }
+                }?.sortedByDescending { it.second.createdAtMs } ?: emptyList()
+                onChange(list)
+            }
+    }
+
+    fun replyToSupportMessage(msgId: String, javob: String, onResult: (Boolean) -> Unit) {
+        db.collection("support_messages").document(msgId)
+            .update(
+                mapOf(
+                    "adminJavobi" to javob,
+                    "holati" to "javob_berildi",
+                    "javobVaqtiMs" to System.currentTimeMillis()
+                )
+            )
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
+
+    // ==================== Premium so'rovlari ====================
+
+    fun sendPremiumRequest(izoh: String, skrinshotBase64: String, onResult: (Boolean) -> Unit) {
+        val user = auth.currentUser ?: return onResult(false)
+        val req = PremiumRequest(
+            fromUid = user.uid,
+            fromEmail = user.email.orEmpty(),
+            tolovIzohi = izoh,
+            tolovSkrinshotiBase64 = skrinshotBase64,
+            createdAtMs = System.currentTimeMillis()
+        )
+        db.collection("premium_requests").add(req)
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
+
+    /** ADMIN uchun: barcha premium so'rovlarini kuzatish. */
+    fun listenAllPremiumRequests(onChange: (List<Pair<String, PremiumRequest>>) -> Unit) {
+        db.collection("premium_requests")
+            .addSnapshotListener { snap, _ ->
+                val list = snap?.documents?.mapNotNull { doc ->
+                    doc.toObject(PremiumRequest::class.java)?.let { doc.id to it }
+                }?.sortedByDescending { it.second.createdAtMs } ?: emptyList()
+                onChange(list)
+            }
+    }
+
+    /** ADMIN: so'rovni tasdiqlaydi VA shu foydalanuvchiga premium beradi. */
+    fun approvePremiumRequest(reqId: String, fromUid: String, onResult: (Boolean) -> Unit) {
+        val batch = db.batch()
+        batch.update(
+            db.collection("premium_requests").document(reqId),
+            mapOf("holati" to "tolandi", "halQilinganMs" to System.currentTimeMillis())
+        )
+        batch.set(
+            db.collection("parents").document(fromUid),
+            mapOf("premium" to true),
+            SetOptions.merge()
+        )
+        batch.commit()
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
+
+    fun rejectPremiumRequest(reqId: String, onResult: (Boolean) -> Unit) {
+        db.collection("premium_requests").document(reqId)
+            .update(mapOf("holati" to "rad_etildi", "halQilinganMs" to System.currentTimeMillis()))
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
+
+    // ==================== Admin to'lov kartalari ====================
+
+    fun listenAdminCards(onChange: (List<AdminCard>) -> Unit) {
+        db.collection("admin_cards")
+            .addSnapshotListener { snap, _ ->
+                val list = snap?.documents?.mapNotNull { doc ->
+                    doc.toObject(AdminCard::class.java)?.copy(id = doc.id)
+                } ?: emptyList()
+                onChange(list)
+            }
+    }
+
+    fun addAdminCard(turi: String, raqam: String, egasi: String, onResult: (Boolean) -> Unit) {
+        db.collection("admin_cards").add(AdminCard(turi = turi, raqam = raqam, egasi = egasi))
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
+
+    fun deleteAdminCard(cardId: String) {
+        db.collection("admin_cards").document(cardId).delete()
     }
 }

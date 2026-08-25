@@ -23,11 +23,16 @@ import java.util.Locale
  *    lekin kim ekani (raqami) hech qachon ko'rsatilmaydi
  *  - agar kontakt qurilmada ism bilan saqlangan bo'lsa — o'sha ism
  *  - vaqti, yo'nalishi (kiruvchi/chiquvchi/javobsiz), davomiyligi
+ *
+ * PREMIUM CHEKLOVI: saqlanmagan raqamning o'zini ko'rish (ro'yxatda
+ * ham, qatorga bosilganda ham) FAQAT Premium foydalanuvchilar uchun —
+ * [setPremium] orqali holat beriladi.
  */
 class CallHistoryAdapter : RecyclerView.Adapter<CallHistoryAdapter.VH>() {
 
     private var items: List<CallEvent> = emptyList()
     private var names: Map<String, String> = emptyMap()
+    private var isPremium: Boolean = false
     private val timeFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     fun setData(newItems: List<CallEvent>) {
@@ -37,6 +42,11 @@ class CallHistoryAdapter : RecyclerView.Adapter<CallHistoryAdapter.VH>() {
 
     fun setNames(newNames: Map<String, String>) {
         names = newNames
+        notifyDataSetChanged()
+    }
+
+    fun setPremium(premium: Boolean) {
+        isPremium = premium
         notifyDataSetChanged()
     }
 
@@ -57,11 +67,12 @@ class CallHistoryAdapter : RecyclerView.Adapter<CallHistoryAdapter.VH>() {
         val item = items[position]
         val hash = item.kontaktHash.ifBlank { "noma_lum" }
         val savedName = names[hash]
+        val canSeeNumber = isPremium && item.raqam.isNotBlank()
 
         holder.contactLabel.text = when {
             hash == "noma_lum" -> "Noma'lum raqam"
             savedName != null -> savedName
-            item.raqam.isNotBlank() -> item.raqam
+            canSeeNumber -> item.raqam
             else -> "Saqlanmagan kontakt"
         }
 
@@ -86,11 +97,19 @@ class CallHistoryAdapter : RecyclerView.Adapter<CallHistoryAdapter.VH>() {
 
         // Saqlangan kontakt bo'lsa, ism ko'rinadi-yu, raqam yashirin
         // qoladi — shu qatorga bosilganda raqamning o'zi ham ko'rsatiladi.
+        // Saqlanmagan raqam esa FAQAT Premium bo'lsa ko'rsatiladi.
         holder.root.setOnClickListener {
-            if (item.raqam.isNotBlank()) {
-                val message = if (savedName != null) "$savedName — ${item.raqam}" else item.raqam
-                android.widget.Toast.makeText(holder.root.context, message, android.widget.Toast.LENGTH_LONG).show()
+            if (item.raqam.isBlank()) return@setOnClickListener
+            if (!isPremium) {
+                android.widget.Toast.makeText(
+                    holder.root.context,
+                    "Raqamni ko'rish faqat Premium foydalanuvchilar uchun",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+                return@setOnClickListener
             }
+            val message = if (savedName != null) "$savedName — ${item.raqam}" else item.raqam
+            android.widget.Toast.makeText(holder.root.context, message, android.widget.Toast.LENGTH_LONG).show()
         }
     }
 

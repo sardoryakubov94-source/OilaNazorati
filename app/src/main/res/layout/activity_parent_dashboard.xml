@@ -10,6 +10,36 @@
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- ========== Premium / Admin qatori ========== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/btnPremium"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:text="⭐ Premium"
+            android:textSize="12sp"
+            android:textColor="#0D1117"
+            android:background="@drawable/bg_button_primary"/>
+
+        <Button
+            android:id="@+id/btnAdminPanel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:text="🛠️ Admin panel"
+            android:textSize="12sp"
+            android:visibility="gone"/>
+
+    </LinearLayout>
+
     <!-- ========== Oila kodi qatori ========== -->
     <LinearLayout
         android:layout_width="match_parent"

@@ -38,6 +38,9 @@ import uz.oilanazorati.parentcontrol.util.AppPasswordUtil
  */
 class MainActivity : AppCompatActivity() {
 
+    private enum class PendingDestination { PARENT_DASHBOARD, SUPPORT }
+    private var pendingDestination = PendingDestination.PARENT_DASHBOARD
+
     private lateinit var binding: ActivityMainBinding
     private lateinit var googleSignInClient: GoogleSignInClient
 
@@ -80,6 +83,15 @@ class MainActivity : AppCompatActivity() {
             if (FirebaseAuth.getInstance().currentUser?.isAnonymous == false) {
                 startActivity(Intent(this, ParentDashboardActivity::class.java))
             } else {
+                pendingDestination = PendingDestination.PARENT_DASHBOARD
+                showGoogleLoginSection()
+            }
+        }
+        binding.btnSupport.setOnClickListener {
+            if (FirebaseAuth.getInstance().currentUser?.isAnonymous == false) {
+                startActivity(Intent(this, SupportActivity::class.java))
+            } else {
+                pendingDestination = PendingDestination.SUPPORT
                 showGoogleLoginSection()
             }
         }
@@ -159,7 +171,11 @@ class MainActivity : AppCompatActivity() {
             .addOnSuccessListener { result ->
                 val user = result.user ?: return@addOnSuccessListener
                 saveParentProfile(user.uid, user.displayName.orEmpty(), user.email.orEmpty())
-                startActivity(Intent(this, ParentDashboardActivity::class.java))
+                val destination = when (pendingDestination) {
+                    PendingDestination.SUPPORT -> SupportActivity::class.java
+                    PendingDestination.PARENT_DASHBOARD -> ParentDashboardActivity::class.java
+                }
+                startActivity(Intent(this, destination))
             }
             .addOnFailureListener {
                 binding.loginStatusText.text = "Kirishda xato yuz berdi, qayta urinib ko'ring"

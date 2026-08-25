@@ -78,6 +78,17 @@
             android:name=".ui.NotificationHistoryActivity"
             android:exported="false" />
 
+        <!-- Support (Bizga yozing), Premium sorov va Admin panel -->
+        <activity
+            android:name=".ui.SupportActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.PremiumActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.AdminPanelActivity"
+            android:exported="false" />
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="@string/google_maps_key" />

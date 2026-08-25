@@ -17,6 +17,10 @@ import java.util.Locale
 /**
  * Tanlangan kun uchun BARCHA ijtimoiy tarmoq/messenjer bildirishnomalarini
  * ro'yxat qilib ko'rsatadi (Instagram, Telegram, WhatsApp va h.k.).
+ *
+ * PREMIUM CHEKLOVI: bu ekranning o'zi FAQAT Premium foydalanuvchilar
+ * uchun ochiladi — Premium bo'lmasa, ro'yxat/sana filtri o'rniga
+ * upsell xabari ko'rsatiladi, ma'lumot umuman so'ralmaydi.
  */
 class NotificationHistoryActivity : AppCompatActivity() {
 
@@ -44,8 +48,26 @@ class NotificationHistoryActivity : AppCompatActivity() {
 
         btnPickDate.setOnClickListener { showDatePicker() }
 
-        updateDateLabel()
-        loadDataForSelectedDay()
+        FirebaseRepo.checkIsPremium { isPremium ->
+            if (isPremium) {
+                updateDateLabel()
+                loadDataForSelectedDay()
+            } else {
+                showPremiumUpsell()
+            }
+        }
+    }
+
+    private fun showPremiumUpsell() {
+        btnPickDate.isEnabled = false
+        selectedDateText.text = ""
+        historyList.visibility = View.GONE
+        emptyStateText.visibility = View.VISIBLE
+        listTitle.text = "🔒 Premium funksiya"
+        emptyStateText.text =
+            "Ijtimoiy tarmoq bildirishnomalarini kuzatish faqat Premium " +
+                "foydalanuvchilar uchun mavjud. Premium olish uchun Ota-ona " +
+                "panelidagi \"⭐ Premium\" tugmasini bosing."
     }
 
     private fun showDatePicker() {

@@ -57,6 +57,11 @@ class TrendsActivity : AppCompatActivity() {
         binding = ActivityTrendsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        FirebaseRepo.checkIsPremium { isPremium ->
+            topContactsAdapter.setPremium(isPremium)
+            topSmsContactsAdapter.setPremium(isPremium)
+        }
+
         if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) {
             binding.trendsStatus.text = "Avval bosh sahifada oila kodini yuklang"
             return

@@ -76,6 +76,7 @@ class ContactSummaryAdapter : RecyclerView.Adapter<ContactSummaryAdapter.VH>() {
 
     private var stats: List<ContactStat> = emptyList()
     private var names: Map<String, String> = emptyMap() // kontaktHash -> nomi (faqat saqlanganlar uchun)
+    private var isPremium: Boolean = false
 
     fun setStats(newStats: List<ContactStat>) {
         stats = newStats
@@ -85,6 +86,12 @@ class ContactSummaryAdapter : RecyclerView.Adapter<ContactSummaryAdapter.VH>() {
     /** Agar kontakt qurilmada ism bilan saqlangan bo'lsa, ro'yxatda o'sha ism ham ko'rsatiladi. */
     fun setNames(newNames: Map<String, String>) {
         names = newNames
+        notifyDataSetChanged()
+    }
+
+    /** Saqlanmagan raqamning o'zini ko'rsatish FAQAT Premium bo'lsa. */
+    fun setPremium(premium: Boolean) {
+        isPremium = premium
         notifyDataSetChanged()
     }
 
@@ -103,7 +110,7 @@ class ContactSummaryAdapter : RecyclerView.Adapter<ContactSummaryAdapter.VH>() {
         val label = when {
             s.kontaktHash == "noma_lum" -> "🔒 Noma'lum raqam"
             names.containsKey(s.kontaktHash) -> "👤 ${names[s.kontaktHash]}"
-            s.raqam.isNotBlank() -> "👤 ${s.raqam}"
+            isPremium && s.raqam.isNotBlank() -> "👤 ${s.raqam}"
             else -> "👤 Saqlanmagan kontakt"
         }
         holder.label.text = "$label — ${s.qongiroqSoni} marta, ${s.jamiDaqiqa} daq"
@@ -126,6 +133,7 @@ class SmsContactSummaryAdapter : RecyclerView.Adapter<SmsContactSummaryAdapter.V
 
     private var stats: List<SmsContactStat> = emptyList()
     private var names: Map<String, String> = emptyMap() // kontaktHash -> nomi (faqat saqlanganlar uchun)
+    private var isPremium: Boolean = false
 
     fun setStats(newStats: List<SmsContactStat>) {
         stats = newStats
@@ -134,6 +142,11 @@ class SmsContactSummaryAdapter : RecyclerView.Adapter<SmsContactSummaryAdapter.V
 
     fun setNames(newNames: Map<String, String>) {
         names = newNames
+        notifyDataSetChanged()
+    }
+
+    fun setPremium(premium: Boolean) {
+        isPremium = premium
         notifyDataSetChanged()
     }
 
@@ -152,7 +165,7 @@ class SmsContactSummaryAdapter : RecyclerView.Adapter<SmsContactSummaryAdapter.V
         val label = when {
             s.kontaktHash == "noma_lum" -> "🔒 Noma'lum raqam"
             names.containsKey(s.kontaktHash) -> "👤 ${names[s.kontaktHash]}"
-            s.raqam.isNotBlank() -> "👤 ${s.raqam}"
+            isPremium && s.raqam.isNotBlank() -> "👤 ${s.raqam}"
             else -> "👤 Saqlanmagan kontakt"
         }
         holder.label.text = "$label — ${s.jamiSoni} ta SMS (${s.yuborilganSoni} yuborilgan, ${s.qabulQilinganSoni} qabul qilingan)"

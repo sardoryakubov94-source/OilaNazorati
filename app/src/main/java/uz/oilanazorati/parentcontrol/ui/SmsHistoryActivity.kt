@@ -48,6 +48,7 @@ class SmsHistoryActivity : AppCompatActivity() {
         FirebaseRepo.listenSavedContacts { contacts ->
             adapter.setNames(contacts.associate { it.kontaktHash to it.nomi })
         }
+        FirebaseRepo.checkIsPremium { isPremium -> adapter.setPremium(isPremium) }
 
         updateDateLabel()
         loadDataForSelectedDay()

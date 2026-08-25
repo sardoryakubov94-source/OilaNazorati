@@ -19,11 +19,17 @@ import java.util.Locale
  * jo'natuvchi/qabul qiluvchi (ism yoki raqam), vaqti va MATN oldindan
  * ko'rinishi (bitta qator, uzun bo'lsa "..."). Qatorga bosilganda —
  * to'liq matn va raqam alohida oynada ko'rsatiladi.
+ *
+ * PREMIUM CHEKLOVI: (1) saqlanmagan raqamning o'zi va (2) SMS matnining
+ * o'zi — ikkalasi ham FAQAT Premium foydalanuvchilar uchun ko'rinadi.
+ * Premium bo'lmasa faqat "turi" (yuborilgan/qabul qilingan) va vaqti
+ * ko'rinadi, matn joyida upsell xabari chiqadi.
  */
 class SmsHistoryAdapter : RecyclerView.Adapter<SmsHistoryAdapter.VH>() {
 
     private var items: List<SmsEvent> = emptyList()
     private var names: Map<String, String> = emptyMap()
+    private var isPremium: Boolean = false
     private val timeFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     fun setData(newItems: List<SmsEvent>) {
@@ -33,6 +39,11 @@ class SmsHistoryAdapter : RecyclerView.Adapter<SmsHistoryAdapter.VH>() {
 
     fun setNames(newNames: Map<String, String>) {
         names = newNames
+        notifyDataSetChanged()
+    }
+
+    fun setPremium(premium: Boolean) {
+        isPremium = premium
         notifyDataSetChanged()
     }
 
@@ -54,11 +65,12 @@ class SmsHistoryAdapter : RecyclerView.Adapter<SmsHistoryAdapter.VH>() {
         val item = items[position]
         val hash = item.kontaktHash.ifBlank { "noma_lum" }
         val savedName = names[hash]
+        val canSeeNumber = isPremium && item.raqam.isNotBlank()
 
         holder.contactLabel.text = when {
             hash == "noma_lum" -> "Noma'lum raqam"
             savedName != null -> savedName
-            item.raqam.isNotBlank() -> item.raqam
+            canSeeNumber -> item.raqam
             else -> "Saqlanmagan kontakt"
         }
 
@@ -69,11 +81,16 @@ class SmsHistoryAdapter : RecyclerView.Adapter<SmsHistoryAdapter.VH>() {
 
         holder.timeLabel.text = timeFmt.format(Date(item.vaqtMs))
 
-        if (item.matn.isNotBlank()) {
-            holder.bodyPreview.visibility = View.VISIBLE
-            holder.bodyPreview.text = item.matn
-        } else {
-            holder.bodyPreview.visibility = View.GONE
+        when {
+            !isPremium -> {
+                holder.bodyPreview.visibility = View.VISIBLE
+                holder.bodyPreview.text = "🔒 Matnni o'qish faqat Premium uchun"
+            }
+            item.matn.isNotBlank() -> {
+                holder.bodyPreview.visibility = View.VISIBLE
+                holder.bodyPreview.text = item.matn
+            }
+            else -> holder.bodyPreview.visibility = View.GONE
         }
 
         val color = ContactAnonymizer.colorFor(hash)
@@ -83,7 +100,19 @@ class SmsHistoryAdapter : RecyclerView.Adapter<SmsHistoryAdapter.VH>() {
 
         // Qatorga bosilganda — to'liq matn va raqam (agar saqlangan
         // kontakt bo'lsa, ism ustiga qo'shimcha) alohida oynada ko'rinadi.
+        // Premium bo'lmasa — faqat upsell xabari chiqadi.
         holder.root.setOnClickListener {
+            if (!isPremium) {
+                AlertDialog.Builder(holder.root.context)
+                    .setTitle("Premium funksiya")
+                    .setMessage(
+                        "SMS matnini va saqlanmagan raqamlarni to'liq ko'rish " +
+                            "faqat Premium foydalanuvchilar uchun mavjud."
+                    )
+                    .setPositiveButton("Tushunarli", null)
+                    .show()
+                return@setOnClickListener
+            }
             val who = if (savedName != null && item.raqam.isNotBlank()) {
                 "$savedName (${item.raqam})"
             } else if (item.raqam.isNotBlank()) {

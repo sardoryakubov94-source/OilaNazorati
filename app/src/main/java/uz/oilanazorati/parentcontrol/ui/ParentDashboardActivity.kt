@@ -34,6 +34,17 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding.contactSummaryList.layoutManager = LinearLayoutManager(this)
         binding.contactSummaryList.adapter = contactSummaryAdapter
 
+        binding.btnPremium.setOnClickListener {
+            startActivity(Intent(this, PremiumActivity::class.java))
+        }
+        if (uz.oilanazorati.parentcontrol.util.AdminConfig.isCurrentUserAdmin()) {
+            binding.btnAdminPanel.visibility = android.view.View.VISIBLE
+            binding.btnAdminPanel.setOnClickListener {
+                startActivity(Intent(this, AdminPanelActivity::class.java))
+            }
+        }
+        FirebaseRepo.checkIsPremium { isPremium -> contactSummaryAdapter.setPremium(isPremium) }
+
         val savedCode = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
             .getString("family_code", null)
         if (savedCode != null) {

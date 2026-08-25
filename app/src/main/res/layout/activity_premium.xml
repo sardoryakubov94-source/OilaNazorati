@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#0D1117">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="⭐ Premium"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Izoh -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card_green"
+        android:padding="16dp"
+        android:layout_marginBottom="20dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Premium quyidagi qo'shimcha imkoniyatlarni ochadi:"
+            android:textColor="#B7F5CE"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:layout_marginBottom="10dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="1. Kiruvchi va chiquvchi qo'ng'iroqlar hamda SMS xabarlarning telefon raqamlari — kontaktdan tashqari (saqlanmagan raqamlar) ham qo'shimcha ko'rinib turadi."
+            android:textColor="#DCE9E0"
+            android:textSize="13sp"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="2. SMS xabarlarning barchasini to'liq o'qish imkoniyati."
+            android:textColor="#DCE9E0"
+            android:textSize="13sp"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="3. Ijtimoiy tarmoqlardan kelgan xabarlarni bildirishnomani o'qish orqali kuzatib borish imkoniyati."
+            android:textColor="#DCE9E0"
+            android:textSize="13sp"/>
+
+    </LinearLayout>
+
+    <!-- Premium holati -->
+    <TextView
+        android:id="@+id/premiumStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#8B96A5"
+        android:textSize="13sp"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- Kartalar -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TO'LOV KARTALARI"
+        android:textColor="#8B96A5"
+        android:textSize="12sp"
+        android:layout_marginBottom="8dp"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/cardsList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="20dp"/>
+
+    <Button
+        android:id="@+id/btnAttachScreenshot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📎 To'lov skrinshotini biriktirish"
+        android:layout_marginBottom="8dp"/>
+
+    <TextView
+        android:id="@+id/screenshotStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Hali skrinshot biriktirilmagan"
+        android:textColor="#8B96A5"
+        android:textSize="12sp"
+        android:layout_marginBottom="16dp"/>
+
+    <Button
+        android:id="@+id/btnSendPremiumRequest"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="To'lov qildim — so'rov yuborish"
+        android:textColor="#0D1117"
+        android:background="@drawable/bg_button_primary"/>
+
+</LinearLayout>
+</ScrollView>
