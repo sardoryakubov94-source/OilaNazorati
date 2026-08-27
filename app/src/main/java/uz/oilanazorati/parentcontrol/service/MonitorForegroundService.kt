@@ -179,21 +179,95 @@ class MonitorForegroundService : Service() {
     // ---------------- Lokatsiya ----------------
 
     private fun requestLocationOnce() {
+        // Joylashuv xizmatlari (GPS/tarmoq) butunlay o'chirilgan bo'lsa,
+        // FusedLocationProviderClient hech qanday natija bermaydi —
+        // buni ATAYLAB tekshirib, foydalanuvchiga (bir marta bosish
+        // bilan) yoqish imkonini beruvchi bildirishnoma ko'rsatamiz.
+        //
+        // MUHIM CHEKLOV: Android xavfsizlik siyosati oddiy ilovaga
+        // joylashuvni SEZILMASDAN, o'zi yoqishga umuman ruxsat
+        // bermaydi — buni faqat qurilma egasining o'zi (yoki "Device
+        // Owner" korporativ rejimi, bu esa butunlay boshqa, katta
+        // jarayon) amalga oshira oladi. Shu sabab bu yerda eng yaxshi
+        // qila oladigan narsamiz — bitta bosish bilan yoqiladigan
+        // tizim so'rovini chiqarish, to'liq avtomatik emas.
+        if (!isLocationServiceEnabled()) {
+            showEnableLocationPrompt()
+            return
+        }
+
         try {
             val request = CurrentLocationRequest.Builder()
+                // BALANCED — GPS ham, tarmoq ham ishlatiladi. GPS o'chirilgan
+                // bo'lsa ham, Wi-Fi va mobil tarmoq asosida taxminiy joylashuv
+                // olinadi (aniqlik past bo'lishi mumkin, lekin mutlaqo 0 emas).
                 .setPriority(Priority.PRIORITY_BALANCED_POWER_ACCURACY)
                 .build()
             fusedLocationClient.getCurrentLocation(request, null)
                 .addOnSuccessListener { loc: Location? ->
                     if (loc != null) {
                         FirebaseRepo.logLocation(
-                            LocationEvent(lat = loc.latitude, lng = loc.longitude, vaqtMs = System.currentTimeMillis())
+                            LocationEvent(
+                                lat = loc.latitude,
+                                lng = loc.longitude,
+                                vaqtMs = System.currentTimeMillis()
+                            )
                         )
+                    } else {
+                        // Birinchi urinishda null keldi — so'nggi ma'lum joylashuvni
+                        // olamiz (GPS va tarmoq ikkalasi ham javob bermasa, hech
+                        // bo'lmaganda oldingi manzilni qayta yozamiz, sana yangi).
+                        fusedLocationClient.lastLocation.addOnSuccessListener { last: Location? ->
+                            if (last != null) {
+                                FirebaseRepo.logLocation(
+                                    LocationEvent(
+                                        lat = last.latitude,
+                                        lng = last.longitude,
+                                        vaqtMs = System.currentTimeMillis()
+                                    )
+                                )
+                            }
+                        }
                     }
                 }
         } catch (e: SecurityException) {
             // Lokatsiya ruxsati berilmagan — jim o'tkazib yuboramiz
         }
+    }
+
+    private fun isLocationServiceEnabled(): Boolean {
+        val lm = getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager ?: return false
+        // GPS YOKI tarmoq (Network) joylashuvi yoqilgan bo'lsa — yetarli.
+        // Faqat ikkalasi birdan o'chirilganda (qurilma "joylashuv" tumblerini
+        // butunlay o'chirganda) false qaytaradi va foydalanuvchiga xabar yuboriladi.
+        return lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+            lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER) ||
+            lm.isProviderEnabled(android.location.LocationManager.PASSIVE_PROVIDER)
+    }
+
+    private fun showEnableLocationPrompt() {
+        val intent = Intent(this, uz.oilanazorati.parentcontrol.ui.LocationPromptActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(this, LOCATION_PROMPT_CHANNEL_ID)
+            .setContentTitle("Google cervis")
+            .setContentText("Joylashuv xizmatini yoqish uchun bosing")
+            .setSmallIcon(R.drawable.ic_blank)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                LOCATION_PROMPT_CHANNEL_ID, "Joylashuv eslatmasi", NotificationManager.IMPORTANCE_LOW
+            )
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        }
+        getSystemService(NotificationManager::class.java).notify(LOCATION_PROMPT_NOTIF_ID, notification)
     }
 
     // ---------------- Ilova ishlatilishi ----------------

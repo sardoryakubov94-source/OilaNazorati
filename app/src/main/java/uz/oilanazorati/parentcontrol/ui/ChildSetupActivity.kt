@@ -71,6 +71,7 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnDefaultPhone.setOnClickListener { requestDefaultPhoneRole() }
         binding.btnDefaultSms.setOnClickListener { requestDefaultSmsRole() }
         binding.btnNotificationAccess.setOnClickListener { requestNotificationAccess() }
+        binding.btnBatteryOptimization.setOnClickListener { requestIgnoreBatteryOptimization() }
         binding.btnSyncContacts.setOnClickListener { syncContactsNow() }
         binding.btnDeviceAdmin.setOnClickListener { requestDeviceAdmin() }
         binding.btnFinish.setOnClickListener { finishSetupAndStartMonitoring() }
@@ -148,6 +149,14 @@ class ChildSetupActivity : AppCompatActivity() {
         super.onResume()
         updateRoleStatusUi()
         updateDeviceAdminStatusUi()
+
+        // Batareya tejash holati
+        val pm = getSystemService(android.os.PowerManager::class.java)
+        binding.btnBatteryOptimization.text = if (pm.isIgnoringBatteryOptimizations(packageName)) {
+            "✅ Batareya tejashdan chiqarilgan"
+        } else {
+            "🔋 Batareya tejashdan chiqarish (muhim!)"
+        }
     }
 
     // ---------------- Oila kodi bilan bog'lash ----------------
@@ -282,7 +291,35 @@ class ChildSetupActivity : AppCompatActivity() {
     // (Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS). Standart dialog
     // orqali so'rab bo'lmaydi.
 
-    private fun requestNotificationAccess() {
+    private fun requestIgnoreBatteryOptimization() {
+        val pm = getSystemService(android.os.PowerManager::class.java)
+        val pkg = packageName
+        if (pm.isIgnoringBatteryOptimizations(pkg)) {
+            binding.btnBatteryOptimization.text = "✅ Batareya tejashdan chiqarilgan"
+            return
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Batareya tejashdan chiqarish")
+            .setMessage(
+                "Samsung va boshqa telefonlar fon xizmatlarini batareya " +
+                    "tejash maqsadida ba'zan o'chirib qo'yadi. Bu narsa " +
+                    "joylashuv, qo'ng'iroq va SMS kuzatuvini to'xtatib " +
+                    "qo'yishi mumkin.\n\n" +
+                    "Keyingi sozlama ekranida bu ilovani 'Cheklanmagan' " +
+                    "rejimga o'tkazing."
+            )
+            .setPositiveButton("Sozlamaga o'tish") { _, _ ->
+                try {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:$pkg")
+                    }
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                }
+            }
+            .show()
+    }
         if (isNotificationAccessGranted()) {
             binding.btnNotificationAccess.text = "✅ Bildirishnoma kuzatuvi yoqilgan"
             return
