@@ -17,7 +17,23 @@ import uz.oilanazorati.parentcontrol.model.AdminCard
 
 object FirebaseRepo {
 
-    private val db: FirebaseFirestore by lazy { FirebaseFirestore.getInstance() }
+    private val db: FirebaseFirestore by lazy {
+        FirebaseFirestore.getInstance().also { firestore ->
+            // Offline navbat (persistence) yoqish — internet yo'q bo'lsa
+            // ma'lumotlar qurilmada saqlanib, internet kelganda avtomatik
+            // asl vaqt tamg'asi bilan serverga yuboriladi. Bu bir marta
+            // chaqiriladi (ilova jarayoni boshida) va qayta-qayta
+            // chaqirilsa SDK ogohlantirish beradi.
+            try {
+                firestore.firestoreSettings = com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
+                    .setPersistenceEnabled(true)
+                    .setCacheSizeBytes(com.google.firebase.firestore.FirebaseFirestoreSettings.CACHE_SIZE_UNLIMITED)
+                    .build()
+            } catch (_: Exception) {
+                // Agar allaqachon yoqilgan bo'lsa — jim o'tkazib yuboramiz
+            }
+        }
+    }
     private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
 
     var familyCode: String? = null
