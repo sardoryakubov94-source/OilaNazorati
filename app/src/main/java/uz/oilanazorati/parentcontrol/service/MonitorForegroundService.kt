@@ -198,10 +198,14 @@ class MonitorForegroundService : Service() {
 
         try {
             val request = CurrentLocationRequest.Builder()
-                // BALANCED — GPS ham, tarmoq ham ishlatiladi. GPS o'chirilgan
-                // bo'lsa ham, Wi-Fi va mobil tarmoq asosida taxminiy joylashuv
-                // olinadi (aniqlik past bo'lishi mumkin, lekin mutlaqo 0 emas).
-                .setPriority(Priority.PRIORITY_BALANCED_POWER_ACCURACY)
+                // HIGH_ACCURACY — GPS sputniklaridan to'g'ridan-to'g'ri signal
+                // oladi, tarmoq va Wi-Fi faqat yordamchi sifatida ishlatiladi.
+                // Aniqlik: odatda 3-10 metr (ochiq osmon ostida).
+                // Batareya: BALANCED dan ~2-3x ko'proq yeydi, lekin faqat
+                // har 30 daqiqada bir marta qisqa muddatli so'rov bo'lgani
+                // uchun umumiy ta'sir amalda unchalik katta emas.
+                .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+                .setMaxUpdateAgeMillis(0) // Doim yangi o'lchov olish, kesh emas
                 .build()
             fusedLocationClient.getCurrentLocation(request, null)
                 .addOnSuccessListener { loc: Location? ->
