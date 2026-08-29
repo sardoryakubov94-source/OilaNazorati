@@ -1,6 +1,7 @@
 package uz.oilanazorati.parentcontrol.ui
 
 import android.graphics.Color
+import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -56,6 +57,11 @@ class TrendsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityTrendsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        bindBottomNav(NavTab.APPS) {
+            startActivity(Intent(this, ParentDashboardActivity::class.java).putExtra("open_settings", true))
+            finish()
+        }
 
         FirebaseRepo.checkIsPremium { isPremium ->
             topContactsAdapter.setPremium(isPremium)

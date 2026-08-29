@@ -91,6 +91,11 @@ class LocationHistoryActivity : AppCompatActivity(), OnMapReadyCallback {
 
         updateDateLabel()
         loadDataForSelectedDay()
+
+        bindBottomNav(NavTab.LOCATION) {
+            startActivity(Intent(this, ParentDashboardActivity::class.java).putExtra("open_settings", true))
+            finish()
+        }
     }
 
     override fun onMapReady(map: GoogleMap) {

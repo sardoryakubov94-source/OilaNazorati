@@ -70,6 +70,10 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
             binding.headerFamilyCode.text = savedCode
             loadFamily(savedCode)
         }
+
+        if (intent.getBooleanExtra("open_settings", false)) {
+            showSettingsSheet()
+        }
     }
 
     private fun setupLists() {
@@ -113,11 +117,7 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun setupBottomNav() {
-        binding.navHome.setOnClickListener { /* Allaqachon shu ekranda */ }
-        binding.navCalls.setOnClickListener { openIfChildSelected { CallHistoryActivity::class.java } }
-        binding.navLocation.setOnClickListener { openIfChildSelected { LocationHistoryActivity::class.java } }
-        binding.navApps.setOnClickListener { openIfChildSelected { TrendsActivity::class.java } }
-        binding.navSettings.setOnClickListener { showSettingsSheet() }
+        bindBottomNav(NavTab.HOME) { showSettingsSheet() }
     }
 
     private fun setupSectionButtons() {
@@ -126,6 +126,14 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
         binding.btnSmsHistory.setOnClickListener { openIfChildSelected { SmsHistoryActivity::class.java } }
         binding.btnSavedContacts.setOnClickListener { startActivity(Intent(this, SavedContactsActivity::class.java)) }
         binding.btnTrends.setOnClickListener { startActivity(Intent(this, TrendsActivity::class.java)) }
+
+        // "Bugungi nazorat" statistik kartalari ham bosilganda tegishli
+        // to'liq ekranga o'tkazadi — endi faqat ko'rsatib turadigan
+        // dekorativ katakcha emas.
+        binding.cardStatCalls.setOnClickListener { openIfChildSelected { CallHistoryActivity::class.java } }
+        binding.cardStatSms.setOnClickListener { openIfChildSelected { SmsHistoryActivity::class.java } }
+        binding.cardStatContacts.setOnClickListener { startActivity(Intent(this, SavedContactsActivity::class.java)) }
+        binding.cardStatApps.setOnClickListener { startActivity(Intent(this, TrendsActivity::class.java)) }
     }
 
     private fun openIfChildSelected(activityClass: () -> Class<*>) {

@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Barcha asosiy ekranlarda (Bosh sahifa, Aloqa, Joylashuv, Ilovalar) bir xil
+    ko'rinadigan pastki navigatsiya paneli. Har bir ekran shu faylni
+    <include> qiladi va uz.oilanazorati.parentcontrol.ui.BottomNavKt#bindBottomNav
+    orqali joriy tabni belgilab, boshqa tablarga o'tishni ulaydi — shu sababli
+    ichki ekranlarga kirilganda ham panel yo'qolib qolmaydi.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="64dp"
+    android:orientation="horizontal"
+    android:background="#161B22"
+    android:elevation="8dp">
+
+    <LinearLayout
+        android:id="@+id/navHome"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="🏠" android:textSize="20sp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Bosh sahifa" android:textColor="#8B96A5" android:textSize="9sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navCalls"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="📞" android:textSize="20sp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Aloqa" android:textColor="#8B96A5" android:textSize="9sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navLocation"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="📍" android:textSize="20sp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Joylashuv" android:textColor="#8B96A5" android:textSize="9sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navApps"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="🔲" android:textSize="20sp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Ilovalar" android:textColor="#8B96A5" android:textSize="9sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navSettings"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="⚙️" android:textSize="20sp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Sozlama" android:textColor="#8B96A5" android:textSize="9sp"/>
+    </LinearLayout>
+
+</LinearLayout>

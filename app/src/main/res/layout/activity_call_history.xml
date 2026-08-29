@@ -61,4 +61,6 @@
         android:layout_weight="1"
         android:paddingBottom="16dp"/>
 
+    <include layout="@layout/layout_bottom_nav"/>
+
 </LinearLayout>

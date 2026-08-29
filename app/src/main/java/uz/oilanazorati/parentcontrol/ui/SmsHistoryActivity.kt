@@ -1,6 +1,7 @@
 package uz.oilanazorati.parentcontrol.ui
 
 import android.app.DatePickerDialog
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -52,6 +53,11 @@ class SmsHistoryActivity : AppCompatActivity() {
 
         updateDateLabel()
         loadDataForSelectedDay()
+
+        bindBottomNav(NavTab.CALLS) {
+            startActivity(Intent(this, ParentDashboardActivity::class.java).putExtra("open_settings", true))
+            finish()
+        }
     }
 
     private fun showDatePicker() {
