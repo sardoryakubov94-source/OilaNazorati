@@ -68,6 +68,12 @@
             android:name=".ui.LocationHistoryActivity"
             android:exported="false" />
 
+        <!-- Joylashuv xizmati o'chirilganda bildirishnoma bosilsa ochiladigan, ko'rinmas trampolin ekran -->
+        <activity
+            android:name=".ui.LocationPromptActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.NoDisplay" />
+
         <!-- Kunlik qo'ng'iroqlar/SMS ro'yxati — har bir kontakt rang bilan ajratilgan -->
         <activity
             android:name=".ui.CallHistoryActivity"

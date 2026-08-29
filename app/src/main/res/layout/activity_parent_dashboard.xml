@@ -1,700 +1,472 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#0D1117">
 
-    <!-- Asosiy kontent -->
-    <ScrollView
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- ========== Premium / Admin qatori ========== -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:paddingBottom="72dp"
-        android:clipToPadding="false">
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <Button
+            android:id="@+id/btnPremium"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:text="⭐ Premium"
+            android:textSize="12sp"
+            android:textColor="#0D1117"
+            android:background="@drawable/bg_button_primary"/>
+
+        <Button
+            android:id="@+id/btnAdminPanel"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:text="🛠️ Admin panel"
+            android:textSize="12sp"
+            android:visibility="gone"/>
+
+    </LinearLayout>
+
+    <!-- ========== Oila kodi qatori ========== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="12dp">
+
+        <EditText
+            android:id="@+id/inputFamilyCode"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:hint="Oila kodi"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#6B7A90"
+            android:inputType="textCapCharacters"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
+            android:id="@+id/btnLoadFamily"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="YUKLASH"
+            android:textAllCaps="true"
+            android:textColor="#0D1117"
+            android:background="@drawable/bg_button_primary"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"/>
+    </LinearLayout>
+
+    <Button
+        android:id="@+id/btnGenerateCode"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="YANGI OILA KODI YARATISH"
+        android:textColor="#0D1117"
+        android:background="@drawable/bg_button_primary"
+        android:layout_marginBottom="10dp"/>
+
+    <Button
+        android:id="@+id/btnChooseChild"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="FARZANDLAR (TANLASH / ALMASHTIRISH)"
+        android:textColor="#0D1117"
+        android:background="@drawable/bg_button_primary"
+        android:layout_marginBottom="16dp"/>
+
+    <!-- ========== Joylashuv kartasi ========== -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_card_green"
+        android:padding="16dp"
+        android:layout_marginBottom="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📍"
+            android:textSize="22sp"
+            android:layout_marginEnd="12dp"/>
+
+        <TextView
+            android:id="@+id/locationSummary"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="#B7F5CE"
+            android:text="Joylashuv: -"/>
+
+        <TextView
+            android:id="@+id/btnLocationHistory"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Xaritada →"
+            android:textColor="#2ECC71"
+            android:textStyle="bold"
+            android:padding="8dp"/>
+    </LinearLayout>
+
+    <!-- ========== Asosiy funksiyalar (2x2 grid) ========== -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Asosiy funksiyalar"
+        android:textColor="#8B96A5"
+        android:textSize="13sp"
+        android:layout_marginBottom="10dp"/>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:orientation="horizontal"
+        android:layout_marginBottom="10dp">
 
-        <!-- ========== HEADER ========== -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/btnCallHistory"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="16dp"
-            android:background="#161B22">
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:background="@drawable/bg_card_clickable"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="18dp">
 
-            <!-- Logo -->
             <TextView
-                android:layout_width="44dp"
-                android:layout_height="44dp"
-                android:text="🛡️"
-                android:textSize="22sp"
-                android:gravity="center"
-                android:background="@drawable/bg_card"
-                android:layout_marginEnd="12dp"/>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Oila nazorati"
-                    android:textColor="#FFFFFF"
-                    android:textStyle="bold"
-                    android:textSize="16sp"/>
-
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginTop="4dp">
-
-                    <TextView
-                        android:id="@+id/headerFamilyCode"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="------"
-                        android:textColor="#8B96A5"
-                        android:textSize="12sp"
-                        android:background="@drawable/bg_card"
-                        android:paddingStart="8dp"
-                        android:paddingEnd="8dp"
-                        android:paddingTop="2dp"
-                        android:paddingBottom="2dp"
-                        android:layout_marginEnd="8dp"/>
-
-                    <TextView
-                        android:id="@+id/headerStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="● FAOL"
-                        android:textColor="#2ECC71"
-                        android:textSize="11sp"
-                        android:textStyle="bold"/>
-
-                </LinearLayout>
-            </LinearLayout>
-
-            <!-- Settings (Yangi kod / Farzand tanlash) -->
-            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/btnChooseChild"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:text="👤"
-                    android:textSize="18sp"
-                    android:gravity="center"
-                    android:background="@drawable/bg_card_clickable"
-                    android:layout_marginEnd="8dp"/>
-
-                <TextView
-                    android:id="@+id/btnSettings"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:text="⚙️"
-                    android:textSize="18sp"
-                    android:gravity="center"
-                    android:background="@drawable/bg_card_clickable"/>
-
-            </LinearLayout>
-
+                android:text="📞"
+                android:textSize="26sp"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Qo'ng'iroqlar"
+                android:textColor="#E6E9EF"
+                android:textSize="13sp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Faol"
+                android:textColor="#2ECC71"
+                android:textSize="11sp"/>
         </LinearLayout>
 
-        <!-- ========== JOYLASHUV KARTASI ========== -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:id="@+id/btnSmsHistory"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="#161B22"
-            android:padding="16dp"
-            android:layout_marginTop="1dp">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="📍 SO'NGGI JOYLASHUV"
-                    android:textColor="#2ECC71"
-                    android:textStyle="bold"
-                    android:textSize="11sp"
-                    android:layout_marginBottom="6dp"/>
-
-                <TextView
-                    android:id="@+id/locationTimeAgo"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="🕐  --:-- • --- daqiqa oldin"
-                    android:textColor="#8B96A5"
-                    android:textSize="12sp"
-                    android:layout_marginBottom="6dp"/>
-
-                <TextView
-                    android:id="@+id/locationCoords"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="---, ---"
-                    android:textColor="#FFFFFF"
-                    android:textStyle="bold"
-                    android:textSize="16sp"
-                    android:layout_marginBottom="4dp"/>
-
-                <TextView
-                    android:id="@+id/locationCity"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text=""
-                    android:textColor="#8B96A5"
-                    android:textSize="12sp"
-                    android:layout_marginBottom="10dp"/>
-
-                <TextView
-                    android:id="@+id/btnLocationHistory"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Xaritada ko'rish →"
-                    android:textColor="#2ECC71"
-                    android:textStyle="bold"
-                    android:textSize="13sp"
-                    android:background="@drawable/bg_card"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="12dp"
-                    android:paddingTop="6dp"
-                    android:paddingBottom="6dp"/>
-
-            </LinearLayout>
-
-            <!-- Mini xarita placeholder -->
-            <FrameLayout
-                android:id="@+id/miniMapContainer"
-                android:layout_width="120dp"
-                android:layout_height="100dp"
-                android:layout_marginStart="12dp"
-                android:background="@drawable/bg_card"/>
-
-        </LinearLayout>
-
-        <!-- ========== BUGUNGI NAZORAT stats ========== -->
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="BUGUNGI NAZORAT"
-            android:textColor="#2ECC71"
-            android:textStyle="bold"
-            android:textSize="11sp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="10dp"/>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:paddingBottom="16dp">
-
-            <!-- Qo'ng'iroqlar -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_margin="4dp"
-                android:orientation="vertical"
-                android:background="@drawable/bg_card"
-                android:padding="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="📞"
-                        android:textSize="18sp"
-                        android:layout_marginEnd="6dp"/>
-
-                    <TextView
-                        android:id="@+id/statCallCount"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0 ta"
-                        android:textColor="#FFFFFF"
-                        android:textStyle="bold"
-                        android:textSize="18sp"/>
-
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Qo'ng'iroqlar"
-                    android:textColor="#8B96A5"
-                    android:textSize="11sp"
-                    android:layout_marginBottom="6dp"/>
-
-                <TextView
-                    android:id="@+id/statCallDetail"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="0 kiruvchi\n0 chiquvchi"
-                    android:textColor="#2ECC71"
-                    android:textSize="10sp"
-                    android:lineSpacingExtra="2dp"/>
-
-            </LinearLayout>
-
-            <!-- SMS -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_margin="4dp"
-                android:orientation="vertical"
-                android:background="@drawable/bg_card"
-                android:padding="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="💬"
-                        android:textSize="18sp"
-                        android:layout_marginEnd="6dp"/>
-
-                    <TextView
-                        android:id="@+id/statSmsCount"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0 ta"
-                        android:textColor="#FFFFFF"
-                        android:textStyle="bold"
-                        android:textSize="18sp"/>
-
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="SMS"
-                    android:textColor="#8B96A5"
-                    android:textSize="11sp"
-                    android:layout_marginBottom="6dp"/>
-
-                <TextView
-                    android:id="@+id/statSmsDetail"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="0 yuborilgan\n0 qabul"
-                    android:textColor="#3498DB"
-                    android:textSize="10sp"
-                    android:lineSpacingExtra="2dp"/>
-
-            </LinearLayout>
-
-            <!-- Kontaktlar -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_margin="4dp"
-                android:orientation="vertical"
-                android:background="@drawable/bg_card"
-                android:padding="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="👥"
-                        android:textSize="18sp"
-                        android:layout_marginEnd="6dp"/>
-
-                    <TextView
-                        android:id="@+id/statContactCount"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0 ta"
-                        android:textColor="#FFFFFF"
-                        android:textStyle="bold"
-                        android:textSize="18sp"/>
-
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Kontaktlar"
-                    android:textColor="#8B96A5"
-                    android:textSize="11sp"
-                    android:layout_marginBottom="6dp"/>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Bugun faol"
-                    android:textColor="#9B59B6"
-                    android:textSize="10sp"/>
-
-            </LinearLayout>
-
-            <!-- Ilovalar -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_margin="4dp"
-                android:orientation="vertical"
-                android:background="@drawable/bg_card"
-                android:padding="12dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="📱"
-                        android:textSize="18sp"
-                        android:layout_marginEnd="6dp"/>
-
-                    <TextView
-                        android:id="@+id/statAppCount"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="0 ta"
-                        android:textColor="#FFFFFF"
-                        android:textStyle="bold"
-                        android:textSize="18sp"/>
-
-                </LinearLayout>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Ilovalar"
-                    android:textColor="#8B96A5"
-                    android:textSize="11sp"
-                    android:layout_marginBottom="6dp"/>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Faoliyat&#10;kuzatilmoqda"
-                    android:textColor="#F39C12"
-                    android:textSize="10sp"/>
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- ========== QO'NG'IROQLAR bo'limi ========== -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
             android:orientation="vertical"
-            android:background="#161B22"
-            android:padding="16dp"
-            android:layout_marginBottom="8dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="📞 QO'NG'IROQLAR"
-                    android:textColor="#2ECC71"
-                    android:textStyle="bold"
-                    android:textSize="12sp"/>
-
-                <TextView
-                    android:id="@+id/btnCallHistory"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Barchasini ko'rish →"
-                    android:textColor="#2ECC71"
-                    android:textSize="12sp"/>
-
-            </LinearLayout>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/timelineList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-
-        </LinearLayout>
-
-        <!-- ========== SMS bo'limi ========== -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#161B22"
-            android:padding="16dp"
-            android:layout_marginBottom="8dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="💬 SMS"
-                    android:textColor="#3498DB"
-                    android:textStyle="bold"
-                    android:textSize="12sp"/>
-
-                <TextView
-                    android:id="@+id/btnSmsHistory"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Barchasini ko'rish →"
-                    android:textColor="#3498DB"
-                    android:textSize="12sp"/>
-
-            </LinearLayout>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/smsTimelineList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+            android:gravity="center"
+            android:background="@drawable/bg_card_clickable"
+            android:clickable="true"
+            android:focusable="true"
+            android:padding="18dp">
 
             <TextView
-                android:id="@+id/smsSectionEmpty"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Bugun SMS yo'q"
-                android:textColor="#8B96A5"
-                android:textSize="13sp"
-                android:visibility="gone"/>
-
-        </LinearLayout>
-
-        <!-- ========== MULOQOTLAR bo'limi ========== -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#161B22"
-            android:padding="16dp"
-            android:layout_marginBottom="8dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
+                android:text="✉️"
+                android:textSize="26sp"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="👥 MULOQOTLAR"
-                    android:textColor="#9B59B6"
-                    android:textStyle="bold"
-                    android:textSize="12sp"/>
-
-                <TextView
-                    android:id="@+id/btnSavedContacts"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Barchasini ko'rish →"
-                    android:textColor="#9B59B6"
-                    android:textSize="12sp"/>
-
-            </LinearLayout>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/contactSummaryList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-
-        </LinearLayout>
-
-        <!-- ========== ILOVALAR bo'limi ========== -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#161B22"
-            android:padding="16dp"
-            android:layout_marginBottom="8dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
+                android:text="SMS"
+                android:textColor="#E6E9EF"
+                android:textSize="13sp"/>
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="📱 ILOVALAR"
-                    android:textColor="#F39C12"
-                    android:textStyle="bold"
-                    android:textSize="12sp"/>
-
-                <TextView
-                    android:id="@+id/btnTrends"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Barchasini ko'rish →"
-                    android:textColor="#F39C12"
-                    android:textSize="12sp"/>
-
-            </LinearLayout>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/appUsageList"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
-
+                android:text="Faol"
+                android:textColor="#2ECC71"
+                android:textSize="11sp"/>
         </LinearLayout>
 
     </LinearLayout>
-    </ScrollView>
 
-    <!-- ========== PASTKI NAVIGATSIYA ========== -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:layout_gravity="bottom"
+        android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:background="#161B22"
-        android:elevation="8dp">
+        android:layout_marginBottom="20dp">
 
         <LinearLayout
-            android:id="@+id/navHome"
+            android:id="@+id/btnSavedContacts"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginEnd="6dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="?attr/selectableItemBackground"
+            android:background="@drawable/bg_card_clickable"
             android:clickable="true"
-            android:focusable="true">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="🏠" android:textSize="20sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Bosh sahifa" android:textColor="#2ECC71" android:textSize="9sp"/>
+            android:focusable="true"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="👤"
+                android:textSize="26sp"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Kontaktlar"
+                android:textColor="#E6E9EF"
+                android:textSize="13sp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Faol"
+                android:textColor="#2ECC71"
+                android:textSize="11sp"/>
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/navCalls"
+            android:id="@+id/btnTrends"
             android:layout_width="0dp"
-            android:layout_height="match_parent"
+            android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:layout_marginStart="6dp"
             android:orientation="vertical"
             android:gravity="center"
-            android:background="?attr/selectableItemBackground"
+            android:background="@drawable/bg_card_clickable"
             android:clickable="true"
-            android:focusable="true">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="📞" android:textSize="20sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Aloqa" android:textColor="#8B96A5" android:textSize="9sp"/>
-        </LinearLayout>
+            android:focusable="true"
+            android:padding="18dp">
 
-        <LinearLayout
-            android:id="@+id/navLocation"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?attr/selectableItemBackground"
-            android:clickable="true"
-            android:focusable="true">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="📍" android:textSize="20sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Joylashuv" android:textColor="#8B96A5" android:textSize="9sp"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/navApps"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?attr/selectableItemBackground"
-            android:clickable="true"
-            android:focusable="true">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="🔲" android:textSize="20sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Ilovalar" android:textColor="#8B96A5" android:textSize="9sp"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/navSettings"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center"
-            android:background="?attr/selectableItemBackground"
-            android:clickable="true"
-            android:focusable="true">
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="⚙️" android:textSize="20sp"/>
-            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:text="Sozlama" android:textColor="#8B96A5" android:textSize="9sp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🔲"
+                android:textSize="26sp"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ilovalar"
+                android:textColor="#E6E9EF"
+                android:textSize="13sp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Faol"
+                android:textColor="#2ECC71"
+                android:textSize="11sp"/>
         </LinearLayout>
 
     </LinearLayout>
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+    <LinearLayout
+        android:id="@+id/btnNotifications"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_card_clickable"
+        android:clickable="true"
+        android:focusable="true"
+        android:padding="16dp"
+        android:layout_marginBottom="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📱"
+            android:textSize="22sp"
+            android:layout_marginEnd="12dp"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Ijtimoiy tarmoq bildirishnomalari"
+                android:textColor="#E6E9EF"
+                android:textSize="14sp"/>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Instagram, Telegram, WhatsApp va h.k."
+                android:textColor="#8B96A5"
+                android:textSize="11sp"/>
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="→"
+            android:textColor="#2ECC71"
+            android:textSize="18sp"/>
+    </LinearLayout>
+
+    <!-- ========== Bugungi aktivlik ========== -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="BUGUNGI AKTIVLIK"
+        android:textColor="#8B96A5"
+        android:textSize="12sp"
+        android:layout_marginBottom="10dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="20dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📞 Qo'ng'iroqlar"
+                android:textColor="#E6E9EF"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:id="@+id/callsSummary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#B7C0CC"
+                android:textSize="10sp"
+                android:lineSpacingExtra="5dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="✉️ SMS"
+                android:textColor="#E6E9EF"
+                android:textStyle="bold"
+                android:textSize="11sp"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:id="@+id/smsSummary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#B7C0CC"
+                android:textSize="10sp"
+                android:lineSpacingExtra="5dp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ========== Qo'ng'iroqlar vaqt jadvali ========== -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Qo'ng'iroqlar vaqt jadvali"
+        android:textColor="#E6E9EF"
+        android:textStyle="bold"
+        android:textSize="14sp"
+        android:layout_marginBottom="8dp"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:padding="8dp"
+        android:layout_marginBottom="20dp">
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/timelineList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+    <!-- ========== Kontaktlar bo'yicha ========== -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="KONTAKTLAR BO'YICHA"
+        android:textColor="#8B96A5"
+        android:textSize="12sp"
+        android:layout_marginBottom="8dp"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:padding="16dp"
+        android:layout_marginBottom="20dp">
+
+        <TextView
+            android:id="@+id/contactCountSummary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#8B96A5"
+            android:textSize="12sp"
+            android:layout_marginBottom="8dp"/>
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/contactSummaryList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+    <!-- ========== Ilovalarda o'tkazilgan vaqt ========== -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="ILOVALARDA O'TKAZILGAN VAQT"
+        android:textColor="#8B96A5"
+        android:textSize="12sp"
+        android:layout_marginBottom="8dp"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card"
+        android:padding="16dp"
+        android:layout_marginBottom="20dp">
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/appUsageList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+</LinearLayout>
+</ScrollView>

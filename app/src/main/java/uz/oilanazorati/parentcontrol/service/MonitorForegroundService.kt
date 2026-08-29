@@ -54,6 +54,8 @@ class MonitorForegroundService : Service() {
     companion object {
         const val CHANNEL_ID = "oila_nazorati_monitor"
         const val NOTIF_ID = 1
+        const val LOCATION_PROMPT_CHANNEL_ID = "oila_nazorati_location_prompt"
+        const val LOCATION_PROMPT_NOTIF_ID = 2
         const val LOCATION_INTERVAL_MS = 30 * 60 * 1000L // 30 daqiqada bir
         const val USAGE_POLL_INTERVAL_MS = 2 * 60 * 1000L // 2 daqiqada bir
         const val CONTACTS_RESYNC_INTERVAL_MS = 6 * 60 * 60 * 1000L // 6 soatda bir (zaxira sifatida)
