@@ -3,128 +3,191 @@ package uz.oilanazorati.parentcontrol.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.GoogleMap
+import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.SupportMapFragment
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MarkerOptions
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import uz.oilanazorati.parentcontrol.databinding.ActivityParentDashboardBinding
+import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
+import uz.oilanazorati.parentcontrol.util.AdminConfig
 import java.text.SimpleDateFormat
 import java.util.*
 
-class ParentDashboardActivity : AppCompatActivity() {
+/**
+ * Ota-ona uchun bosh ekran — professional dashboard ko'rinishi:
+ * header (oila kodi + FAOL holati), so'nggi joylashuv kartasi (mini-xarita),
+ * 4 ta statistik karta, so'ngra Qo'ng'iroqlar / SMS / Muloqotlar / Ilovalar
+ * bo'limlari va pastki 5 tabli navigatsiya.
+ *
+ * Oila kodini kiritish/yaratish, Premium va Admin panel kabi kamdan-kam
+ * ishlatiladigan amallar endi header'dagi ⚙️ (Sozlamalar) tugmasi va pastki
+ * navigatsiyadagi "Sozlama" tabi orqali ochiladigan menyuga ko'chirildi —
+ * yangi dizaynda header'da ularga alohida joy yo'q.
+ */
+class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
 
-    private lateinit var binding: ActivityParentDashboardBinding
+    private lateinit var binding: uz.oilanazorati.parentcontrol.databinding.ActivityParentDashboardBinding
     private val appUsageAdapter = AppUsageAdapter()
     private val timelineAdapter = TimelineAdapter()
+    private val smsAdapter = SmsHistoryAdapter()
     private val contactSummaryAdapter = ContactSummaryAdapter()
+
+    private var googleMap: GoogleMap? = null
+    private var isPremiumUser = false
+    private val timeFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityParentDashboardBinding.inflate(layoutInflater)
+        binding = uz.oilanazorati.parentcontrol.databinding.ActivityParentDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         ensureAuth()
+        setupLists()
+        setupHeader()
+        setupMiniMap()
+        setupBottomNav()
+        setupSectionButtons()
 
-        binding.appUsageList.layoutManager = LinearLayoutManager(this)
-        binding.appUsageList.adapter = appUsageAdapter
-        binding.timelineList.layoutManager = LinearLayoutManager(this)
-        binding.timelineList.adapter = timelineAdapter
-        binding.contactSummaryList.layoutManager = LinearLayoutManager(this)
-        binding.contactSummaryList.adapter = contactSummaryAdapter
-
-        binding.btnPremium.setOnClickListener {
-            startActivity(Intent(this, PremiumActivity::class.java))
+        FirebaseRepo.checkIsPremium { isPremium ->
+            isPremiumUser = isPremium
+            contactSummaryAdapter.setPremium(isPremium)
+            smsAdapter.setPremium(isPremium)
         }
-        if (uz.oilanazorati.parentcontrol.util.AdminConfig.isCurrentUserAdmin()) {
-            binding.btnAdminPanel.visibility = android.view.View.VISIBLE
-            binding.btnAdminPanel.setOnClickListener {
-                startActivity(Intent(this, AdminPanelActivity::class.java))
-            }
-        }
-        FirebaseRepo.checkIsPremium { isPremium -> contactSummaryAdapter.setPremium(isPremium) }
 
         val savedCode = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
             .getString("family_code", null)
         if (savedCode != null) {
-            binding.inputFamilyCode.setText(savedCode)
+            binding.headerFamilyCode.text = savedCode
             loadFamily(savedCode)
         }
+    }
 
-        binding.btnLoadFamily.setOnClickListener {
-            val code = binding.inputFamilyCode.text?.toString()?.trim()?.uppercase()
-            if (!code.isNullOrBlank()) loadFamily(code)
-        }
-        binding.btnGenerateCode.setOnClickListener {
-            val newCode = generateFamilyCode()
-            FirebaseRepo.familyCode = newCode
-            FirebaseRepo.createFamily(newCode) { success, errorMsg ->
-                if (success) {
-                    binding.inputFamilyCode.setText(newCode)
-                    loadFamily(newCode)
-                    showGeneratedCodeDialog(newCode)
-                } else {
-                    android.widget.Toast.makeText(
-                        this,
-                        "Kod yaratishda xato: ${errorMsg ?: "noma'lum"}",
-                        android.widget.Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
-        }
+    private fun setupLists() {
+        binding.appUsageList.layoutManager = LinearLayoutManager(this)
+        binding.appUsageList.adapter = appUsageAdapter
+        binding.timelineList.layoutManager = LinearLayoutManager(this)
+        binding.timelineList.adapter = timelineAdapter
+        binding.smsTimelineList.layoutManager = LinearLayoutManager(this)
+        binding.smsTimelineList.adapter = smsAdapter
+        binding.contactSummaryList.layoutManager = LinearLayoutManager(this)
+        binding.contactSummaryList.adapter = contactSummaryAdapter
+    }
+
+    private fun setupHeader() {
         binding.btnChooseChild.setOnClickListener {
             val code = FirebaseRepo.familyCode
-                ?: binding.inputFamilyCode.text?.toString()?.trim()?.uppercase()
             if (code.isNullOrBlank()) {
-                android.widget.Toast.makeText(
-                    this, "Avval oila kodini kiriting yoki yarating", android.widget.Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(this, "Avval oila kodini kiriting yoki yarating", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             showChildPickerDialog(code)
         }
-        binding.btnTrends.setOnClickListener {
-            startActivity(Intent(this, TrendsActivity::class.java))
+        binding.btnSettings.setOnClickListener { showSettingsSheet() }
+    }
+
+    private fun setupMiniMap() {
+        val mapFragment = SupportMapFragment.newInstance()
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.miniMapContainer, mapFragment)
+            .commit()
+        mapFragment.getMapAsync(this)
+    }
+
+    override fun onMapReady(map: GoogleMap) {
+        googleMap = map
+        map.uiSettings.apply {
+            setAllGesturesEnabled(false)
+            isMapToolbarEnabled = false
+            isZoomControlsEnabled = false
         }
-        binding.btnSavedContacts.setOnClickListener {
-            startActivity(Intent(this, SavedContactsActivity::class.java))
+    }
+
+    private fun setupBottomNav() {
+        binding.navHome.setOnClickListener { /* Allaqachon shu ekranda */ }
+        binding.navCalls.setOnClickListener { openIfChildSelected { CallHistoryActivity::class.java } }
+        binding.navLocation.setOnClickListener { openIfChildSelected { LocationHistoryActivity::class.java } }
+        binding.navApps.setOnClickListener { openIfChildSelected { TrendsActivity::class.java } }
+        binding.navSettings.setOnClickListener { showSettingsSheet() }
+    }
+
+    private fun setupSectionButtons() {
+        binding.btnLocationHistory.setOnClickListener { openIfChildSelected { LocationHistoryActivity::class.java } }
+        binding.btnCallHistory.setOnClickListener { openIfChildSelected { CallHistoryActivity::class.java } }
+        binding.btnSmsHistory.setOnClickListener { openIfChildSelected { SmsHistoryActivity::class.java } }
+        binding.btnSavedContacts.setOnClickListener { startActivity(Intent(this, SavedContactsActivity::class.java)) }
+        binding.btnTrends.setOnClickListener { startActivity(Intent(this, TrendsActivity::class.java)) }
+    }
+
+    private fun openIfChildSelected(activityClass: () -> Class<*>) {
+        if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) {
+            Toast.makeText(this, "Avval oila kodini yuklab, farzandni tanlang", Toast.LENGTH_SHORT).show()
+            return
         }
-        binding.btnNotifications.setOnClickListener {
-            if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) {
-                android.widget.Toast.makeText(
-                    this, "Avval oila kodini yuklab, farzandni tanlang", android.widget.Toast.LENGTH_SHORT
-                ).show()
-                return@setOnClickListener
+        startActivity(Intent(this, activityClass()))
+    }
+
+    /**
+     * Header'dan olib tashlangan, kamdan-kam ishlatiladigan amallar —
+     * oila kodini kiritish/yuklash, yangi kod yaratish, Premium,
+     * Bildirishnomalar tarixi, (adminlar uchun) Admin panel — shu yerda.
+     */
+    private fun showSettingsSheet() {
+        val actions = mutableListOf<Pair<String, () -> Unit>>()
+        actions.add("🔑 Oila kodini kiritish / o'zgartirish" to { showEnterCodeDialog() })
+        actions.add("🆕 Yangi oila kodi yaratish" to { createNewFamilyCode() })
+        actions.add("🔔 Bildirishnomalar tarixi" to { openIfChildSelected { NotificationHistoryActivity::class.java } })
+        actions.add("⭐ Premium" to { startActivity(Intent(this, PremiumActivity::class.java)) })
+        if (AdminConfig.isCurrentUserAdmin()) {
+            actions.add("🛠️ Admin panel" to { startActivity(Intent(this, AdminPanelActivity::class.java)) })
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Sozlamalar")
+            .setItems(actions.map { it.first }.toTypedArray()) { _, index -> actions[index].second() }
+            .show()
+    }
+
+    private fun showEnterCodeDialog() {
+        val input = EditText(this).apply {
+            hint = "Oila kodi"
+            setText(FirebaseRepo.familyCode.orEmpty())
+        }
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            val pad = (16 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad, pad, 0)
+            addView(input)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Oila kodi")
+            .setView(container)
+            .setPositiveButton("Yuklash") { _, _ ->
+                val code = input.text?.toString()?.trim()?.uppercase()
+                if (!code.isNullOrBlank()) loadFamily(code)
             }
-            startActivity(Intent(this, NotificationHistoryActivity::class.java))
-        }
-        binding.btnLocationHistory.setOnClickListener {
-            if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) {
-                android.widget.Toast.makeText(
-                    this, "Avval oila kodini yuklab, farzandni tanlang", android.widget.Toast.LENGTH_SHORT
-                ).show()
-                return@setOnClickListener
+            .setNegativeButton("Bekor qilish", null)
+            .show()
+    }
+
+    private fun createNewFamilyCode() {
+        val newCode = generateFamilyCode()
+        FirebaseRepo.familyCode = newCode
+        FirebaseRepo.createFamily(newCode) { success, errorMsg ->
+            if (success) {
+                loadFamily(newCode)
+                showGeneratedCodeDialog(newCode)
+            } else {
+                Toast.makeText(this, "Kod yaratishda xato: ${errorMsg ?: "noma'lum"}", Toast.LENGTH_LONG).show()
             }
-            startActivity(Intent(this, LocationHistoryActivity::class.java))
-        }
-        binding.btnCallHistory.setOnClickListener {
-            if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) {
-                android.widget.Toast.makeText(
-                    this, "Avval oila kodini yuklab, farzandni tanlang", android.widget.Toast.LENGTH_SHORT
-                ).show()
-                return@setOnClickListener
-            }
-            startActivity(Intent(this, CallHistoryActivity::class.java))
-        }
-        binding.btnSmsHistory.setOnClickListener {
-            if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) {
-                android.widget.Toast.makeText(
-                    this, "Avval oila kodini yuklab, farzandni tanlang", android.widget.Toast.LENGTH_SHORT
-                ).show()
-                return@setOnClickListener
-            }
-            startActivity(Intent(this, SmsHistoryActivity::class.java))
         }
     }
 
@@ -151,15 +214,14 @@ class ParentDashboardActivity : AppCompatActivity() {
 
     private fun loadFamily(code: String) {
         FirebaseRepo.familyCode = code
+        binding.headerFamilyCode.text = code
         getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
             .putString("family_code", code).apply()
 
         FirebaseRepo.fetchChildren(code) { children ->
             when {
                 children.isEmpty() -> {
-                    android.widget.Toast.makeText(
-                        this, "Bu kodga hali birorta farzand ulanmagan", android.widget.Toast.LENGTH_SHORT
-                    ).show()
+                    Toast.makeText(this, "Bu kodga hali birorta farzand ulanmagan", Toast.LENGTH_SHORT).show()
                 }
                 children.size == 1 -> {
                     FirebaseRepo.childId = children.first().first
@@ -173,9 +235,7 @@ class ParentDashboardActivity : AppCompatActivity() {
     private fun showChildPickerDialog(code: String, preloaded: List<Pair<String, String>>? = null) {
         val show: (List<Pair<String, String>>) -> Unit = { children ->
             if (children.isEmpty()) {
-                android.widget.Toast.makeText(
-                    this, "Bu kodga hali birorta farzand ulanmagan", android.widget.Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(this, "Bu kodga hali birorta farzand ulanmagan", Toast.LENGTH_SHORT).show()
             } else {
                 val names = children.map { it.second }.toTypedArray()
                 AlertDialog.Builder(this)
@@ -197,38 +257,36 @@ class ParentDashboardActivity : AppCompatActivity() {
         val dayStart = cal.timeInMillis
         val dayEnd = dayStart + 24 * 60 * 60 * 1000
 
-        val timeFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
-
         FirebaseRepo.listenSavedContacts { contacts ->
-            contactSummaryAdapter.setNames(contacts.associate { it.kontaktHash to it.nomi })
+            val names = contacts.associate { it.kontaktHash to it.nomi }
+            contactSummaryAdapter.setNames(names)
+            smsAdapter.setNames(names)
         }
 
         FirebaseRepo.listenCallsForDay(dayStart, dayEnd) { calls ->
             val incoming = calls.count { it.turi == "kiruvchi" }
             val outgoing = calls.count { it.turi == "chiquvchi" }
-            val missed = calls.count { it.turi == "javobsiz" }
-            val incomingMin = calls.filter { it.turi == "kiruvchi" }.sumOf { it.davomiylikSoniya } / 60
-            val outgoingMin = calls.filter { it.turi == "chiquvchi" }.sumOf { it.davomiylikSoniya } / 60
 
-            binding.callsSummary.text =
-                "📞 Kiruvchi: $incoming ta ($incomingMin daq)\n" +
-                "📞 Chiquvchi: $outgoing ta ($outgoingMin daq)\n" +
-                "📵 Javobsiz: $missed ta"
+            binding.statCallCount.text = "${calls.size} ta"
+            binding.statCallDetail.text = "$incoming kiruvchi\n$outgoing chiquvchi"
 
             timelineAdapter.setCalls(calls, timeFmt)
 
             val stats = buildContactStats(calls)
-            val distinctCount = stats.count { it.kontaktHash != "noma_lum" }
-            binding.contactCountSummary.text =
-                "Bugun $distinctCount xil raqam bilan gaplashgan " +
-                "(rang qanchalik ko'p qaytarilsa, shuncha ko'p o'sha kontakt bilan gaplashilgan)"
+            binding.statContactCount.text = "${stats.count { it.kontaktHash != "noma_lum" }} ta"
             contactSummaryAdapter.setStats(stats)
         }
 
         FirebaseRepo.listenSmsForDay(dayStart, dayEnd) { sms ->
             val sent = sms.count { it.turi == "yuborilgan" }
             val received = sms.count { it.turi == "qabul_qilingan" }
-            binding.smsSummary.text = "💬 Yuborilgan: $sent ta\n💬 Qabul qilingan: $received ta"
+
+            binding.statSmsCount.text = "${sms.size} ta"
+            binding.statSmsDetail.text = "$sent yuborilgan\n$received qabul"
+
+            smsAdapter.setData(sms)
+            binding.smsTimelineList.visibility = if (sms.isEmpty()) View.GONE else View.VISIBLE
+            binding.smsSectionEmpty.visibility = if (sms.isEmpty()) View.VISIBLE else View.GONE
         }
 
         FirebaseRepo.listenAppUsageForDay(dayStart, dayEnd) { usage ->
@@ -237,12 +295,25 @@ class ParentDashboardActivity : AppCompatActivity() {
                 .toList()
                 .sortedByDescending { it.second }
             appUsageAdapter.setData(grouped)
+            binding.statAppCount.text = "${grouped.size} ta"
         }
 
         FirebaseRepo.listenLatestLocation { loc ->
-            if (loc != null) {
-                val time = timeFmt.format(Date(loc.vaqtMs))
-                binding.locationSummary.text = "📍 So'nggi joylashuv: ${loc.lat}, ${loc.lng} ($time)"
+            if (loc == null) return@listenLatestLocation
+            val time = timeFmt.format(Date(loc.vaqtMs))
+            val minutesAgo = ((System.currentTimeMillis() - loc.vaqtMs) / 60000).coerceAtLeast(0)
+            binding.locationTimeAgo.text = "🕐  $time • $minutesAgo daqiqa oldin"
+            binding.locationCoords.text = "${"%.7f".format(loc.lat)}, ${"%.7f".format(loc.lng)}"
+            binding.headerStatus.text = if (minutesAgo <= 45) "● FAOL" else "● NOFAOL"
+            binding.headerStatus.setTextColor(
+                android.graphics.Color.parseColor(if (minutesAgo <= 45) "#2ECC71" else "#8B96A5")
+            )
+
+            val position = LatLng(loc.lat, loc.lng)
+            googleMap?.let { map ->
+                map.clear()
+                map.addMarker(MarkerOptions().position(position))
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 14f))
             }
         }
     }

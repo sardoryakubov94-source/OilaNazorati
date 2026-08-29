@@ -51,11 +51,23 @@ class MonitorForegroundService : Service() {
     private var smsSentObserver: ContentObserver? = null
     private var callLogObserver: ContentObserver? = null
 
+    // Joylashuv filtri uchun oxirgi QABUL QILINGAN (rad etilmagan) nuqta.
+    // SharedPreferences'da saqlanadi — xizmat qayta ishga tushganda ham
+    // (masalan tizim uni o'chirib qayta ko'targanda) filtr davom etaveradi.
+    private val locationPrefs by lazy { getSharedPreferences("location_filter", Context.MODE_PRIVATE) }
+
     companion object {
         const val CHANNEL_ID = "oila_nazorati_monitor"
         const val NOTIF_ID = 1
         const val LOCATION_PROMPT_CHANNEL_ID = "oila_nazorati_location_prompt"
         const val LOCATION_PROMPT_NOTIF_ID = 2
+
+        // GPS "sakrash" filtri sozlamalari (acceptOrRejectLocation)
+        private const val MIN_SUSPICIOUS_JUMP_METERS = 500f
+        private const val MAX_PLAUSIBLE_SPEED_KMH = 200.0
+        private const val KEY_LAST_LAT = "last_lat"
+        private const val KEY_LAST_LNG = "last_lng"
+        private const val KEY_LAST_TIME_MS = "last_time_ms"
         const val LOCATION_INTERVAL_MS = 30 * 60 * 1000L // 30 daqiqada bir
         const val USAGE_POLL_INTERVAL_MS = 2 * 60 * 1000L // 2 daqiqada bir
         const val CONTACTS_RESYNC_INTERVAL_MS = 6 * 60 * 60 * 1000L // 6 soatda bir (zaxira sifatida)
@@ -212,26 +224,14 @@ class MonitorForegroundService : Service() {
             fusedLocationClient.getCurrentLocation(request, null)
                 .addOnSuccessListener { loc: Location? ->
                     if (loc != null) {
-                        FirebaseRepo.logLocation(
-                            LocationEvent(
-                                lat = loc.latitude,
-                                lng = loc.longitude,
-                                vaqtMs = System.currentTimeMillis()
-                            )
-                        )
+                        acceptOrRejectLocation(loc.latitude, loc.longitude)
                     } else {
                         // Birinchi urinishda null keldi — so'nggi ma'lum joylashuvni
                         // olamiz (GPS va tarmoq ikkalasi ham javob bermasa, hech
                         // bo'lmaganda oldingi manzilni qayta yozamiz, sana yangi).
                         fusedLocationClient.lastLocation.addOnSuccessListener { last: Location? ->
                             if (last != null) {
-                                FirebaseRepo.logLocation(
-                                    LocationEvent(
-                                        lat = last.latitude,
-                                        lng = last.longitude,
-                                        vaqtMs = System.currentTimeMillis()
-                                    )
-                                )
+                                acceptOrRejectLocation(last.latitude, last.longitude)
                             }
                         }
                     }
@@ -239,6 +239,47 @@ class MonitorForegroundService : Service() {
         } catch (e: SecurityException) {
             // Lokatsiya ruxsati berilmagan — jim o'tkazib yuboramiz
         }
+    }
+
+    /**
+     * GPS "sakrash" filtri: oldingi qabul qilingan nuqtadan MASOFA 500
+     * metrdan katta VA shu masofani bosib o'tish uchun kerak bo'ladigan
+     * TEZLIK mantiqsiz (real hayotda bo'lishi mumkin bo'lmagan) darajada
+     * baland bo'lsa — bu nuqta chiqindi (GPS xatosi/sakrash) deb hisoblab,
+     * Firestore'ga YOZILMAYDI va "oxirgi qabul qilingan nuqta" ham
+     * yangilanmaydi (keyingi o'lchov shu eski, ishonchli nuqta bilan
+     * solishtiriladi). Birinchi o'lchov (oldingi nuqta hali yo'q bo'lsa)
+     * har doim qabul qilinadi.
+     */
+    private fun acceptOrRejectLocation(lat: Double, lng: Double) {
+        val nowMs = System.currentTimeMillis()
+        val prevLatStr = locationPrefs.getString(KEY_LAST_LAT, null)
+        val prevLngStr = locationPrefs.getString(KEY_LAST_LNG, null)
+        val prevTimeMs = locationPrefs.getLong(KEY_LAST_TIME_MS, 0L)
+
+        if (prevLatStr != null && prevLngStr != null && prevTimeMs > 0) {
+            val prevLat = prevLatStr.toDoubleOrNull()
+            val prevLng = prevLngStr.toDoubleOrNull()
+            if (prevLat != null && prevLng != null) {
+                val distanceMeters = FloatArray(1)
+                Location.distanceBetween(prevLat, prevLng, lat, lng, distanceMeters)
+                val elapsedSeconds = (nowMs - prevTimeMs) / 1000.0
+                if (distanceMeters[0] > MIN_SUSPICIOUS_JUMP_METERS && elapsedSeconds > 0) {
+                    val speedKmh = (distanceMeters[0] / elapsedSeconds) * 3.6
+                    if (speedKmh > MAX_PLAUSIBLE_SPEED_KMH) {
+                        // Sakrash + mantiqsiz tezlik — GPS xatosi, e'tiborsiz qoldiramiz.
+                        return
+                    }
+                }
+            }
+        }
+
+        FirebaseRepo.logLocation(LocationEvent(lat = lat, lng = lng, vaqtMs = nowMs))
+        locationPrefs.edit()
+            .putString(KEY_LAST_LAT, lat.toString())
+            .putString(KEY_LAST_LNG, lng.toString())
+            .putLong(KEY_LAST_TIME_MS, nowMs)
+            .apply()
     }
 
     private fun isLocationServiceEnabled(): Boolean {
