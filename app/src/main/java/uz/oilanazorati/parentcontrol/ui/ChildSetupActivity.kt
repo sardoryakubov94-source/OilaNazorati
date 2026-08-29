@@ -320,6 +320,8 @@ class ChildSetupActivity : AppCompatActivity() {
             }
             .show()
     }
+
+    private fun requestNotificationAccess() {
         if (isNotificationAccessGranted()) {
             binding.btnNotificationAccess.text = "✅ Bildirishnoma kuzatuvi yoqilgan"
             return
