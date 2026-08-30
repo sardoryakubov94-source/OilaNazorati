@@ -78,12 +78,8 @@ class CallHistoryActivity : AppCompatActivity() {
     }
 
     private fun updateDateLabel() {
-        val today = Calendar.getInstance()
-        val isToday = today.get(Calendar.YEAR) == selectedCalendar.get(Calendar.YEAR) &&
-            today.get(Calendar.DAY_OF_YEAR) == selectedCalendar.get(Calendar.DAY_OF_YEAR)
-
-        val fmt = SimpleDateFormat("dd-MMMM, yyyy", Locale("uz"))
-        selectedDateText.text = if (isToday) "Bugun (${fmt.format(selectedCalendar.time)})" else fmt.format(selectedCalendar.time)
+        val fmt = SimpleDateFormat("dd.MM.yyyy", Locale.US)
+        selectedDateText.text = fmt.format(selectedCalendar.time)
     }
 
     private fun loadDataForSelectedDay() {

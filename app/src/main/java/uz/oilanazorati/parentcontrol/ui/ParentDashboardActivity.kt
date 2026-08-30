@@ -233,7 +233,7 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
             val time = timeFmt.format(Date(loc.vaqtMs))
             val minutesAgo = ((System.currentTimeMillis() - loc.vaqtMs) / 60000).coerceAtLeast(0)
             binding.locationTimeAgo.text = "🕐  $time • $minutesAgo daqiqa oldin"
-            binding.locationCoords.text = "${"%.7f".format(loc.lat)}, ${"%.7f".format(loc.lng)}"
+            binding.locationCoords.text = "${"%.5f".format(Locale.US, loc.lat)}, ${"%.5f".format(Locale.US, loc.lng)}"
             binding.headerStatus.text = if (minutesAgo <= 45) "● FAOL" else "● NOFAOL"
             binding.headerStatus.setTextColor(
                 android.graphics.Color.parseColor(if (minutesAgo <= 45) "#2ECC71" else "#8B96A5")
