@@ -2,6 +2,7 @@ package uz.oilanazorati.parentcontrol
 
 import android.app.Application
 import android.content.Context
+import androidx.appcompat.app.AppCompatDelegate
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 
 /**
@@ -19,12 +20,17 @@ import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
  * qaytadan joylashtiradi. Shu tufayli qurilma qayta yoqilgandan keyin ham,
  * yoki tizim ilova jarayonini tozalab qo'yganda ham, kuzatuv (qo'ng'iroq,
  * SMS, joylashuv, ilova ishlatilishi) yozilishda uzilish bo'lmaydi.
+ *
+ * Shu yerda, birinchi Activity ochilishidan OLDIN, saqlangan mavzu
+ * (kunduzgi/tungi) tanlovi ham qo'llanadi — shu sababli birinchi ekran
+ * noto'g'ri rejimda ochilib, keyin sakrab o'zgarib qolmaydi.
  */
 class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
         restoreSavedPairing(this)
+        applySavedTheme(this)
     }
 
     companion object {
@@ -38,6 +44,14 @@ class App : Application() {
 
             if (FirebaseRepo.familyCode == null) FirebaseRepo.familyCode = savedCode
             if (FirebaseRepo.childId == null) FirebaseRepo.childId = savedChildId
+        }
+
+        fun applySavedTheme(context: Context) {
+            val prefs = context.getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+            val isLight = prefs.getBoolean("light_theme", false)
+            AppCompatDelegate.setDefaultNightMode(
+                if (isLight) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES
+            )
         }
     }
 }

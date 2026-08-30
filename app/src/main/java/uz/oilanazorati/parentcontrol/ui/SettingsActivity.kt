@@ -9,6 +9,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.util.AdminConfig
@@ -36,8 +37,13 @@ class SettingsActivity : AppCompatActivity() {
             findViewById<TextView>(R.id.currentFamilyCodeSubtitle).text = "Joriy kod: $currentCode"
         }
 
+        val isLight = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).getBoolean("light_theme", false)
+        findViewById<TextView>(R.id.currentThemeSubtitle).text =
+            if (isLight) "Kunduzgi rejim" else "Tungi rejim (standart)"
+
         findViewById<android.view.View>(R.id.rowEnterCode).setOnClickListener { showEnterCodeDialog() }
         findViewById<android.view.View>(R.id.rowNewCode).setOnClickListener { createNewFamilyCode() }
+        findViewById<android.view.View>(R.id.rowTheme).setOnClickListener { showThemePickerDialog() }
         findViewById<android.view.View>(R.id.rowNotifications).setOnClickListener {
             if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) {
                 Toast.makeText(this, "Avval oila kodini yuklab, farzandni tanlang", Toast.LENGTH_SHORT).show()
@@ -59,6 +65,25 @@ class SettingsActivity : AppCompatActivity() {
                 startActivity(Intent(this, AdminPanelActivity::class.java))
             }
         }
+    }
+
+    private fun showThemePickerDialog() {
+        val options = arrayOf("Tungi rejim (standart)", "Kunduzgi rejim")
+        val current = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).getBoolean("light_theme", false)
+        AlertDialog.Builder(this)
+            .setTitle("Mavzu")
+            .setSingleChoiceItems(options, if (current) 1 else 0) { dialog, which ->
+                val isLight = which == 1
+                getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
+                    .putBoolean("light_theme", isLight).apply()
+                AppCompatDelegate.setDefaultNightMode(
+                    if (isLight) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES
+                )
+                dialog.dismiss()
+                recreate()
+            }
+            .setNegativeButton("Bekor qilish", null)
+            .show()
     }
 
     private fun showEnterCodeDialog() {

@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:background="#0D1117">
+    android:background="@color/color_bg">
 
     <!-- ========== HEADER ========== -->
     <LinearLayout
@@ -20,7 +20,7 @@
             android:padding="6dp"
             android:src="@drawable/ic_back_arrow"
             android:tint="#FFFFFF"
-            android:background="@drawable/bg_badge_dark"
+            android:background="@drawable/bg_badge_theme"
             android:clickable="true"
             android:focusable="true"
             android:contentDescription="Orqaga"/>
@@ -30,7 +30,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="14dp"
             android:text="Sozlamalar"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/color_text_primary"
             android:textSize="22sp"
             android:textStyle="bold"/>
     </LinearLayout>
@@ -76,7 +76,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Premium'ga o'ting"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/color_text_primary"
                         android:textStyle="bold"
                         android:textSize="16sp"/>
 
@@ -95,7 +95,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Ko'rish  →"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/color_text_primary"
                     android:textStyle="bold"
                     android:textSize="13sp"
                     android:background="#33000000"
@@ -111,7 +111,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="OILA"
-                android:textColor="#8B96A5"
+                android:textColor="@color/color_text_secondary"
                 android:textSize="11sp"
                 android:letterSpacing="0.1"
                 android:layout_marginBottom="8dp"/>
@@ -120,7 +120,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_card"
+                android:background="@drawable/bg_card_theme"
                 android:layout_marginBottom="20dp">
 
                 <LinearLayout
@@ -130,14 +130,14 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:padding="14dp"
-                    android:background="@drawable/bg_card_clickable"
+                    android:background="@drawable/bg_card_clickable_theme"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="36dp"
                         android:layout_height="36dp"
-                        android:background="@drawable/bg_badge_dark">
+                        android:background="@drawable/bg_badge_theme">
                         <ImageView
                             android:layout_width="18dp"
                             android:layout_height="18dp"
@@ -157,7 +157,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Oila kodini kiritish / o'zgartirish"
-                            android:textColor="#FFFFFF"
+                            android:textColor="@color/color_text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold"/>
 
@@ -167,7 +167,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="Hozircha kod kiritilmagan"
-                            android:textColor="#8B96A5"
+                            android:textColor="@color/color_text_secondary"
                             android:textSize="12sp"/>
 
                     </LinearLayout>
@@ -182,7 +182,7 @@
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
-                    android:background="#22FFFFFF"
+                    android:background="@color/color_border"
                     android:layout_marginStart="14dp"
                     android:layout_marginEnd="14dp"/>
 
@@ -193,14 +193,14 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:padding="14dp"
-                    android:background="@drawable/bg_card_clickable"
+                    android:background="@drawable/bg_card_clickable_theme"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="36dp"
                         android:layout_height="36dp"
-                        android:background="@drawable/bg_badge_dark">
+                        android:background="@drawable/bg_badge_theme">
                         <ImageView
                             android:layout_width="18dp"
                             android:layout_height="18dp"
@@ -220,7 +220,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="Yangi oila kodi yaratish"
-                            android:textColor="#FFFFFF"
+                            android:textColor="@color/color_text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold"/>
 
@@ -229,7 +229,82 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
                             android:text="Bola qurilmasini ulash uchun"
-                            android:textColor="#8B96A5"
+                            android:textColor="@color/color_text_secondary"
+                            android:textSize="12sp"/>
+
+                    </LinearLayout>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/bg_chevron"/>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- ========== UMUMIY ========== -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="UMUMIY"
+                android:textColor="@color/color_text_secondary"
+                android:textSize="11sp"
+                android:letterSpacing="0.1"
+                android:layout_marginBottom="8dp"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card_theme"
+                android:layout_marginBottom="20dp">
+
+                <LinearLayout
+                    android:id="@+id/rowTheme"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="14dp"
+                    android:background="@drawable/bg_card_clickable_theme"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <FrameLayout
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="@drawable/bg_badge_theme">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="🌓"
+                            android:textSize="16sp"/>
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical"
+                        android:layout_marginStart="12dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Mavzu"
+                            android:textColor="@color/color_text_primary"
+                            android:textSize="14sp"
+                            android:textStyle="bold"/>
+
+                        <TextView
+                            android:id="@+id/currentThemeSubtitle"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Tungi rejim (standart)"
+                            android:textColor="@color/color_text_secondary"
                             android:textSize="12sp"/>
 
                     </LinearLayout>
@@ -248,7 +323,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="BOSHQARUV"
-                android:textColor="#8B96A5"
+                android:textColor="@color/color_text_secondary"
                 android:textSize="11sp"
                 android:letterSpacing="0.1"
                 android:layout_marginBottom="8dp"/>
@@ -257,7 +332,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_card"
+                android:background="@drawable/bg_card_theme"
                 android:layout_marginBottom="20dp">
 
                 <LinearLayout
@@ -267,14 +342,14 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:padding="14dp"
-                    android:background="@drawable/bg_card_clickable"
+                    android:background="@drawable/bg_card_clickable_theme"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="36dp"
                         android:layout_height="36dp"
-                        android:background="@drawable/bg_badge_dark">
+                        android:background="@drawable/bg_badge_theme">
                         <ImageView
                             android:layout_width="18dp"
                             android:layout_height="18dp"
@@ -289,7 +364,7 @@
                         android:layout_weight="1"
                         android:layout_marginStart="12dp"
                         android:text="Bildirishnomalar tarixi"
-                        android:textColor="#FFFFFF"
+                        android:textColor="@color/color_text_primary"
                         android:textSize="14sp"
                         android:textStyle="bold"/>
 
@@ -314,7 +389,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="ADMIN"
-                    android:textColor="#8B96A5"
+                    android:textColor="@color/color_text_secondary"
                     android:textSize="11sp"
                     android:letterSpacing="0.1"
                     android:layout_marginBottom="8dp"/>
@@ -323,7 +398,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:background="@drawable/bg_card"
+                    android:background="@drawable/bg_card_theme"
                     android:layout_marginBottom="20dp">
 
                     <LinearLayout
@@ -333,14 +408,14 @@
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
                         android:padding="14dp"
-                        android:background="@drawable/bg_card_clickable"
+                        android:background="@drawable/bg_card_clickable_theme"
                         android:clickable="true"
                         android:focusable="true">
 
                         <FrameLayout
                             android:layout_width="36dp"
                             android:layout_height="36dp"
-                            android:background="@drawable/bg_badge_dark">
+                            android:background="@drawable/bg_badge_theme">
                             <ImageView
                                 android:layout_width="18dp"
                                 android:layout_height="18dp"
@@ -355,7 +430,7 @@
                             android:layout_weight="1"
                             android:layout_marginStart="12dp"
                             android:text="Admin panel"
-                            android:textColor="#FFFFFF"
+                            android:textColor="@color/color_text_primary"
                             android:textSize="14sp"
                             android:textStyle="bold"/>
 

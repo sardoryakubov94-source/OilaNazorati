@@ -12,6 +12,9 @@ import com.github.mikephil.charting.data.BarEntry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.PieData
+import com.github.mikephil.charting.data.PieDataSet
+import com.github.mikephil.charting.data.PieEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import uz.oilanazorati.parentcontrol.databinding.ActivityTrendsBinding
 import uz.oilanazorati.parentcontrol.model.CallEvent
@@ -92,6 +95,7 @@ class TrendsActivity : AppCompatActivity() {
         loadHourlyCallChart(weekRangeStart, rangeEnd)
         loadHourlySmsChart(weekRangeStart, rangeEnd)
         loadTopAppsChart(weekRangeStart, rangeEnd)
+        loadDonutCharts()
 
         // Ismlarni oldindan yuklab olamiz — reytingda "raqamsiz, lekin
         // saqlangan bo'lsa ismi bilan" ko'rsatish uchun.
@@ -104,6 +108,148 @@ class TrendsActivity : AppCompatActivity() {
         loadContactTrends(monthRangeStart, rangeEnd)
         loadSmsContactTrends(monthRangeStart, rangeEnd)
     }
+
+    // ---------------- 0) Bugungi umumiy holat — donut diagrammalar ----------------
+
+    private fun loadDonutCharts() {
+        val cal = Calendar.getInstance()
+        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
+        val dayStart = cal.timeInMillis
+        val dayEnd = dayStart + 24 * 60 * 60 * 1000
+
+        FirebaseRepo.listenCallsForDay(dayStart, dayEnd) { calls -> drawCallsDonut(calls) }
+        FirebaseRepo.listenSmsForDay(dayStart, dayEnd) { smsList -> drawSmsDonut(smsList) }
+        FirebaseRepo.listenAppUsageForDay(dayStart, dayEnd) { usage -> drawAppsDonut(usage) }
+        FirebaseRepo.listenSavedContacts { contacts -> drawContactsDonut(contacts.size) }
+    }
+
+    /** Umumiy donut (pie, teshikli) sozlamalarini bitta joyda ushlab turadi. */
+    private fun styleDonut(chart: com.github.mikephil.charting.charts.PieChart, centerText: String) {
+        chart.apply {
+            description.isEnabled = false
+            legend.isEnabled = false
+            setUsePercentValues(false)
+            setDrawEntryLabels(false)
+            isRotationEnabled = false
+            setHoleColor(android.graphics.Color.TRANSPARENT)
+            holeRadius = 62f
+            transparentCircleRadius = 64f
+            setCenterText(centerText)
+            setCenterTextSize(14f)
+            setCenterTextColor(Color.parseColor("#FFFFFF"))
+            animateY(500)
+        }
+    }
+
+    private fun donutDataSet(entries: List<PieEntry>, colors: List<Int>): PieDataSet {
+        return PieDataSet(entries, "").apply {
+            this.colors = colors
+            setDrawValues(false)
+            sliceSpace = 2f
+        }
+    }
+
+    private fun drawCallsDonut(calls: List<CallEvent>) {
+        val incoming = calls.count { it.turi == "kiruvchi" }
+        val outgoing = calls.count { it.turi == "chiquvchi" }
+        val missed = calls.size - incoming - outgoing
+        val total = calls.size
+
+        styleDonut(binding.donutCalls, "$total ta")
+        if (total == 0) {
+            binding.donutCalls.data = null
+            binding.donutCalls.invalidate()
+            binding.legendCalls.text = "Bugun qo'ng'iroq yo'q"
+            return
+        }
+        val entries = mutableListOf<PieEntry>()
+        val colors = mutableListOf<Int>()
+        val legendParts = mutableListOf<String>()
+        if (incoming > 0) { entries.add(PieEntry(incoming.toFloat())); colors.add(Color.parseColor("#2ECC71")) }
+        if (outgoing > 0) { entries.add(PieEntry(outgoing.toFloat())); colors.add(Color.parseColor("#3498DB")) }
+        if (missed > 0) { entries.add(PieEntry(missed.toFloat())); colors.add(Color.parseColor("#F39C12")) }
+        legendParts.add("🟢 Kiruvchi ${percent(incoming, total)}%")
+        legendParts.add("🔵 Chiquvchi ${percent(outgoing, total)}%")
+        if (missed > 0) legendParts.add("🟠 Javobsiz ${percent(missed, total)}%")
+
+        binding.donutCalls.data = PieData(donutDataSet(entries, colors))
+        binding.donutCalls.invalidate()
+        binding.legendCalls.text = legendParts.joinToString("\n")
+    }
+
+    private fun drawSmsDonut(smsList: List<SmsEvent>) {
+        val sent = smsList.count { it.turi == "yuborilgan" }
+        val received = smsList.size - sent
+        val total = smsList.size
+
+        styleDonut(binding.donutSms, "$total ta")
+        if (total == 0) {
+            binding.donutSms.data = null
+            binding.donutSms.invalidate()
+            binding.legendSms.text = "Bugun SMS yo'q"
+            return
+        }
+        val entries = mutableListOf<PieEntry>()
+        val colors = mutableListOf<Int>()
+        if (sent > 0) { entries.add(PieEntry(sent.toFloat())); colors.add(Color.parseColor("#3498DB")) }
+        if (received > 0) { entries.add(PieEntry(received.toFloat())); colors.add(Color.parseColor("#2ECC71")) }
+
+        binding.donutSms.data = PieData(donutDataSet(entries, colors))
+        binding.donutSms.invalidate()
+        binding.legendSms.text = "🔵 Yuborilgan ${percent(sent, total)}%\n🟢 Qabul qilingan ${percent(received, total)}%"
+    }
+
+    private fun drawContactsDonut(totalContacts: Int) {
+        styleDonut(binding.donutContacts, "$totalContacts ta")
+        if (totalContacts == 0) {
+            binding.donutContacts.data = null
+            binding.donutContacts.invalidate()
+            binding.legendContacts.text = "Hali kontakt saqlanmagan"
+            return
+        }
+        val entries = listOf(PieEntry(totalContacts.toFloat()))
+        val colors = listOf(Color.parseColor("#2ECC71"))
+        binding.donutContacts.data = PieData(donutDataSet(entries, colors))
+        binding.donutContacts.invalidate()
+        binding.legendContacts.text = "🟢 Bugun faol 100%"
+    }
+
+    private fun drawAppsDonut(usage: List<uz.oilanazorati.parentcontrol.model.AppUsageEvent>) {
+        val totals = usage.groupBy { it.ilovaNomi }
+            .mapValues { (_, list) -> list.sumOf { it.davomiylikSoniya } }
+            .toList()
+            .sortedByDescending { it.second }
+
+        styleDonut(binding.donutApps, "${totals.size} ta")
+        val totalSeconds = totals.sumOf { it.second }
+        if (totals.isEmpty() || totalSeconds == 0L) {
+            binding.donutApps.data = null
+            binding.donutApps.invalidate()
+            binding.legendApps.text = "Bugun faoliyat yo'q"
+            return
+        }
+
+        // Ilovalarni ishlatilish vaqti bo'yicha 3ta darajaga bo'lamiz: Faol / O'rta / Kam.
+        val third = (totals.size + 2) / 3
+        val faol = totals.take(third).sumOf { it.second }
+        val orta = totals.drop(third).take(third).sumOf { it.second }
+        val kam = totals.drop(third * 2).sumOf { it.second }
+
+        val entries = mutableListOf<PieEntry>()
+        val colors = mutableListOf<Int>()
+        val legendParts = mutableListOf<String>()
+        if (faol > 0) { entries.add(PieEntry(faol.toFloat())); colors.add(Color.parseColor("#2ECC71")); legendParts.add("🟢 Faol ${percent(faol, totalSeconds)}%") }
+        if (orta > 0) { entries.add(PieEntry(orta.toFloat())); colors.add(Color.parseColor("#F39C12")); legendParts.add("🟠 O'rta ${percent(orta, totalSeconds)}%") }
+        if (kam > 0) { entries.add(PieEntry(kam.toFloat())); colors.add(Color.parseColor("#E74C3C")); legendParts.add("🔴 Kam ${percent(kam, totalSeconds)}%") }
+
+        binding.donutApps.data = PieData(donutDataSet(entries, colors))
+        binding.donutApps.invalidate()
+        binding.legendApps.text = legendParts.joinToString("\n")
+    }
+
+    private fun percent(part: Int, total: Int): Int = if (total == 0) 0 else (part * 100) / total
+    private fun percent(part: Long, total: Long): Int = if (total == 0L) 0 else (part * 100 / total).toInt()
 
     // ---------------- 1) Soat bo'yicha qo'ng'iroq faolligi ----------------
 

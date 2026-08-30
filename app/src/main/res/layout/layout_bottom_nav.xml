@@ -11,7 +11,7 @@
     android:layout_width="match_parent"
     android:layout_height="64dp"
     android:orientation="horizontal"
-    android:background="#161B22"
+    android:background="@color/color_surface"
     android:elevation="8dp">
 
     <LinearLayout
@@ -25,11 +25,11 @@
         android:clickable="true"
         android:focusable="true">
         <ImageView android:layout_width="22dp" android:layout_height="22dp"
-            android:src="@drawable/ic_nav_home" android:tint="#8B96A5"
+            android:src="@drawable/ic_nav_home" android:tint="@color/color_nav_inactive"
             android:contentDescription="Bosh sahifa"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Bosh sahifa" android:textColor="#8B96A5" android:textSize="9sp"/>
+            android:text="Bosh sahifa" android:textColor="@color/color_nav_inactive" android:textSize="9sp"/>
     </LinearLayout>
 
     <LinearLayout
@@ -43,11 +43,11 @@
         android:clickable="true"
         android:focusable="true">
         <ImageView android:layout_width="22dp" android:layout_height="22dp"
-            android:src="@drawable/ic_nav_call" android:tint="#8B96A5"
+            android:src="@drawable/ic_nav_call" android:tint="@color/color_nav_inactive"
             android:contentDescription="Aloqa"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Aloqa" android:textColor="#8B96A5" android:textSize="9sp"/>
+            android:text="Aloqa" android:textColor="@color/color_nav_inactive" android:textSize="9sp"/>
     </LinearLayout>
 
     <LinearLayout
@@ -61,11 +61,11 @@
         android:clickable="true"
         android:focusable="true">
         <ImageView android:layout_width="22dp" android:layout_height="22dp"
-            android:src="@drawable/ic_nav_location" android:tint="#8B96A5"
+            android:src="@drawable/ic_nav_location" android:tint="@color/color_nav_inactive"
             android:contentDescription="Joylashuv"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Joylashuv" android:textColor="#8B96A5" android:textSize="9sp"/>
+            android:text="Joylashuv" android:textColor="@color/color_nav_inactive" android:textSize="9sp"/>
     </LinearLayout>
 
     <LinearLayout
@@ -79,11 +79,11 @@
         android:clickable="true"
         android:focusable="true">
         <ImageView android:layout_width="22dp" android:layout_height="22dp"
-            android:src="@drawable/ic_nav_apps" android:tint="#8B96A5"
+            android:src="@drawable/ic_nav_apps" android:tint="@color/color_nav_inactive"
             android:contentDescription="Ilovalar"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Ilovalar" android:textColor="#8B96A5" android:textSize="9sp"/>
+            android:text="Ilovalar" android:textColor="@color/color_nav_inactive" android:textSize="9sp"/>
     </LinearLayout>
 
     <LinearLayout
@@ -97,11 +97,11 @@
         android:clickable="true"
         android:focusable="true">
         <ImageView android:layout_width="22dp" android:layout_height="22dp"
-            android:src="@drawable/ic_nav_settings" android:tint="#8B96A5"
+            android:src="@drawable/ic_nav_settings" android:tint="@color/color_nav_inactive"
             android:contentDescription="Sozlama"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Sozlama" android:textColor="#8B96A5" android:textSize="9sp"/>
+            android:text="Sozlama" android:textColor="@color/color_nav_inactive" android:textSize="9sp"/>
     </LinearLayout>
 
 </LinearLayout>
