@@ -15,6 +15,13 @@
         android:layout_marginEnd="10dp"
         android:background="@drawable/shape_color_dot"/>
 
+    <ImageView
+        android:id="@+id/callDirectionIcon"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:layout_marginEnd="8dp"
+        android:contentDescription="Qo'ng'iroq yo'nalishi"/>
+
     <TextView
         android:id="@+id/timelineLabel"
         android:layout_width="0dp"

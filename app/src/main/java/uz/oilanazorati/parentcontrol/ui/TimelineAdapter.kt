@@ -36,6 +36,7 @@ class TimelineAdapter : RecyclerView.Adapter<TimelineAdapter.VH>() {
     class VH(view: View) : RecyclerView.ViewHolder(view) {
         val label: TextView = view.findViewById(R.id.timelineLabel)
         val colorDot: View = view.findViewById(R.id.contactColorDot)
+        val directionIcon: android.widget.ImageView = view.findViewById(R.id.callDirectionIcon)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -45,15 +46,17 @@ class TimelineAdapter : RecyclerView.Adapter<TimelineAdapter.VH>() {
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val c = calls[position]
-        val icon = when (c.turi) {
-            "kiruvchi" -> "📲"
-            "chiquvchi" -> "☎️"
-            else -> "📵"
-        }
+        holder.directionIcon.setImageResource(
+            when (c.turi) {
+                "kiruvchi" -> R.drawable.ic_call_incoming
+                "chiquvchi" -> R.drawable.ic_call_outgoing
+                else -> R.drawable.ic_call_missed
+            }
+        )
         val start = fmt.format(Date(c.boshlanishMs))
         val end = if (c.tugashMs > 0) fmt.format(Date(c.tugashMs)) else "-"
         val durMin = c.davomiylikSoniya / 60
-        holder.label.text = "$icon $start – $end  ($durMin daq, ${c.turi})"
+        holder.label.text = "$start – $end  ($durMin daq, ${c.turi})"
 
         // Shu kontaktning rangi (raqamning o'zi emas — faqat anonim xashdan).
         val hashForColor = c.kontaktHash.ifBlank { "noma_lum" }
