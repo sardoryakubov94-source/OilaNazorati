@@ -261,11 +261,11 @@
                     android:text="0 ta"
                     android:textColor="#FFFFFF"
                     android:textStyle="bold"
-                    android:textSize="15sp"
+                    android:textSize="13sp"
                     android:maxLines="1"
                     android:autoSizeTextType="uniform"
-                    android:autoSizeMinTextSize="10sp"
-                    android:autoSizeMaxTextSize="15sp"
+                    android:autoSizeMinTextSize="9sp"
+                    android:autoSizeMaxTextSize="13sp"
                     android:gravity="center"/>
 
                 <TextView
@@ -274,11 +274,11 @@
                     android:layout_marginTop="2dp"
                     android:text="Qo'ng'iroqlar"
                     android:textColor="#8B96A5"
-                    android:textSize="10sp"
+                    android:textSize="9sp"
                     android:maxLines="1"
                     android:autoSizeTextType="uniform"
-                    android:autoSizeMinTextSize="7sp"
-                    android:autoSizeMaxTextSize="10sp"
+                    android:autoSizeMinTextSize="6sp"
+                    android:autoSizeMaxTextSize="9sp"
                     android:gravity="center"/>
 
                 <TextView
@@ -288,7 +288,7 @@
                     android:layout_marginTop="6dp"
                     android:text="0 kiruvchi\n0 chiquvchi"
                     android:textColor="#2ECC71"
-                    android:textSize="9sp"
+                    android:textSize="8sp"
                     android:minLines="2"
                     android:gravity="center"
                     android:lineSpacingExtra="2dp"/>
@@ -330,11 +330,11 @@
                     android:text="0 ta"
                     android:textColor="#FFFFFF"
                     android:textStyle="bold"
-                    android:textSize="15sp"
+                    android:textSize="13sp"
                     android:maxLines="1"
                     android:autoSizeTextType="uniform"
-                    android:autoSizeMinTextSize="10sp"
-                    android:autoSizeMaxTextSize="15sp"
+                    android:autoSizeMinTextSize="9sp"
+                    android:autoSizeMaxTextSize="13sp"
                     android:gravity="center"/>
 
                 <TextView
@@ -343,11 +343,11 @@
                     android:layout_marginTop="2dp"
                     android:text="SMS"
                     android:textColor="#8B96A5"
-                    android:textSize="10sp"
+                    android:textSize="9sp"
                     android:maxLines="1"
                     android:autoSizeTextType="uniform"
-                    android:autoSizeMinTextSize="7sp"
-                    android:autoSizeMaxTextSize="10sp"
+                    android:autoSizeMinTextSize="6sp"
+                    android:autoSizeMaxTextSize="9sp"
                     android:gravity="center"/>
 
                 <TextView
@@ -357,7 +357,7 @@
                     android:layout_marginTop="6dp"
                     android:text="0 yuborilgan\n0 qabul"
                     android:textColor="#3498DB"
-                    android:textSize="9sp"
+                    android:textSize="8sp"
                     android:minLines="2"
                     android:gravity="center"
                     android:lineSpacingExtra="2dp"/>
@@ -399,11 +399,11 @@
                     android:text="0 ta"
                     android:textColor="#FFFFFF"
                     android:textStyle="bold"
-                    android:textSize="15sp"
+                    android:textSize="13sp"
                     android:maxLines="1"
                     android:autoSizeTextType="uniform"
-                    android:autoSizeMinTextSize="10sp"
-                    android:autoSizeMaxTextSize="15sp"
+                    android:autoSizeMinTextSize="9sp"
+                    android:autoSizeMaxTextSize="13sp"
                     android:gravity="center"/>
 
                 <TextView
@@ -412,11 +412,11 @@
                     android:layout_marginTop="2dp"
                     android:text="Kontaktlar"
                     android:textColor="#8B96A5"
-                    android:textSize="10sp"
+                    android:textSize="9sp"
                     android:maxLines="1"
                     android:autoSizeTextType="uniform"
-                    android:autoSizeMinTextSize="7sp"
-                    android:autoSizeMaxTextSize="10sp"
+                    android:autoSizeMinTextSize="6sp"
+                    android:autoSizeMaxTextSize="9sp"
                     android:gravity="center"/>
 
                 <TextView
@@ -425,7 +425,7 @@
                     android:layout_marginTop="6dp"
                     android:text="Bugun\nfaol"
                     android:textColor="#9B59B6"
-                    android:textSize="9sp"
+                    android:textSize="8sp"
                     android:minLines="2"
                     android:gravity="center"
                     android:lineSpacingExtra="2dp"/>
@@ -467,11 +467,11 @@
                     android:text="0 ta"
                     android:textColor="#FFFFFF"
                     android:textStyle="bold"
-                    android:textSize="15sp"
+                    android:textSize="13sp"
                     android:maxLines="1"
                     android:autoSizeTextType="uniform"
-                    android:autoSizeMinTextSize="10sp"
-                    android:autoSizeMaxTextSize="15sp"
+                    android:autoSizeMinTextSize="9sp"
+                    android:autoSizeMaxTextSize="13sp"
                     android:gravity="center"/>
 
                 <TextView
@@ -480,11 +480,11 @@
                     android:layout_marginTop="2dp"
                     android:text="Ilovalar"
                     android:textColor="#8B96A5"
-                    android:textSize="10sp"
+                    android:textSize="9sp"
                     android:maxLines="1"
                     android:autoSizeTextType="uniform"
-                    android:autoSizeMinTextSize="7sp"
-                    android:autoSizeMaxTextSize="10sp"
+                    android:autoSizeMinTextSize="6sp"
+                    android:autoSizeMaxTextSize="9sp"
                     android:gravity="center"/>
 
                 <TextView
@@ -493,7 +493,7 @@
                     android:layout_marginTop="6dp"
                     android:text="Faoliyat\nkuzatilmoqda"
                     android:textColor="#F39C12"
-                    android:textSize="9sp"
+                    android:textSize="8sp"
                     android:minLines="2"
                     android:gravity="center"
                     android:lineSpacingExtra="2dp"/>
@@ -540,7 +540,9 @@
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/timelineList"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="330dp"
+                android:nestedScrollingEnabled="true"
+                android:clipToPadding="false"/>
 
         </LinearLayout>
 
