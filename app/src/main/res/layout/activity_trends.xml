@@ -50,7 +50,7 @@
             android:layout_marginEnd="6dp"
             android:orientation="vertical"
             android:gravity="center_horizontal"
-            android:background="@drawable/bg_card"
+            android:background="@drawable/bg_card_theme"
             android:padding="10dp">
 
             <TextView
@@ -82,7 +82,7 @@
             android:layout_marginStart="6dp"
             android:orientation="vertical"
             android:gravity="center_horizontal"
-            android:background="@drawable/bg_card"
+            android:background="@drawable/bg_card_theme"
             android:padding="10dp">
 
             <TextView
@@ -122,7 +122,7 @@
             android:layout_marginEnd="6dp"
             android:orientation="vertical"
             android:gravity="center_horizontal"
-            android:background="@drawable/bg_card"
+            android:background="@drawable/bg_card_theme"
             android:padding="10dp">
 
             <TextView
@@ -154,7 +154,7 @@
             android:layout_marginStart="6dp"
             android:orientation="vertical"
             android:gravity="center_horizontal"
-            android:background="@drawable/bg_card"
+            android:background="@drawable/bg_card_theme"
             android:padding="10dp">
 
             <TextView

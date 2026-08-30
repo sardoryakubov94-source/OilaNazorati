@@ -2,8 +2,7 @@
 <androidx.coordinatorlayout.widget.CoordinatorLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@drawable/bg_app_gradient">
+    android:layout_height="match_parent">
 
     <!-- Asosiy kontent -->
     <ScrollView
@@ -24,7 +23,7 @@
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:padding="16dp"
-            android:background="#161B22">
+            android:background="@color/color_surface">
 
             <!-- Logo -->
             <TextView
@@ -33,7 +32,7 @@
                 android:text="🛡️"
                 android:textSize="22sp"
                 android:gravity="center"
-                android:background="@drawable/bg_card"
+                android:background="@drawable/bg_card_theme"
                 android:layout_marginEnd="12dp"/>
 
             <LinearLayout
@@ -46,7 +45,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Oila nazorati"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/color_text_primary"
                     android:textStyle="bold"
                     android:textSize="16sp"/>
 
@@ -62,9 +61,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="------"
-                        android:textColor="#8B96A5"
+                        android:textColor="@color/color_text_secondary"
                         android:textSize="12sp"
-                        android:background="@drawable/bg_card"
+                        android:background="@drawable/bg_card_theme"
                         android:paddingStart="8dp"
                         android:paddingEnd="8dp"
                         android:paddingTop="2dp"
@@ -93,7 +92,7 @@
                     android:id="@+id/btnChooseChild"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:background="@drawable/bg_card_clickable"
+                    android:background="@drawable/bg_card_clickable_theme"
                     android:clickable="true"
                     android:focusable="true"
                     android:layout_marginEnd="8dp">
@@ -102,7 +101,7 @@
                         android:layout_height="18dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_person"
-                        android:tint="#FFFFFF"
+                        android:tint="@color/color_text_primary"
                         android:contentDescription="Farzand tanlash"/>
                 </FrameLayout>
 
@@ -110,7 +109,7 @@
                     android:id="@+id/btnSettings"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:background="@drawable/bg_card_clickable"
+                    android:background="@drawable/bg_card_clickable_theme"
                     android:clickable="true"
                     android:focusable="true">
                     <ImageView
@@ -118,7 +117,7 @@
                         android:layout_height="18dp"
                         android:layout_gravity="center"
                         android:src="@drawable/ic_nav_settings"
-                        android:tint="#FFFFFF"
+                        android:tint="@color/color_text_primary"
                         android:contentDescription="Sozlamalar"/>
                 </FrameLayout>
 
@@ -132,7 +131,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
-            android:background="#161B22"
+            android:background="@color/color_surface"
             android:padding="16dp"
             android:layout_marginTop="1dp">
 
@@ -156,7 +155,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🕐  --:-- • --- daqiqa oldin"
-                    android:textColor="#8B96A5"
+                    android:textColor="@color/color_text_secondary"
                     android:textSize="12sp"
                     android:layout_marginBottom="6dp"/>
 
@@ -165,7 +164,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="---, ---"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/color_text_primary"
                     android:textStyle="bold"
                     android:textSize="14sp"
                     android:maxLines="1"
@@ -179,7 +178,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text=""
-                    android:textColor="#8B96A5"
+                    android:textColor="@color/color_text_secondary"
                     android:textSize="12sp"
                     android:layout_marginBottom="10dp"/>
 
@@ -191,7 +190,7 @@
                     android:textColor="#2ECC71"
                     android:textStyle="bold"
                     android:textSize="13sp"
-                    android:background="@drawable/bg_card"
+                    android:background="@drawable/bg_card_theme"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
                     android:paddingTop="6dp"
@@ -205,7 +204,7 @@
                 android:layout_width="120dp"
                 android:layout_height="100dp"
                 android:layout_marginStart="12dp"
-                android:background="@drawable/bg_card"/>
+                android:background="@drawable/bg_card_theme"/>
 
         </LinearLayout>
 
@@ -240,7 +239,7 @@
                 android:minHeight="140dp"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@drawable/bg_card_clickable"
+                android:background="@drawable/bg_card_clickable_theme"
                 android:clickable="true"
                 android:focusable="true"
                 android:padding="10dp">
@@ -263,7 +262,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="0 ta"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/color_text_primary"
                     android:textStyle="bold"
                     android:textSize="13sp"
                     android:maxLines="1"
@@ -277,7 +276,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="Qo'ng'iroqlar"
-                    android:textColor="#8B96A5"
+                    android:textColor="@color/color_text_secondary"
                     android:textSize="9sp"
                     android:maxLines="1"
                     android:autoSizeTextType="uniform"
@@ -309,7 +308,7 @@
                 android:minHeight="140dp"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@drawable/bg_card_clickable"
+                android:background="@drawable/bg_card_clickable_theme"
                 android:clickable="true"
                 android:focusable="true"
                 android:padding="10dp">
@@ -332,7 +331,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="0 ta"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/color_text_primary"
                     android:textStyle="bold"
                     android:textSize="13sp"
                     android:maxLines="1"
@@ -346,7 +345,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="SMS"
-                    android:textColor="#8B96A5"
+                    android:textColor="@color/color_text_secondary"
                     android:textSize="9sp"
                     android:maxLines="1"
                     android:autoSizeTextType="uniform"
@@ -378,7 +377,7 @@
                 android:minHeight="140dp"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@drawable/bg_card_clickable"
+                android:background="@drawable/bg_card_clickable_theme"
                 android:clickable="true"
                 android:focusable="true"
                 android:padding="10dp">
@@ -401,7 +400,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="0 ta"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/color_text_primary"
                     android:textStyle="bold"
                     android:textSize="13sp"
                     android:maxLines="1"
@@ -415,7 +414,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="Kontaktlar"
-                    android:textColor="#8B96A5"
+                    android:textColor="@color/color_text_secondary"
                     android:textSize="9sp"
                     android:maxLines="1"
                     android:autoSizeTextType="uniform"
@@ -446,7 +445,7 @@
                 android:minHeight="140dp"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@drawable/bg_card_clickable"
+                android:background="@drawable/bg_card_clickable_theme"
                 android:clickable="true"
                 android:focusable="true"
                 android:padding="10dp">
@@ -469,7 +468,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="0 ta"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/color_text_primary"
                     android:textStyle="bold"
                     android:textSize="13sp"
                     android:maxLines="1"
@@ -483,7 +482,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:text="Ilovalar"
-                    android:textColor="#8B96A5"
+                    android:textColor="@color/color_text_secondary"
                     android:textSize="9sp"
                     android:maxLines="1"
                     android:autoSizeTextType="uniform"
@@ -511,7 +510,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#161B22"
+            android:background="@color/color_surface"
             android:padding="16dp"
             android:layout_marginBottom="8dp">
 
@@ -555,7 +554,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#161B22"
+            android:background="@color/color_surface"
             android:padding="16dp"
             android:layout_marginBottom="8dp">
 
@@ -595,7 +594,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Bugun SMS yo'q"
-                android:textColor="#8B96A5"
+                android:textColor="@color/color_text_secondary"
                 android:textSize="13sp"
                 android:visibility="gone"/>
 
@@ -606,7 +605,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#161B22"
+            android:background="@color/color_surface"
             android:padding="16dp"
             android:layout_marginBottom="8dp">
 
@@ -648,7 +647,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:background="#161B22"
+            android:background="@color/color_surface"
             android:padding="16dp"
             android:layout_marginBottom="8dp">
 
