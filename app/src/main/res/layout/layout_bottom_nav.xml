@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Barcha asosiy ekranlarda (Bosh sahifa, Aloqa, Joylashuv, Ilovalar) bir xil
-    ko'rinadigan pastki navigatsiya paneli. Har bir ekran shu faylni
-    <include> qiladi va uz.oilanazorati.parentcontrol.ui.BottomNavKt#bindBottomNav
-    orqali joriy tabni belgilab, boshqa tablarga o'tishni ulaydi — shu sababli
-    ichki ekranlarga kirilganda ham panel yo'qolib qolmaydi.
+    Barcha asosiy ekranlarda (Bosh sahifa, Aloqa, Joylashuv, Ilovalar,
+    Sozlama) bir xil ko'rinadigan pastki navigatsiya paneli — NurMakon
+    dasturidagi kabi chiziqli (vector) iconlar bilan. Har bir ekran shu
+    faylni <include> qiladi va
+    uz.oilanazorati.parentcontrol.ui.BottomNavKt#bindBottomNav orqali
+    joriy tabni belgilab, boshqa tablarga o'tishni ulaydi.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -23,9 +24,11 @@
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+            android:src="@drawable/ic_nav_home" android:tint="#8B96A5"
+            android:contentDescription="Bosh sahifa"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="🏠" android:textSize="20sp"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
             android:text="Bosh sahifa" android:textColor="#8B96A5" android:textSize="9sp"/>
     </LinearLayout>
 
@@ -39,9 +42,11 @@
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+            android:src="@drawable/ic_nav_call" android:tint="#8B96A5"
+            android:contentDescription="Aloqa"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="📞" android:textSize="20sp"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
             android:text="Aloqa" android:textColor="#8B96A5" android:textSize="9sp"/>
     </LinearLayout>
 
@@ -55,9 +60,11 @@
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+            android:src="@drawable/ic_nav_location" android:tint="#8B96A5"
+            android:contentDescription="Joylashuv"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="📍" android:textSize="20sp"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
             android:text="Joylashuv" android:textColor="#8B96A5" android:textSize="9sp"/>
     </LinearLayout>
 
@@ -71,9 +78,11 @@
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+            android:src="@drawable/ic_nav_apps" android:tint="#8B96A5"
+            android:contentDescription="Ilovalar"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="🔲" android:textSize="20sp"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
             android:text="Ilovalar" android:textColor="#8B96A5" android:textSize="9sp"/>
     </LinearLayout>
 
@@ -87,9 +96,11 @@
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true">
+        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+            android:src="@drawable/ic_nav_settings" android:tint="#8B96A5"
+            android:contentDescription="Sozlama"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:text="⚙️" android:textSize="20sp"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
             android:text="Sozlama" android:textColor="#8B96A5" android:textSize="9sp"/>
     </LinearLayout>
 

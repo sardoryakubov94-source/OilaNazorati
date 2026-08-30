@@ -4,8 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -19,7 +17,6 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.firebase.auth.FirebaseAuth
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
-import uz.oilanazorati.parentcontrol.util.AdminConfig
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -30,9 +27,9 @@ import java.util.*
  * bo'limlari va pastki 5 tabli navigatsiya.
  *
  * Oila kodini kiritish/yaratish, Premium va Admin panel kabi kamdan-kam
- * ishlatiladigan amallar endi header'dagi ⚙️ (Sozlamalar) tugmasi va pastki
- * navigatsiyadagi "Sozlama" tabi orqali ochiladigan menyuga ko'chirildi —
- * yangi dizaynda header'da ularga alohida joy yo'q.
+ * ishlatiladigan amallar endi to'liq alohida SettingsActivity ekranida —
+ * header'dagi ⚙️ tugmasi va pastki navigatsiyadagi "Sozlama" tabi o'sha
+ * ekranga olib boradi.
  */
 class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
 
@@ -70,10 +67,6 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
             binding.headerFamilyCode.text = savedCode
             loadFamily(savedCode)
         }
-
-        if (intent.getBooleanExtra("open_settings", false)) {
-            showSettingsSheet()
-        }
     }
 
     private fun setupLists() {
@@ -96,7 +89,7 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
             }
             showChildPickerDialog(code)
         }
-        binding.btnSettings.setOnClickListener { showSettingsSheet() }
+        binding.btnSettings.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
     }
 
     private fun setupMiniMap() {
@@ -117,7 +110,7 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun setupBottomNav() {
-        bindBottomNav(NavTab.HOME) { showSettingsSheet() }
+        bindBottomNav(NavTab.HOME)
     }
 
     private fun setupSectionButtons() {
@@ -144,80 +137,9 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
         startActivity(Intent(this, activityClass()))
     }
 
-    /**
-     * Header'dan olib tashlangan, kamdan-kam ishlatiladigan amallar —
-     * oila kodini kiritish/yuklash, yangi kod yaratish, Premium,
-     * Bildirishnomalar tarixi, (adminlar uchun) Admin panel — shu yerda.
-     */
-    private fun showSettingsSheet() {
-        val actions = mutableListOf<Pair<String, () -> Unit>>()
-        actions.add("🔑 Oila kodini kiritish / o'zgartirish" to { showEnterCodeDialog() })
-        actions.add("🆕 Yangi oila kodi yaratish" to { createNewFamilyCode() })
-        actions.add("🔔 Bildirishnomalar tarixi" to { openIfChildSelected { NotificationHistoryActivity::class.java } })
-        actions.add("⭐ Premium" to { startActivity(Intent(this, PremiumActivity::class.java)) })
-        if (AdminConfig.isCurrentUserAdmin()) {
-            actions.add("🛠️ Admin panel" to { startActivity(Intent(this, AdminPanelActivity::class.java)) })
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Sozlamalar")
-            .setItems(actions.map { it.first }.toTypedArray()) { _, index -> actions[index].second() }
-            .show()
-    }
-
-    private fun showEnterCodeDialog() {
-        val input = EditText(this).apply {
-            hint = "Oila kodi"
-            setText(FirebaseRepo.familyCode.orEmpty())
-        }
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            val pad = (16 * resources.displayMetrics.density).toInt()
-            setPadding(pad, pad, pad, 0)
-            addView(input)
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Oila kodi")
-            .setView(container)
-            .setPositiveButton("Yuklash") { _, _ ->
-                val code = input.text?.toString()?.trim()?.uppercase()
-                if (!code.isNullOrBlank()) loadFamily(code)
-            }
-            .setNegativeButton("Bekor qilish", null)
-            .show()
-    }
-
-    private fun createNewFamilyCode() {
-        val newCode = generateFamilyCode()
-        FirebaseRepo.familyCode = newCode
-        FirebaseRepo.createFamily(newCode) { success, errorMsg ->
-            if (success) {
-                loadFamily(newCode)
-                showGeneratedCodeDialog(newCode)
-            } else {
-                Toast.makeText(this, "Kod yaratishda xato: ${errorMsg ?: "noma'lum"}", Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
     private fun ensureAuth() {
         val auth = FirebaseAuth.getInstance()
         if (auth.currentUser == null) auth.signInAnonymously()
-    }
-
-    private fun generateFamilyCode(): String {
-        val chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-        return (1..6).map { chars.random() }.joinToString("")
-    }
-
-    private fun showGeneratedCodeDialog(code: String) {
-        AlertDialog.Builder(this)
-            .setTitle("Yangi oila kodi yaratildi")
-            .setMessage(
-                "$code\n\nBu kodni bola qurilmasidagi \"Bu farzandimning telefoni\" " +
-                "ekranidagi \"Ota-onaning kodini kiriting\" maydoniga kiriting."
-            )
-            .setPositiveButton("Tushunarli", null)
-            .show()
     }
 
     private fun loadFamily(code: String) {

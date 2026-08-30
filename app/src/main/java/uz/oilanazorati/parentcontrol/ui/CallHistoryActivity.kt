@@ -56,10 +56,7 @@ class CallHistoryActivity : AppCompatActivity() {
         updateDateLabel()
         loadDataForSelectedDay()
 
-        bindBottomNav(NavTab.CALLS) {
-            startActivity(Intent(this, ParentDashboardActivity::class.java).putExtra("open_settings", true))
-            finish()
-        }
+        bindBottomNav(NavTab.CALLS)
     }
 
     private fun showDatePicker() {

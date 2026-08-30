@@ -63,6 +63,11 @@
             android:name=".ui.TrendsActivity"
             android:exported="false" />
 
+        <!-- To'liq alohida Sozlamalar ekrani (avvalgi kichik AlertDialog o'rniga) -->
+        <activity
+            android:name=".ui.SettingsActivity"
+            android:exported="false" />
+
         <!-- Kun/oy bo'yicha joylashuv tarixini Google Xaritada ko'rsatadigan ekran -->
         <activity
             android:name=".ui.LocationHistoryActivity"

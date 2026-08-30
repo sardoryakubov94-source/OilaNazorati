@@ -89,24 +89,38 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal">
 
-                <TextView
+                <FrameLayout
                     android:id="@+id/btnChooseChild"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:text="👤"
-                    android:textSize="18sp"
-                    android:gravity="center"
                     android:background="@drawable/bg_card_clickable"
-                    android:layout_marginEnd="8dp"/>
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginEnd="8dp">
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_person"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Farzand tanlash"/>
+                </FrameLayout>
 
-                <TextView
+                <FrameLayout
                     android:id="@+id/btnSettings"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
-                    android:text="⚙️"
-                    android:textSize="18sp"
-                    android:gravity="center"
-                    android:background="@drawable/bg_card_clickable"/>
+                    android:background="@drawable/bg_card_clickable"
+                    android:clickable="true"
+                    android:focusable="true">
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_nav_settings"
+                        android:tint="#FFFFFF"
+                        android:contentDescription="Sozlamalar"/>
+                </FrameLayout>
 
             </LinearLayout>
 
@@ -231,12 +245,12 @@
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:background="@drawable/bg_badge_green">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
                         android:layout_gravity="center"
-                        android:text="📞"
-                        android:textSize="16sp"/>
+                        android:src="@drawable/ic_nav_call"
+                        android:tint="#FFFFFF"/>
                 </FrameLayout>
 
                 <TextView
@@ -300,12 +314,12 @@
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:background="@drawable/bg_badge_blue">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
                         android:layout_gravity="center"
-                        android:text="💬"
-                        android:textSize="16sp"/>
+                        android:src="@drawable/ic_message"
+                        android:tint="#FFFFFF"/>
                 </FrameLayout>
 
                 <TextView
@@ -369,12 +383,12 @@
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:background="@drawable/bg_badge_purple">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
                         android:layout_gravity="center"
-                        android:text="👥"
-                        android:textSize="16sp"/>
+                        android:src="@drawable/ic_group"
+                        android:tint="#FFFFFF"/>
                 </FrameLayout>
 
                 <TextView
@@ -437,12 +451,12 @@
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:background="@drawable/bg_badge_orange">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
                         android:layout_gravity="center"
-                        android:text="📱"
-                        android:textSize="16sp"/>
+                        android:src="@drawable/ic_nav_apps"
+                        android:tint="#FFFFFF"/>
                 </FrameLayout>
 
                 <TextView

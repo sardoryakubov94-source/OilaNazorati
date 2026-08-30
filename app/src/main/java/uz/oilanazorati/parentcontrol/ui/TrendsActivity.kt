@@ -58,10 +58,7 @@ class TrendsActivity : AppCompatActivity() {
         binding = ActivityTrendsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        bindBottomNav(NavTab.APPS) {
-            startActivity(Intent(this, ParentDashboardActivity::class.java).putExtra("open_settings", true))
-            finish()
-        }
+        bindBottomNav(NavTab.APPS)
 
         FirebaseRepo.checkIsPremium { isPremium ->
             topContactsAdapter.setPremium(isPremium)
