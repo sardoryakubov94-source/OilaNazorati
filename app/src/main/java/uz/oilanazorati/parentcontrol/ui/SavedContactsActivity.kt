@@ -25,6 +25,8 @@ class SavedContactsActivity : AppCompatActivity() {
         binding.savedContactsList.layoutManager = LinearLayoutManager(this)
         binding.savedContactsList.adapter = adapter
 
+        bindBottomNav(NavTab.CALLS)
+
         FirebaseRepo.listenSavedContacts { contacts ->
             adapter.setContacts(contacts)
         }
