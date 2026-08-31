@@ -108,6 +108,22 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun createNewFamilyCode() {
+        AlertDialog.Builder(this)
+            .setTitle("Yangi oila kodi yaratish")
+            .setMessage(
+                "Bu BUTUNLAY YANGI, hozirgi kodga (${FirebaseRepo.familyCode ?: "---"}) bog'liq " +
+                "bo'lmagan oila yaratadi — hozir ulangan farzand qurilmasi bu yerga avtomatik " +
+                "o'tmaydi.\n\n" +
+                "Agar shu OILAGA yana bitta farzand qo'shmoqchi bo'lsangiz — yangi kod " +
+                "yaratmang, aksincha hozirgi kodni ikkinchi farzand qurilmasiga kiriting.\n\n" +
+                "Yangi kod faqat butunlay boshqa (bog'liq bo'lmagan) oila uchun kerak bo'lsa yarating."
+            )
+            .setPositiveButton("Baribir yarataman") { _, _ -> generateAndCreateFamily() }
+            .setNegativeButton("Bekor qilish", null)
+            .show()
+    }
+
+    private fun generateAndCreateFamily() {
         val newCode = generateFamilyCode()
         FirebaseRepo.createFamily(newCode) { success, errorMsg ->
             if (success) {
@@ -138,8 +154,18 @@ class SettingsActivity : AppCompatActivity() {
     /** Oila kodini saqlaydi va o'zgarishni aks ettirish uchun Bosh sahifani qayta ochadi. */
     private fun saveFamilyCodeAndReturn(code: String) {
         FirebaseRepo.familyCode = code
+
+        // Oila kodi o'zgarganda, oldingi tanlangan farzand (childId) endi
+        // BOSHQA oilaga tegishli bo'lib qoladi — shu yerda ma'nosiz. Uni
+        // tozalamasak, dashboard eski (endi noto'g'ri) childId bilan
+        // ishlashga urinib, hech narsa topolmay "hech qanday ma'lumot yo'q"
+        // holatiga tushib qolishi mumkin edi.
+        FirebaseRepo.childId = null
         getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
-            .putString("family_code", code).apply()
+            .putString("family_code", code)
+            .remove("child_id")
+            .apply()
+
         startActivity(Intent(this, ParentDashboardActivity::class.java))
         finish()
     }
