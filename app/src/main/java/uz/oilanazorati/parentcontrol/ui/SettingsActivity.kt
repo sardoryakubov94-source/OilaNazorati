@@ -80,7 +80,6 @@ class SettingsActivity : AppCompatActivity() {
                     if (isLight) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES
                 )
                 dialog.dismiss()
-                recreate()
             }
             .setNegativeButton("Bekor qilish", null)
             .show()

@@ -154,12 +154,28 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
                     Toast.makeText(this, "Bu kodga hali birorta farzand ulanmagan", Toast.LENGTH_SHORT).show()
                 }
                 children.size == 1 -> {
-                    FirebaseRepo.childId = children.first().first
+                    setChildId(children.first().first)
                     loadTodayStats()
                 }
                 else -> showChildPickerDialog(code, children)
             }
         }
+    }
+
+    /**
+     * FirebaseRepo.childId'ni to'g'ridan-to'g'ri o'rnatish YETARLI EMAS —
+     * u faqat xotirada (RAM) saqlanadi. Agar tizim ilova jarayonini
+     * keyinroq tozalab qo'ysa (masalan xotira yetishmasa, yoki mavzuni
+     * almashtirganda ba'zi qurilmalarda bo'lgani kabi), jarayon qaytadan
+     * boshlanganda bu qiymat yo'qolib, "hech qanday qurilma ulanmagan"
+     * holatiga qaytib qolar edi — garchi oila kodi to'g'ri saqlangan
+     * bo'lsa ham. Shu funksiya childId'ni SharedPreferences'ga ham
+     * yozadi, App.kt esa jarayon boshlanganda uni qaytadan tiklaydi.
+     */
+    private fun setChildId(id: String) {
+        FirebaseRepo.childId = id
+        getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
+            .putString("child_id", id).apply()
     }
 
     private fun showChildPickerDialog(code: String, preloaded: List<Pair<String, String>>? = null) {
@@ -171,7 +187,7 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
                 AlertDialog.Builder(this)
                     .setTitle("Qaysi farzand?")
                     .setItems(names) { _, index ->
-                        FirebaseRepo.childId = children[index].first
+                        setChildId(children[index].first)
                         loadTodayStats()
                     }
                     .show()
