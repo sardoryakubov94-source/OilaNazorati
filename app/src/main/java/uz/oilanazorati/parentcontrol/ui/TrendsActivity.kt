@@ -137,7 +137,7 @@ class TrendsActivity : AppCompatActivity() {
             transparentCircleRadius = 64f
             setCenterText(centerText)
             setCenterTextSize(14f)
-            setCenterTextColor(androidx.core.content.ContextCompat.getColor(this@TrendsActivity, R.color.color_text_primary))
+            setCenterTextColor(Color.parseColor("#FFFFFF"))
             animateY(500)
         }
     }
