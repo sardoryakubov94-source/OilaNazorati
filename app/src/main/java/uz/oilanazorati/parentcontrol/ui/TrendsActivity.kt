@@ -137,7 +137,9 @@ class TrendsActivity : AppCompatActivity() {
             transparentCircleRadius = 64f
             setCenterText(centerText)
             setCenterTextSize(14f)
-            setCenterTextColor(androidx.core.content.ContextCompat.getColor(this@TrendsActivity, R.color.color_text_primary))
+            val nightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            val isNight = nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            setCenterTextColor(if (isNight) Color.parseColor("#FFFFFF") else Color.parseColor("#1A1F26"))
             animateY(500)
         }
     }
