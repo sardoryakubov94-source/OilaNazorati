@@ -19,7 +19,7 @@
             android:layout_height="36dp"
             android:padding="6dp"
             android:src="@drawable/ic_back_arrow"
-            android:tint="#FFFFFF"
+            android:tint="@color/color_text_primary"
             android:background="@drawable/bg_badge_theme"
             android:clickable="true"
             android:focusable="true"
