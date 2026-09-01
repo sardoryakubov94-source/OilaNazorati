@@ -48,7 +48,8 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
         binding = uz.oilanazorati.parentcontrol.databinding.ActivityParentDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        ensureAuth()
+        if (!ensureAuth()) return
+
         setupLists()
         setupHeader()
         setupMiniMap()
@@ -137,9 +138,28 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
         startActivity(Intent(this, activityClass()))
     }
 
-    private fun ensureAuth() {
+    /**
+     * MUHIM TUZATISH: bu yerda avval `auth.currentUser == null` bo'lsa
+     * `signInAnonymously()` chaqirilar edi — bu esa ota-onaning HAQIQIY
+     * Google identifikatorini ANONIM identifikator bilan almashtirib
+     * qo'yardi (masalan process qayta ishga tushganda, tungi/kunduzgi
+     * temani almashtirganda ham shu holat yuz berishi mumkin edi).
+     * Anonim identifikator FAQAT bola qurilmasi uchun mo'ljallangan
+     * (ChildSetupActivity) — ota-ona tomonida ishlatilsa, Firestore
+     * qoidalari (isRealOwner) farzandlar ro'yxatini ko'rsatishni rad
+     * etadi va "Bu kodga hali birorta farzand ulanmagan" degan noto'g'ri
+     * xabar chiqadi, garchi farzand aslida ulangan bo'lsa ham.
+     * Endi bunday holatda anonim kirish o'rniga foydalanuvchi qayta
+     * Google bilan kirishi uchun kirish ekraniga qaytariladi.
+     */
+    private fun ensureAuth(): Boolean {
         val auth = FirebaseAuth.getInstance()
-        if (auth.currentUser == null) auth.signInAnonymously()
+        if (auth.currentUser == null) {
+            startActivity(Intent(this, MainActivity::class.java))
+            finish()
+            return false
+        }
+        return true
     }
 
     private fun loadFamily(code: String) {

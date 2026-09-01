@@ -188,7 +188,7 @@
                     android:textColor="#2ECC71"
                     android:textStyle="bold"
                     android:textSize="13sp"
-                    android:background="@drawable/bg_card_theme"
+                    android:background="@drawable/bg_pill_theme"
                     android:paddingStart="12dp"
                     android:paddingEnd="12dp"
                     android:paddingTop="6dp"
@@ -550,7 +550,12 @@
                     android:layout_height="wrap_content"
                     android:text="Barchasini ko'rish →"
                     android:textColor="#2ECC71"
-                    android:textSize="12sp"/>
+                    android:textSize="12sp"
+                    android:background="@drawable/bg_pill_theme"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"/>
 
             </LinearLayout>
 
@@ -594,7 +599,12 @@
                     android:layout_height="wrap_content"
                     android:text="Barchasini ko'rish →"
                     android:textColor="#3498DB"
-                    android:textSize="12sp"/>
+                    android:textSize="12sp"
+                    android:background="@drawable/bg_pill_theme"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"/>
 
             </LinearLayout>
 
@@ -645,7 +655,12 @@
                     android:layout_height="wrap_content"
                     android:text="Barchasini ko'rish →"
                     android:textColor="#9B59B6"
-                    android:textSize="12sp"/>
+                    android:textSize="12sp"
+                    android:background="@drawable/bg_pill_theme"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"/>
 
             </LinearLayout>
 
@@ -687,7 +702,12 @@
                     android:layout_height="wrap_content"
                     android:text="Barchasini ko'rish →"
                     android:textColor="#F39C12"
-                    android:textSize="12sp"/>
+                    android:textSize="12sp"
+                    android:background="@drawable/bg_pill_theme"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"/>
 
             </LinearLayout>
 
