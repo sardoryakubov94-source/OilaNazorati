@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- TUNGI mavzu ranglari — orqa fon gradientiga (qora+binafsha) mos, binafsharoq bo'limlar -->
 <resources>
-    <color name="color_bg">#0D1117</color>
+    <color name="color_bg">#251C38</color>
     <color name="color_surface">#473A5E</color>
     <color name="color_surface_alt">#53446D</color>
     <color name="color_text_primary">#FFFFFF</color>
