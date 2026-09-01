@@ -24,12 +24,12 @@
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true">
-        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+        <ImageView android:layout_width="20dp" android:layout_height="20dp"
             android:src="@drawable/ic_nav_home" android:tint="@color/color_nav_inactive"
             android:contentDescription="Bosh sahifa"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Bosh sahifa" android:textColor="@color/color_nav_inactive" android:textSize="9sp"/>
+            android:text="Bosh sahifa" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
     </LinearLayout>
 
     <LinearLayout
@@ -42,12 +42,30 @@
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true">
-        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+        <ImageView android:layout_width="20dp" android:layout_height="20dp"
             android:src="@drawable/ic_nav_call" android:tint="@color/color_nav_inactive"
             android:contentDescription="Aloqa"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Aloqa" android:textColor="@color/color_nav_inactive" android:textSize="9sp"/>
+            android:text="Aloqa" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/navSms"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:background="?attr/selectableItemBackground"
+        android:clickable="true"
+        android:focusable="true">
+        <ImageView android:layout_width="20dp" android:layout_height="20dp"
+            android:src="@drawable/ic_message" android:tint="@color/color_nav_inactive"
+            android:contentDescription="SMS"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:text="SMS" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
     </LinearLayout>
 
     <LinearLayout
@@ -60,12 +78,12 @@
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true">
-        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+        <ImageView android:layout_width="20dp" android:layout_height="20dp"
             android:src="@drawable/ic_nav_location" android:tint="@color/color_nav_inactive"
             android:contentDescription="Joylashuv"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Joylashuv" android:textColor="@color/color_nav_inactive" android:textSize="9sp"/>
+            android:text="Joylashuv" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
     </LinearLayout>
 
     <LinearLayout
@@ -78,12 +96,12 @@
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true">
-        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+        <ImageView android:layout_width="20dp" android:layout_height="20dp"
             android:src="@drawable/ic_nav_apps" android:tint="@color/color_nav_inactive"
             android:contentDescription="Ilovalar"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Ilovalar" android:textColor="@color/color_nav_inactive" android:textSize="9sp"/>
+            android:text="Ilovalar" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
     </LinearLayout>
 
     <LinearLayout
@@ -96,12 +114,12 @@
         android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true">
-        <ImageView android:layout_width="22dp" android:layout_height="22dp"
+        <ImageView android:layout_width="20dp" android:layout_height="20dp"
             android:src="@drawable/ic_nav_settings" android:tint="@color/color_nav_inactive"
             android:contentDescription="Sozlama"/>
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
-            android:text="Sozlama" android:textColor="@color/color_nav_inactive" android:textSize="9sp"/>
+            android:text="Sozlama" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
     </LinearLayout>
 
 </LinearLayout>

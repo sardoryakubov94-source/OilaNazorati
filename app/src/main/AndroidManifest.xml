@@ -90,6 +90,7 @@
             android:exported="false" />
         <activity
             android:name=".ui.SmsHistoryActivity"
+            android:launchMode="singleTask"
             android:exported="false" />
         <activity
             android:name=".ui.NotificationHistoryActivity"

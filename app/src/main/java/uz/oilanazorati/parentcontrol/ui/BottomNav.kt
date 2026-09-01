@@ -10,7 +10,7 @@ import android.widget.Toast
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 
-enum class NavTab { HOME, CALLS, LOCATION, APPS, SETTINGS }
+enum class NavTab { HOME, CALLS, SMS, LOCATION, APPS, SETTINGS }
 
 private const val COLOR_ACTIVE = "#2ECC71"
 
@@ -39,6 +39,7 @@ private const val COLOR_ACTIVE = "#2ECC71"
 fun Activity.bindBottomNav(active: NavTab) {
     val navHome = findViewById<LinearLayout>(R.id.navHome) ?: return
     val navCalls = findViewById<LinearLayout>(R.id.navCalls) ?: return
+    val navSms = findViewById<LinearLayout>(R.id.navSms) ?: return
     val navLocation = findViewById<LinearLayout>(R.id.navLocation) ?: return
     val navApps = findViewById<LinearLayout>(R.id.navApps) ?: return
     val navSettings = findViewById<LinearLayout>(R.id.navSettings) ?: return
@@ -54,6 +55,7 @@ fun Activity.bindBottomNav(active: NavTab) {
     }
     highlight(navHome, active == NavTab.HOME)
     highlight(navCalls, active == NavTab.CALLS)
+    highlight(navSms, active == NavTab.SMS)
     highlight(navLocation, active == NavTab.LOCATION)
     highlight(navApps, active == NavTab.APPS)
     highlight(navSettings, active == NavTab.SETTINGS)
@@ -78,6 +80,7 @@ fun Activity.bindBottomNav(active: NavTab) {
         if (active != NavTab.HOME) goToTab(ParentDashboardActivity::class.java)
     }
     navCalls.setOnClickListener { if (active != NavTab.CALLS) goIfChildSelected { CallHistoryActivity::class.java } }
+    navSms.setOnClickListener { if (active != NavTab.SMS) goIfChildSelected { SmsHistoryActivity::class.java } }
     navLocation.setOnClickListener { if (active != NavTab.LOCATION) goIfChildSelected { LocationHistoryActivity::class.java } }
     navApps.setOnClickListener { if (active != NavTab.APPS) goIfChildSelected { TrendsActivity::class.java } }
     navSettings.setOnClickListener {

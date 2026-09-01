@@ -54,7 +54,7 @@ class SmsHistoryActivity : AppCompatActivity() {
         updateDateLabel()
         loadDataForSelectedDay()
 
-        bindBottomNav(NavTab.CALLS)
+        bindBottomNav(NavTab.SMS)
     }
 
     private fun showDatePicker() {
@@ -94,5 +94,10 @@ class SmsHistoryActivity : AppCompatActivity() {
             historyList.visibility = if (sorted.isEmpty()) View.GONE else View.VISIBLE
             listTitle.text = "SMS ro'yxati — ${sorted.size} ta"
         }
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        moveTaskToBack(true)
     }
 }
