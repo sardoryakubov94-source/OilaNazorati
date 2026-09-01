@@ -263,4 +263,12 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
             }
         }
     }
+
+    // Tab-ekranlar endi finish() qilinmaydi (tez almashish uchun tirik
+    // qoladi) — shuning uchun orqaga tugmasi eski ekranga qaytish
+    // o'rniga to'g'ridan-to'g'ri ilovadan chiqishi kerak.
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        moveTaskToBack(true)
+    }
 }

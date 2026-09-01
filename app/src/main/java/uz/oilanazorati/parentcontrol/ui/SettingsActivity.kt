@@ -169,4 +169,9 @@ class SettingsActivity : AppCompatActivity() {
         startActivity(Intent(this, ParentDashboardActivity::class.java))
         finish()
     }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        moveTaskToBack(true)
+    }
 }

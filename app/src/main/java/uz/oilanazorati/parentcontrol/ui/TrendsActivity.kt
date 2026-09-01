@@ -579,4 +579,9 @@ class TrendsActivity : AppCompatActivity() {
         }
         return IndexAxisValueFormatter(labels)
     }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        moveTaskToBack(true)
+    }
 }

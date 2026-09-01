@@ -97,4 +97,9 @@ class CallHistoryActivity : AppCompatActivity() {
             listTitle.text = "Qo'ng'iroqlar ro'yxati — ${sorted.size} ta"
         }
     }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        moveTaskToBack(true)
+    }
 }

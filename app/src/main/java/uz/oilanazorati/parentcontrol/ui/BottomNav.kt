@@ -23,11 +23,18 @@ private const val COLOR_ACTIVE = "#2ECC71"
  *   bindBottomNav(NavTab.CALLS)
  *
  * Joriy tab (icon + yozuv) yashil rangda belgilanadi; boshqa tabga
- * bosilsa mos ekranga o'tiladi va joriy ekran finish() qilinadi (tekis/
- * tab-uslubidagi navigatsiya — ekranlar cheksiz qatlamlanib qolmaydi).
- * "Sozlama" endi to'liq alohida SettingsActivity ekraniga olib boradi.
- * Oila kodi yoki farzand hali tanlanmagan bo'lsa, Aloqa/Joylashuv/
- * Ilovalar tablariga o'tish o'rniga ogohlantirish ko'rsatiladi.
+ * bosilsa mos ekranga o'tiladi. Har bir asosiy ekran singleTask
+ * launchMode'da e'lon qilingan (AndroidManifest.xml) — shuning uchun
+ * FLAG_ACTIVITY_REORDER_TO_FRONT bilan chaqirilganda, agar ekran
+ * avval ochilgan bo'lsa, u NOLDAN qayta yaratilmaydi (Firebase
+ * tinglovchilari, xarita va ro'yxatlar tirik qoladi) — faqat
+ * oldinga chiqariladi. Bu "har safar qayta yuklanadi" muammosini
+ * hal qiladi. Orqaga tugmasi esa har bir ekranda alohida
+ * moveTaskToBack() bilan ilovadan chiqadi (ekranlar cheksiz
+ * qatlamlanib qolmasligi uchun). "Sozlama" endi to'liq alohida
+ * SettingsActivity ekraniga olib boradi. Oila kodi yoki farzand
+ * hali tanlanmagan bo'lsa, Aloqa/Joylashuv/Ilovalar tablariga
+ * o'tish o'rniga ogohlantirish ko'rsatiladi.
  */
 fun Activity.bindBottomNav(active: NavTab) {
     val navHome = findViewById<LinearLayout>(R.id.navHome) ?: return
@@ -51,28 +58,29 @@ fun Activity.bindBottomNav(active: NavTab) {
     highlight(navApps, active == NavTab.APPS)
     highlight(navSettings, active == NavTab.SETTINGS)
 
+    fun goToTab(targetClass: Class<*>) {
+        val intent = Intent(this, targetClass).apply {
+            flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+        }
+        startActivity(intent)
+        overridePendingTransition(0, 0)
+    }
+
     fun goIfChildSelected(target: () -> Class<*>) {
         if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) {
             Toast.makeText(this, "Avval oila kodini yuklab, farzandni tanlang", Toast.LENGTH_SHORT).show()
             return
         }
-        startActivity(Intent(this, target()))
-        finish()
+        goToTab(target())
     }
 
     navHome.setOnClickListener {
-        if (active != NavTab.HOME) {
-            startActivity(Intent(this, ParentDashboardActivity::class.java))
-            finish()
-        }
+        if (active != NavTab.HOME) goToTab(ParentDashboardActivity::class.java)
     }
     navCalls.setOnClickListener { if (active != NavTab.CALLS) goIfChildSelected { CallHistoryActivity::class.java } }
     navLocation.setOnClickListener { if (active != NavTab.LOCATION) goIfChildSelected { LocationHistoryActivity::class.java } }
     navApps.setOnClickListener { if (active != NavTab.APPS) goIfChildSelected { TrendsActivity::class.java } }
     navSettings.setOnClickListener {
-        if (active != NavTab.SETTINGS) {
-            startActivity(Intent(this, SettingsActivity::class.java))
-            finish()
-        }
+        if (active != NavTab.SETTINGS) goToTab(SettingsActivity::class.java)
     }
 }

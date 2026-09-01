@@ -240,4 +240,9 @@ class LocationHistoryActivity : AppCompatActivity(), OnMapReadyCallback {
         markersByTimeMs[event.vaqtMs]?.showInfoWindow()
         adapter.selectByEvent(event)
     }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        moveTaskToBack(true)
+    }
 }
