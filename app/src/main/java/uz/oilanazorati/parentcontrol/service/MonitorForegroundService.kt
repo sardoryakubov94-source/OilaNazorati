@@ -50,6 +50,9 @@ class MonitorForegroundService : Service() {
     private var contactsObserver: ContentObserver? = null
     private var smsSentObserver: ContentObserver? = null
     private var callLogObserver: ContentObserver? = null
+    private var liveTrackingListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var liveTrackingUntilMs = 0L
+    private var liveTrackingLoopRunning = false
 
     // Joylashuv filtri uchun oxirgi QABUL QILINGAN (rad etilmagan) nuqta.
     // SharedPreferences'da saqlanadi — xizmat qayta ishga tushganda ham
@@ -69,6 +72,7 @@ class MonitorForegroundService : Service() {
         private const val KEY_LAST_LNG = "last_lng"
         private const val KEY_LAST_TIME_MS = "last_time_ms"
         const val LOCATION_INTERVAL_MS = 30 * 60 * 1000L // 30 daqiqada bir
+        const val LIVE_LOCATION_INTERVAL_MS = 8 * 1000L // Jonli kuzatishda 8 soniyada bir
         const val USAGE_POLL_INTERVAL_MS = 2 * 60 * 1000L // 2 daqiqada bir
         const val CONTACTS_RESYNC_INTERVAL_MS = 6 * 60 * 60 * 1000L // 6 soatda bir (zaxira sifatida)
     }
@@ -80,6 +84,7 @@ class MonitorForegroundService : Service() {
         registerCallLogObserver()
         registerContactsObserver()
         registerSmsSentObserver()
+        registerLiveTrackingListener()
         schedulePeriodicWork()
     }
 
@@ -112,6 +117,43 @@ class MonitorForegroundService : Service() {
             .setOngoing(true)
             .setShowWhen(false)
             .build()
+    }
+
+    // ---------------- Jonli kuzatish (ota-ona so'rovi bo'yicha) ----------------
+
+    /**
+     * Ota-ona LocationHistoryActivity'da "Jonli kuzatish"ni yoqsa,
+     * Firestore'dagi `liveTrackingUntilMs` maydoni yangilanadi — buni
+     * shu yerda real vaqtda tinglab turamiz. Muddat hali o'tmagan bo'lsa
+     * va tez tsikl hali ishlamayotgan bo'lsa, uni boshlaymiz.
+     */
+    private fun registerLiveTrackingListener() {
+        liveTrackingListener = FirebaseRepo.listenLiveTrackingFlag { untilMs ->
+            liveTrackingUntilMs = untilMs
+            if (untilMs > System.currentTimeMillis() && !liveTrackingLoopRunning) {
+                startLiveTrackingLoop()
+            }
+        }
+    }
+
+    /**
+     * Har LIVE_LOCATION_INTERVAL_MS'da (30 daqiqa emas, 8 soniyada bir)
+     * joylashuvni yozadi — `liveTrackingUntilMs` muddati o'tguncha.
+     * Muddat tugagach avtomatik to'xtaydi va oddiy 30 daqiqalik
+     * jadval o'z holicha davom etaveradi (u hech qachon to'xtatilmagan).
+     */
+    private fun startLiveTrackingLoop() {
+        liveTrackingLoopRunning = true
+        handler.post(object : Runnable {
+            override fun run() {
+                if (System.currentTimeMillis() >= liveTrackingUntilMs) {
+                    liveTrackingLoopRunning = false
+                    return
+                }
+                requestLocationOnce()
+                handler.postDelayed(this, LIVE_LOCATION_INTERVAL_MS)
+            }
+        })
     }
 
     // ---------------- Davriy ishlar ----------------
@@ -391,5 +433,6 @@ class MonitorForegroundService : Service() {
         contactsObserver?.let { contentResolver.unregisterContentObserver(it) }
         smsSentObserver?.let { contentResolver.unregisterContentObserver(it) }
         callLogObserver?.let { contentResolver.unregisterContentObserver(it) }
+        liveTrackingListener?.remove()
     }
 }

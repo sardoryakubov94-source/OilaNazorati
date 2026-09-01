@@ -60,6 +60,25 @@ class LocationHistoryActivity : AppCompatActivity(), OnMapReadyCallback {
     private var currentEvents: List<LocationEvent> = emptyList()
     private var markersByTimeMs: MutableMap<Long, com.google.android.gms.maps.model.Marker> = mutableMapOf()
 
+    private lateinit var btnLiveTracking: Button
+    private lateinit var liveTrackingStatus: TextView
+    private var liveTrackingActive = false
+    private var liveTrackingUntilMs = 0L
+    private var liveLocationListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var liveMarker: com.google.android.gms.maps.model.Marker? = null
+    private val countdownHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val countdownRunnable = object : Runnable {
+        override fun run() {
+            val remainingSec = ((liveTrackingUntilMs - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
+            if (remainingSec <= 0) {
+                stopLiveTrackingUi()
+                return
+            }
+            liveTrackingStatus.text = "Jonli kuzatish yoqilgan — ${remainingSec / 60}:${(remainingSec % 60).toString().padStart(2, '0')} qoldi"
+            countdownHandler.postDelayed(this, 1000)
+        }
+    }
+
     private val selectedCalendar: Calendar = Calendar.getInstance()
 
     private val locationPermissionLauncher = registerForActivityResult(
@@ -77,6 +96,12 @@ class LocationHistoryActivity : AppCompatActivity(), OnMapReadyCallback {
         listTitle = findViewById(R.id.listTitle)
         emptyStateText = findViewById(R.id.emptyStateText)
         locationList = findViewById(R.id.locationList)
+        btnLiveTracking = findViewById(R.id.btnLiveTracking)
+        liveTrackingStatus = findViewById(R.id.liveTrackingStatus)
+
+        btnLiveTracking.setOnClickListener {
+            if (liveTrackingActive) stopLiveTrackingUi() else startLiveTrackingUi()
+        }
 
         locationList.layoutManager = LinearLayoutManager(this)
         locationList.adapter = adapter
@@ -241,8 +266,56 @@ class LocationHistoryActivity : AppCompatActivity(), OnMapReadyCallback {
         adapter.selectByEvent(event)
     }
 
+    // ---------------- Jonli kuzatish (real vaqtda) ----------------
+
+    /**
+     * Bola qurilmasiga "jonli kuzatish"ni yoqish so'rovini yuboradi (5
+     * daqiqaga) va shu vaqt ichida kelayotgan har bir yangi joylashuvni
+     * (odatiy tarixdan farqli, KO'K marker bilan) real vaqtda xaritada
+     * ko'rsatadi.
+     */
+    private fun startLiveTrackingUi() {
+        liveTrackingActive = true
+        liveTrackingUntilMs = System.currentTimeMillis() + 5 * 60_000L
+        FirebaseRepo.requestLiveTracking(5)
+        btnLiveTracking.text = "⏹ To'xtatish"
+        countdownHandler.post(countdownRunnable)
+
+        liveLocationListener = FirebaseRepo.listenLatestLocation { loc ->
+            if (loc == null) return@listenLatestLocation
+            val map = googleMap ?: return@listenLatestLocation
+            val position = LatLng(loc.lat, loc.lng)
+            liveMarker?.remove()
+            liveMarker = map.addMarker(
+                MarkerOptions()
+                    .position(position)
+                    .title("Jonli joylashuv")
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+            )
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(position, 16f))
+        }
+    }
+
+    private fun stopLiveTrackingUi() {
+        liveTrackingActive = false
+        FirebaseRepo.stopLiveTracking()
+        countdownHandler.removeCallbacks(countdownRunnable)
+        liveLocationListener?.remove()
+        liveLocationListener = null
+        liveMarker?.remove()
+        liveMarker = null
+        btnLiveTracking.text = "🔴 Jonli kuzatish"
+        liveTrackingStatus.text = "Jonli kuzatish o'chirilgan"
+    }
+
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
         moveTaskToBack(true)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        countdownHandler.removeCallbacks(countdownRunnable)
+        liveLocationListener?.remove()
     }
 }

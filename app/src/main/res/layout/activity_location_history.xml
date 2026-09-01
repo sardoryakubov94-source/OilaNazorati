@@ -36,6 +36,33 @@
 
     </LinearLayout>
 
+    <!-- Jonli kuzatish -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="12dp">
+
+        <TextView
+            android:id="@+id/liveTrackingStatus"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="13sp"
+            android:textColor="@color/color_text_secondary"
+            android:text="Jonli kuzatish o'chirilgan"/>
+
+        <Button
+            android:id="@+id/btnLiveTracking"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🔴 Jonli kuzatish"/>
+
+    </LinearLayout>
+
     <!-- Xarita -->
     <FrameLayout
         android:id="@+id/mapContainer"

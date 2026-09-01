@@ -160,9 +160,54 @@ object FirebaseRepo {
             }
     }
 
-    fun listenLatestLocation(onChange: (LocationEvent?) -> Unit) {
-        val col = childCollection("locations") ?: return onChange(null)
-        col
+    // ---------------- Jonli kuzatish (on-demand real-time joylashuv) ----------------
+
+    /**
+     * Ota-ona tomonidan chaqiriladi: bola qurilmasining hujjatiga
+     * `liveTrackingUntilMs` (hozirgi vaqt + durationMinutes) yozadi.
+     * Bola qurilmasidagi MonitorForegroundService shu maydonni
+     * tinglab turadi va muddat o'tmaguncha har LIVE_LOCATION_INTERVAL_MS'da
+     * (odatiy 30 daqiqa o'rniga) joylashuvni yuboradi.
+     */
+    fun requestLiveTracking(durationMinutes: Int = 5) {
+        val code = familyCode ?: return
+        val cid = childId ?: return
+        db.collection("families").document(code)
+            .collection("children").document(cid)
+            .set(
+                mapOf("liveTrackingUntilMs" to System.currentTimeMillis() + durationMinutes * 60_000L),
+                SetOptions.merge()
+            )
+    }
+
+    /** Ota-ona jonli kuzatishni muddatidan oldin to'xtatmoqchi bo'lsa. */
+    fun stopLiveTracking() {
+        val code = familyCode ?: return
+        val cid = childId ?: return
+        db.collection("families").document(code)
+            .collection("children").document(cid)
+            .set(mapOf("liveTrackingUntilMs" to 0L), SetOptions.merge())
+    }
+
+    /**
+     * Bola qurilmasi tomonidan chaqiriladi: o'zining `liveTrackingUntilMs`
+     * maydonini real vaqtda kuzatib boradi (parent uni istalgan payt
+     * o'zgartirishi mumkin). Chaqiruvchi tomon `remove()` bilan
+     * tinglovchini o'chirishi uchun ListenerRegistration qaytariladi.
+     */
+    fun listenLiveTrackingFlag(onChange: (Long) -> Unit): com.google.firebase.firestore.ListenerRegistration? {
+        val code = familyCode ?: return null
+        val cid = childId ?: return null
+        return db.collection("families").document(code)
+            .collection("children").document(cid)
+            .addSnapshotListener { snap, _ ->
+                onChange(snap?.getLong("liveTrackingUntilMs") ?: 0L)
+            }
+    }
+
+    fun listenLatestLocation(onChange: (LocationEvent?) -> Unit): com.google.firebase.firestore.ListenerRegistration? {
+        val col = childCollection("locations") ?: run { onChange(null); return null }
+        return col
             .orderBy("vaqtMs", Query.Direction.DESCENDING)
             .limit(1)
             .addSnapshotListener { snap, _ ->
