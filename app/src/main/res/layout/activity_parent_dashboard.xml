@@ -139,23 +139,49 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="📍 SO'NGGI JOYLASHUV"
-                    android:textColor="#2ECC71"
-                    android:textStyle="bold"
-                    android:textSize="11sp"
-                    android:layout_marginBottom="6dp"/>
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="6dp">
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginEnd="4dp"
+                        android:src="@drawable/ic_nav_location"
+                        android:tint="#2ECC71"
+                        android:contentDescription="Joylashuv"/>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="SO'NGGI JOYLASHUV"
+                        android:textColor="#2ECC71"
+                        android:textStyle="bold"
+                        android:textSize="11sp"/>
+                </LinearLayout>
 
-                <TextView
-                    android:id="@+id/locationTimeAgo"
+                <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="🕐  --:-- • --- daqiqa oldin"
-                    android:textColor="@color/color_text_secondary"
-                    android:textSize="12sp"
-                    android:layout_marginBottom="6dp"/>
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="6dp">
+                    <ImageView
+                        android:layout_width="13dp"
+                        android:layout_height="13dp"
+                        android:layout_marginEnd="4dp"
+                        android:src="@drawable/ic_clock"
+                        android:tint="@color/color_text_secondary"
+                        android:contentDescription="Vaqt"/>
+                    <TextView
+                        android:id="@+id/locationTimeAgo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="--:-- • --- daqiqa oldin"
+                        android:textColor="@color/color_text_secondary"
+                        android:textSize="12sp"/>
+                </LinearLayout>
 
                 <TextView
                     android:id="@+id/locationCoords"
