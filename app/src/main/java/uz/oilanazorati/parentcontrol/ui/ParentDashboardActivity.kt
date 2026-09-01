@@ -8,12 +8,6 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MarkerOptions
 import com.google.firebase.auth.FirebaseAuth
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
@@ -31,7 +25,7 @@ import java.util.*
  * header'dagi ⚙️ tugmasi va pastki navigatsiyadagi "Sozlama" tabi o'sha
  * ekranga olib boradi.
  */
-class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
+class ParentDashboardActivity : AppCompatActivity() {
 
     private lateinit var binding: uz.oilanazorati.parentcontrol.databinding.ActivityParentDashboardBinding
     private val appUsageAdapter = AppUsageAdapter()
@@ -39,7 +33,6 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
     private val smsAdapter = SmsHistoryAdapter()
     private val contactSummaryAdapter = ContactSummaryAdapter()
 
-    private var googleMap: GoogleMap? = null
     private var isPremiumUser = false
     private val timeFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
 
@@ -52,7 +45,6 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
 
         setupLists()
         setupHeader()
-        setupMiniMap()
         setupBottomNav()
         setupSectionButtons()
 
@@ -91,23 +83,6 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
             showChildPickerDialog(code)
         }
         binding.btnSettings.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
-    }
-
-    private fun setupMiniMap() {
-        val mapFragment = SupportMapFragment.newInstance()
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.miniMapContainer, mapFragment)
-            .commit()
-        mapFragment.getMapAsync(this)
-    }
-
-    override fun onMapReady(map: GoogleMap) {
-        googleMap = map
-        map.uiSettings.apply {
-            setAllGesturesEnabled(false)
-            isMapToolbarEnabled = false
-            isZoomControlsEnabled = false
-        }
     }
 
     private fun setupBottomNav() {
@@ -274,13 +249,6 @@ class ParentDashboardActivity : AppCompatActivity(), OnMapReadyCallback {
             binding.headerStatus.setTextColor(
                 android.graphics.Color.parseColor(if (minutesAgo <= 45) "#2ECC71" else "#8B96A5")
             )
-
-            val position = LatLng(loc.lat, loc.lng)
-            googleMap?.let { map ->
-                map.clear()
-                map.addMarker(MarkerOptions().position(position))
-                map.moveCamera(CameraUpdateFactory.newLatLngZoom(position, 14f))
-            }
         }
     }
 
