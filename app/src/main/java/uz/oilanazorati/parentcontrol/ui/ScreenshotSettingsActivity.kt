@@ -51,17 +51,6 @@ class ScreenshotSettingsActivity : AppCompatActivity() {
             setPadding(0, 24, 0, 20)
         })
 
-        // Reklama joyi — haqiqiy reklama tarmog'i (masalan AdMob) hali ulanmagan,
-        // shuning uchun bu hozircha statik promo blok.
-        root.addView(TextView(this).apply {
-            text = "REKLAMA"
-            textSize = 11f
-            setTextColor(ContextCompat.getColor(this@ScreenshotSettingsActivity, R.color.color_text_secondary))
-            gravity = Gravity.CENTER
-            setPadding(0, 40, 0, 40)
-            setBackgroundColor(0x1AFFFFFF)
-        })
-
         root.addView(LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundResource(R.drawable.bg_premium_banner)
