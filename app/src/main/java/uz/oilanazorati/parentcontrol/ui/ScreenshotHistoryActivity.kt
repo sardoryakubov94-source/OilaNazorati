@@ -1,0 +1,45 @@
+package uz.oilanazorati.parentcontrol.ui
+
+import android.graphics.BitmapFactory
+import android.os.Bundle
+import android.view.ViewGroup
+import android.widget.*
+import androidx.appcompat.app.AppCompatActivity
+import uz.oilanazorati.parentcontrol.model.ScreenshotMetadata
+import uz.oilanazorati.parentcontrol.screenshot.ScreenshotRepository
+import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.*
+import java.util.concurrent.Executors
+
+class ScreenshotHistoryActivity : AppCompatActivity() {
+    private val executor = Executors.newSingleThreadExecutor()
+    private lateinit var box: LinearLayout
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        box = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(24,24,24,24) }
+        val scroll = ScrollView(this).apply { addView(box) }; setContentView(scroll)
+        box.addView(TextView(this).apply { text = "🖼 Screenshotlar tarixi"; textSize = 24f })
+        load()
+    }
+    private fun load() {
+        ScreenshotRepository.fetchHistory { list ->
+            if (list.isEmpty()) box.addView(TextView(this).apply { text = "Hali screenshot mavjud emas." })
+            list.forEach { addItem(it) }
+        }
+    }
+    private fun addItem(meta: ScreenshotMetadata) {
+        val card = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(8,16,8,16) }
+        val title = TextView(this).apply { text = "${meta.appLabel} • ${meta.thresholdMinute} daqiqa\n${SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(meta.capturedAt))}"; textSize = 16f }
+        card.addView(title)
+        val image = ImageView(this).apply { layoutParams = ViewGroup.LayoutParams(-1, 500); scaleType = ImageView.ScaleType.CENTER_CROP }
+        card.addView(image); box.addView(card)
+        ScreenshotRepository.downloadUrl(meta.storagePath) { url ->
+            if (url == null) return@downloadUrl
+            executor.execute {
+                try { val bmp = BitmapFactory.decodeStream(URL(url).openStream()); runOnUiThread { image.setImageBitmap(bmp) } } catch (_: Exception) { }
+            }
+        }
+    }
+    override fun onDestroy() { executor.shutdownNow(); super.onDestroy() }
+}
