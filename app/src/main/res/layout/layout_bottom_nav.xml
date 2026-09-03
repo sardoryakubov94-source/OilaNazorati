@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Barcha asosiy ekranlarda (Bosh sahifa, Aloqa, Joylashuv, Ilovalar,
-    Sozlama) bir xil ko'rinadigan pastki navigatsiya paneli — NurMakon
-    dasturidagi kabi chiziqli (vector) iconlar bilan. Har bir ekran shu
-    faylni <include> qiladi va
-    uz.oilanazorati.parentcontrol.ui.BottomNavKt#bindBottomNav orqali
-    joriy tabni belgilab, boshqa tablarga o'tishni ulaydi.
+    Pastki navigatsiya: Bosh sahifa, Aloqa, SMS, Joylashuv,
+    Ilovalar va Screenshot. Sozlamalar Bosh sahifadagi ⚙ tugmasida.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -16,110 +12,56 @@
 
     <LinearLayout
         android:id="@+id/navHome"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-        <ImageView android:layout_width="20dp" android:layout_height="20dp"
-            android:src="@drawable/ic_nav_home" android:tint="@color/color_nav_inactive"
-            android:contentDescription="Bosh sahifa"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Bosh sahifa" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
+        android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:orientation="vertical" android:gravity="center"
+        android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true">
+        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_nav_home" android:tint="@color/color_nav_inactive" android:contentDescription="Bosh sahifa"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Bosh sahifa" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/navCalls"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-        <ImageView android:layout_width="20dp" android:layout_height="20dp"
-            android:src="@drawable/ic_nav_call" android:tint="@color/color_nav_inactive"
-            android:contentDescription="Aloqa"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Aloqa" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
+        android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:orientation="vertical" android:gravity="center"
+        android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true">
+        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_nav_call" android:tint="@color/color_nav_inactive" android:contentDescription="Aloqa"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Aloqa" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/navSms"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-        <ImageView android:layout_width="20dp" android:layout_height="20dp"
-            android:src="@drawable/ic_message" android:tint="@color/color_nav_inactive"
-            android:contentDescription="SMS"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="SMS" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
+        android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:orientation="vertical" android:gravity="center"
+        android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true">
+        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_message" android:tint="@color/color_nav_inactive" android:contentDescription="SMS"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="SMS" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/navLocation"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-        <ImageView android:layout_width="20dp" android:layout_height="20dp"
-            android:src="@drawable/ic_nav_location" android:tint="@color/color_nav_inactive"
-            android:contentDescription="Joylashuv"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Joylashuv" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
+        android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:orientation="vertical" android:gravity="center"
+        android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true">
+        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_nav_location" android:tint="@color/color_nav_inactive" android:contentDescription="Joylashuv"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Joylashuv" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
     </LinearLayout>
 
     <LinearLayout
         android:id="@+id/navApps"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-        <ImageView android:layout_width="20dp" android:layout_height="20dp"
-            android:src="@drawable/ic_nav_apps" android:tint="@color/color_nav_inactive"
-            android:contentDescription="Ilovalar"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Ilovalar" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
+        android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:orientation="vertical" android:gravity="center"
+        android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true">
+        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_nav_apps" android:tint="@color/color_nav_inactive" android:contentDescription="Ilovalar"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Ilovalar" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/navSettings"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:background="?attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true">
-        <ImageView android:layout_width="20dp" android:layout_height="20dp"
-            android:src="@drawable/ic_nav_settings" android:tint="@color/color_nav_inactive"
-            android:contentDescription="Sozlama"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Sozlama" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
+        android:id="@+id/navScreenshot"
+        android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:orientation="vertical" android:gravity="center"
+        android:background="?attr/selectableItemBackground" android:clickable="true" android:focusable="true">
+        <ImageView android:layout_width="20dp" android:layout_height="20dp" android:src="@drawable/ic_nav_screenshot" android:tint="@color/color_nav_inactive" android:contentDescription="Screenshot"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="2dp" android:text="Screenshot" android:textColor="@color/color_nav_inactive" android:textSize="8sp"/>
     </LinearLayout>
 
 </LinearLayout>

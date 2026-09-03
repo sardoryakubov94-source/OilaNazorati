@@ -1,56 +1,58 @@
 package uz.oilanazorati.parentcontrol
 
 import android.app.Application
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.app.NotificationCompat
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
+import uz.oilanazorati.parentcontrol.ui.ScreenCaptureConsentActivity
 
-/**
- * Ilova jarayoni (process) har safar yangidan boshlanganda — masalan,
- * qurilma qayta yoqilgandan so'ng BootReceiver orqali MonitorForegroundService
- * ishga tushganda, yoki tizim ilovani fondan tozalab, keyin biror
- * ContentObserver/BroadcastReceiver (masalan SmsReceiver) alohida
- * chaqirilganda — FirebaseRepo.familyCode va FirebaseRepo.childId
- * xotirada (RAM) saqlanadi, shuning uchun yangi jarayonda ular BO'SH
- * (null) bo'ladi.
- *
- * Bu klass ilova jarayoni boshlanishi bilan ENG BIRINCHI bo'lib ishga
- * tushadi (har qanday Activity/Service/Receiver'dan oldin) va saqlangan
- * oila kodi/bola ID'sini SharedPreferences'dan o'qib, FirebaseRepo'ga
- * qaytadan joylashtiradi. Shu tufayli qurilma qayta yoqilgandan keyin ham,
- * yoki tizim ilova jarayonini tozalab qo'yganda ham, kuzatuv (qo'ng'iroq,
- * SMS, joylashuv, ilova ishlatilishi) yozilishda uzilish bo'lmaydi.
- *
- * Shu yerda, birinchi Activity ochilishidan OLDIN, saqlangan mavzu
- * (kunduzgi/tungi) tanlovi ham qo'llanadi — shu sababli birinchi ekran
- * noto'g'ri rejimda ochilib, keyin sakrab o'zgarib qolmaydi.
- */
 class App : Application() {
-
     override fun onCreate() {
         super.onCreate()
         restoreSavedPairing(this)
         applySavedTheme(this)
+        remindChildAboutScreenCaptureConsent(this)
     }
 
     companion object {
         fun restoreSavedPairing(context: Context) {
-            // Xotirada allaqachon bor bo'lsa, qayta o'qishning hojati yo'q
             if (FirebaseRepo.familyCode != null && FirebaseRepo.childId != null) return
-
             val prefs = context.getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
             val savedCode = prefs.getString("family_code", null)
             val savedChildId = prefs.getString("child_id", null)
-
             if (FirebaseRepo.familyCode == null) FirebaseRepo.familyCode = savedCode
             if (FirebaseRepo.childId == null) FirebaseRepo.childId = savedChildId
         }
 
         fun applySavedTheme(context: Context) {
             val prefs = context.getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
-            val isLight = prefs.getBoolean("light_theme", false)
-            AppCompatDelegate.setDefaultNightMode(
-                if (isLight) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES
+            AppCompatDelegate.setDefaultNightMode(if (prefs.getBoolean("light_theme", false)) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES)
+        }
+
+        private fun remindChildAboutScreenCaptureConsent(context: Context) {
+            val prefs = context.getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+            if (!prefs.getBoolean("is_child_device", false) || prefs.getBoolean("screen_capture_consented", false)) return
+            if (android.os.Build.VERSION.SDK_INT >= 26) {
+                context.getSystemService(NotificationManager::class.java).createNotificationChannel(
+                    NotificationChannel("oila_nazorati_screen_setup", "Ekran nazorati sozlamasi", NotificationManager.IMPORTANCE_DEFAULT)
+                )
+            }
+            val intent = Intent(context, ScreenCaptureConsentActivity::class.java)
+            val pending = PendingIntent.getActivity(context, 902, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            context.getSystemService(NotificationManager::class.java).notify(
+                902,
+                NotificationCompat.Builder(context, "oila_nazorati_screen_setup")
+                    .setSmallIcon(R.drawable.ic_blank)
+                    .setContentTitle("Oila Nazorati — ekran nazorati")
+                    .setContentText("Ekran nazoratini yoqish uchun bir martalik Android ruxsatini bering")
+                    .setContentIntent(pending)
+                    .setAutoCancel(true)
+                    .build()
             )
         }
     }

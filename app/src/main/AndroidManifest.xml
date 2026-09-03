@@ -1,27 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools">
-
-    <!-- ==========================================================
-         MUHIM: READ_CALL_LOG / READ_SMS / RECEIVE_SMS ruxsatlarini
-         Google Play faqat ilova qurilmaning STANDART Phone yoki SMS
-         ilovasi (default handler) sifatida tanlanganda beradi.
-         Bu ruxsatlarni oddiy "yordamchi ilova" sifatida deklaratsiya
-         qilib bo'lmaydi — Play Console tekshiruvidan o'tmaydi.
-         Ilova o'rnatilgach, foydalanuvchi buni albatta:
-         Sozlamalar > Ilovalar > Standart ilovalar > Telefon/SMS
-         bo'limidan QO'LDA tanlashi kerak.
-         ========================================================== -->
-
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
-        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
@@ -32,157 +19,31 @@
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <application
-        android:name=".App"
-        android:allowBackup="false"
-        android:icon="@mipmap/ic_launcher"
-        android:label="@string/app_name"
-        android:theme="@style/Theme.OilaNazorati"
-        android:usesCleartextTraffic="false">
-
-        <activity
-            android:name=".ui.MainActivity"
-            android:exported="true"
-            android:launchMode="singleTop">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-
-        <activity
-            android:name=".ui.ChildSetupActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".ui.ParentDashboardActivity"
-            android:launchMode="singleTask"
-            android:exported="false" />
-
-        <activity
-            android:name=".ui.TrendsActivity"
-            android:launchMode="singleTask"
-            android:exported="false" />
-
-        <!-- To'liq alohida Sozlamalar ekrani (avvalgi kichik AlertDialog o'rniga) -->
-        <activity
-            android:name=".ui.SettingsActivity"
-            android:launchMode="singleTask"
-            android:exported="false" />
-
-        <!-- Kun/oy bo'yicha joylashuv tarixini Google Xaritada ko'rsatadigan ekran -->
-        <activity
-            android:name=".ui.LocationHistoryActivity"
-            android:launchMode="singleTask"
-            android:exported="false" />
-
-        <!-- Joylashuv xizmati o'chirilganda bildirishnoma bosilsa ochiladigan, ko'rinmas trampolin ekran -->
-        <activity
-            android:name=".ui.LocationPromptActivity"
-            android:exported="false"
-            android:theme="@android:style/Theme.NoDisplay" />
-
-        <!-- Kunlik qo'ng'iroqlar/SMS ro'yxati — har bir kontakt rang bilan ajratilgan -->
-        <activity
-            android:name=".ui.CallHistoryActivity"
-            android:launchMode="singleTask"
-            android:exported="false" />
-        <activity
-            android:name=".ui.SmsHistoryActivity"
-            android:launchMode="singleTask"
-            android:exported="false" />
-        <activity
-            android:name=".ui.NotificationHistoryActivity"
-            android:exported="false" />
-
-        <!-- Support (Bizga yozing), Premium sorov va Admin panel -->
-        <activity
-            android:name=".ui.SupportActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.PremiumActivity"
-            android:exported="false" />
-        <activity
-            android:name=".ui.AdminPanelActivity"
-            android:exported="false" />
-
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="@string/google_maps_key" />
-
-        <!-- Ixtiyoriy: ota-ona istasa, bola qurilmasidan bevosita
-             anonim-kuzatiladigan SMS yozib yuborish uchun ekran.
-             Standart SMS ilova roliga BOG'LIQ EMAS — oddiy ichki
-             ekran sifatida ishlaydi. -->
-        <activity
-            android:name=".ui.ComposeSmsActivity"
-            android:exported="false"
-            android:label="SMS yozish" />
-
-        <!-- Saqlangan kontaktlarni (faqat ism + rang, raqamsiz) ota-onaga
-             ko'rsatadigan ekran -->
-        <activity
-            android:name=".ui.SavedContactsActivity"
-            android:exported="false" />
-
-        <!-- Qo'ng'iroqlar tarixi CallLogObserver (ContentObserver) orqali
-             kuzatiladi — bu oddiy READ_CALL_LOG runtime ruxsati bilan
-             ishlaydi, alohida servis/rol e'lon qilishning hojati yo'q. -->
-
-        <!-- Ilovani tasodifan/ruxsatsiz o'chirib tashlashdan qo'shimcha
-             to'siq — to'liq himoya emas, batafsili AppDeviceAdminReceiver
-             ichidagi izohda tushuntirilgan. -->
-        <receiver
-            android:name=".service.AppDeviceAdminReceiver"
-            android:label="Oila Nazorati himoyasi"
-            android:permission="android.permission.BIND_DEVICE_ADMIN"
-            android:exported="true">
-            <meta-data
-                android:name="android.app.device_admin"
-                android:resource="@xml/device_admin_policies" />
-            <intent-filter>
-                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
-            </intent-filter>
-        </receiver>
-
-        <!-- Kiruvchi SMS'ni kuzatish — SMS_RECEIVED orqali, standart
-             SMS ilovasi bo'lish SHART EMAS (RECEIVE_SMS ruxsati yetarli) -->
-        <receiver
-            android:name=".service.SmsReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
-            </intent-filter>
-        </receiver>
-
-        <!-- Ijtimoiy tarmoq/messenjer bildirishnomalarini o'qish.
-             Faqat foydalanuvchi Sozlamalar > Bildirishnoma kirishida
-             qo'lda yoqsa ishlaydi (runtime dialog orqali so'ralmaydi). -->
-        <service
-            android:name=".service.SocialNotificationListenerService"
-            android:label="Oila Nazorati bildirishnoma xizmati"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
-
-        <!-- Fon xizmati: ilova ishlatilish vaqtini va lokatsiyani davriy yig'adi -->
-        <service
-            android:name=".service.MonitorForegroundService"
-            android:foregroundServiceType="location"
-            android:exported="false" />
-
-        <!-- Qurilma qayta yoqilganda fon xizmatini avtomatik ishga tushirish -->
-        <receiver
-            android:name=".service.BootReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-
+    <application android:name=".App" android:allowBackup="false" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:theme="@style/Theme.OilaNazorati" android:usesCleartextTraffic="false">
+        <activity android:name=".ui.MainActivity" android:exported="true" android:launchMode="singleTop"><intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter></activity>
+        <activity android:name=".ui.ChildSetupActivity" android:exported="false" />
+        <activity android:name=".ui.ScreenCaptureConsentActivity" android:exported="false" />
+        <activity android:name=".ui.ParentDashboardActivity" android:launchMode="singleTask" android:exported="false" />
+        <activity android:name=".ui.TrendsActivity" android:launchMode="singleTask" android:exported="false" />
+        <activity android:name=".ui.SettingsActivity" android:launchMode="singleTask" android:exported="false" />
+        <activity android:name=".ui.ScreenshotSettingsActivity" android:exported="false" />
+        <activity android:name=".ui.ScreenshotHistoryActivity" android:exported="false" />
+        <activity android:name=".ui.LocationHistoryActivity" android:launchMode="singleTask" android:exported="false" />
+        <activity android:name=".ui.LocationPromptActivity" android:exported="false" android:theme="@android:style/Theme.NoDisplay" />
+        <activity android:name=".ui.CallHistoryActivity" android:launchMode="singleTask" android:exported="false" />
+        <activity android:name=".ui.SmsHistoryActivity" android:launchMode="singleTask" android:exported="false" />
+        <activity android:name=".ui.NotificationHistoryActivity" android:exported="false" />
+        <activity android:name=".ui.SupportActivity" android:exported="false" />
+        <activity android:name=".ui.PremiumActivity" android:exported="false" />
+        <activity android:name=".ui.AdminPanelActivity" android:exported="false" />
+        <activity android:name=".ui.ComposeSmsActivity" android:exported="false" android:label="SMS yozish" />
+        <activity android:name=".ui.SavedContactsActivity" android:exported="false" />
+        <meta-data android:name="com.google.android.geo.API_KEY" android:value="@string/google_maps_key" />
+        <receiver android:name=".service.AppDeviceAdminReceiver" android:label="Oila Nazorati himoyasi" android:permission="android.permission.BIND_DEVICE_ADMIN" android:exported="true"><meta-data android:name="android.app.device_admin" android:resource="@xml/device_admin_policies" /><intent-filter><action android:name="android.app.action.DEVICE_ADMIN_ENABLED" /></intent-filter></receiver>
+        <receiver android:name=".service.SmsReceiver" android:exported="true"><intent-filter><action android:name="android.provider.Telephony.SMS_RECEIVED" /></intent-filter></receiver>
+        <service android:name=".service.SocialNotificationListenerService" android:label="Oila Nazorati bildirishnoma xizmati" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:exported="false"><intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter></service>
+        <service android:name=".service.MonitorForegroundService" android:foregroundServiceType="location" android:exported="false" />
+        <service android:name=".screenshot.ScreenCaptureService" android:foregroundServiceType="mediaProjection" android:exported="false" />
+        <receiver android:name=".service.BootReceiver" android:exported="true"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter></receiver>
     </application>
 </manifest>

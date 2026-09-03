@@ -2,41 +2,34 @@ name: Build APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, screenshot-feature ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Kodni olish
         uses: actions/checkout@v4
-
       - name: JDK 17 o'rnatish
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
       - name: google-services.json faylini yaratish
         env:
           GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
         run: echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > app/google-services.json
-
       - name: Keystore faylini tiklash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: echo "$KEYSTORE_BASE64" | base64 -d > app/release.keystore
-     
       - name: Gradle'ni o'rnatish
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.4'
-
-      - name: Debug APK qurish
+      - name: Build
         run: gradle assembleDebug
-
       - name: APK'ni artifact sifatida saqlash
         uses: actions/upload-artifact@v4
         with:
