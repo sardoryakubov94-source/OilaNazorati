@@ -266,7 +266,7 @@
                 android:minHeight="140dp"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@drawable/bg_card_clickable_theme"
+                android:background="@drawable/bg_card_stat_calls"
                 android:clickable="true"
                 android:focusable="true"
                 android:padding="10dp">
@@ -339,7 +339,7 @@
                 android:minHeight="140dp"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@drawable/bg_card_clickable_theme"
+                android:background="@drawable/bg_card_stat_sms"
                 android:clickable="true"
                 android:focusable="true"
                 android:padding="10dp">
@@ -412,7 +412,7 @@
                 android:minHeight="140dp"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@drawable/bg_card_clickable_theme"
+                android:background="@drawable/bg_card_stat_contacts"
                 android:clickable="true"
                 android:focusable="true"
                 android:padding="10dp">
@@ -474,9 +474,9 @@
 
             </LinearLayout>
 
-            <!-- Ilovalar -->
+            <!-- Screenshot -->
             <LinearLayout
-                android:id="@+id/cardStatApps"
+                android:id="@+id/cardStatScreenshot"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -484,7 +484,7 @@
                 android:minHeight="140dp"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@drawable/bg_card_clickable_theme"
+                android:background="@drawable/bg_card_stat_screenshot"
                 android:clickable="true"
                 android:focusable="true"
                 android:padding="10dp">
@@ -497,16 +497,15 @@
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:layout_gravity="center"
-                        android:src="@drawable/ic_nav_apps"
+                        android:src="@drawable/ic_nav_screenshot"
                         android:tint="#FFFFFF"/>
                 </FrameLayout>
 
                 <TextView
-                    android:id="@+id/statAppCount"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="0 ta"
+                    android:text="Ekran"
                     android:textColor="@color/color_text_primary"
                     android:textStyle="bold"
                     android:textSize="13sp"
@@ -520,7 +519,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
-                    android:text="Ilovalar"
+                    android:text="Screenshotlari"
                     android:textColor="@color/color_text_secondary"
                     android:textSize="9sp"
                     android:maxLines="1"
@@ -533,7 +532,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="Faoliyat\nkuzatilmoqda"
+                    android:text="Sozlash\nuchun bosing"
                     android:textColor="#F39C12"
                     android:textSize="8sp"
                     android:minLines="2"

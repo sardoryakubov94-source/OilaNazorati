@@ -102,7 +102,10 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding.cardStatCalls.setOnClickListener { openIfChildSelected { CallHistoryActivity::class.java } }
         binding.cardStatSms.setOnClickListener { openIfChildSelected { SmsHistoryActivity::class.java } }
         binding.cardStatContacts.setOnClickListener { startActivity(Intent(this, SavedContactsActivity::class.java)) }
-        binding.cardStatApps.setOnClickListener { startActivity(Intent(this, TrendsActivity::class.java)) }
+        binding.cardStatScreenshot.setOnClickListener {
+            if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) Toast.makeText(this, "Avval oila kodini yuklab, farzandni tanlang", Toast.LENGTH_SHORT).show()
+            else startActivity(Intent(this, ScreenshotSettingsActivity::class.java))
+        }
     }
 
     private fun openIfChildSelected(activityClass: () -> Class<*>) {
@@ -236,7 +239,6 @@ class ParentDashboardActivity : AppCompatActivity() {
                 .toList()
                 .sortedByDescending { it.second }
             appUsageAdapter.setData(grouped)
-            binding.statAppCount.text = "${grouped.size} ta"
         }
 
         FirebaseRepo.listenLatestLocation { loc ->
