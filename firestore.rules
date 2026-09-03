@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() { return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous' && request.auth.token.email == 'sardoryakubov94@gmail.com'; }
+    function isRealUser() { return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
+    match /families/{familyCode} {
+      function isRealOwner() { return isRealUser() && exists(/databases/$(database)/documents/families/$(familyCode)) && get(/databases/$(database)/documents/families/$(familyCode)).data.ownerUid == request.auth.uid; }
+      allow create: if isRealUser() && request.resource.data.ownerUid == request.auth.uid;
+      allow read, update, delete: if isRealOwner();
+      match /children/{childId} {
+        function isThisChildsOwnSession() { return request.auth != null && request.auth.uid == childId; }
+        allow read, write: if isRealOwner() || isThisChildsOwnSession();
+        match /screenshot_settings/{docId} {
+          allow read: if isRealOwner() || isThisChildsOwnSession();
+          allow create, update: if isRealOwner() && docId == 'current';
+          allow delete: if isRealOwner();
+        }
+        match /screenshot_trigger_state/{docId} {
+          allow read: if isRealOwner() || isThisChildsOwnSession();
+          allow create, update: if isThisChildsOwnSession();
+          allow delete: if isRealOwner();
+        }
+        match /screenshots/{docId} {
+          allow read: if isRealOwner();
+          allow create: if isThisChildsOwnSession();
+          allow update, delete: if isRealOwner();
+        }
+        match /{subcollection}/{docId} {
+          allow read, write: if (isRealOwner() || isThisChildsOwnSession()) && subcollection != 'screenshot_settings' && subcollection != 'screenshot_trigger_state' && subcollection != 'screenshots';
+        }
+      }
+    }
+    match /parents/{uid} {
+      allow read: if isRealUser() && (request.auth.uid == uid || isAdmin());
+      allow write: if isRealUser() && (request.auth.uid == uid || isAdmin());
+    }
+    match /support_messages/{msgId} {
+      allow create: if isRealUser() && request.resource.data.fromUid == request.auth.uid;
+      allow read: if isRealUser() && (resource.data.fromUid == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
+    }
+    match /premium_requests/{reqId} {
+      allow create: if isRealUser() && request.resource.data.fromUid == request.auth.uid;
+      allow read: if isRealUser() && (resource.data.fromUid == request.auth.uid || isAdmin());
+      allow update: if isAdmin();
+    }
+    match /admin_cards/{cardId} {
+      allow read: if isRealUser();
+      allow write: if isAdmin();
+    }
+  }
+}
