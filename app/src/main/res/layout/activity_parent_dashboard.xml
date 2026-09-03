@@ -123,6 +123,70 @@
 
         </LinearLayout>
 
+        <!-- ========== PREMIUM BANNER ========== -->
+        <LinearLayout
+            android:id="@+id/premiumBannerHome"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_premium_banner"
+            android:padding="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="⭐"
+                    android:textSize="28sp"
+                    android:layout_marginEnd="10dp"/>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Premium'ga o'ting"
+                    android:textColor="@color/color_text_primary"
+                    android:textStyle="bold"
+                    android:textSize="16sp"/>
+
+                <TextView
+                    android:id="@+id/btnPremiumCtaHome"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ko'rish  →"
+                    android:textColor="@color/color_text_primary"
+                    android:textStyle="bold"
+                    android:textSize="13sp"
+                    android:background="#33000000"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"/>
+
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="• Kontakt va raqamlarni ochiq ko'rish imkoni\n• Kelgan SMS xabarlarni to'liq o'qish imkoni\n• Eng mashhur ilovalardan har 15-30-60 daqiqada 3-5 tagacha ekran screenshotlarini ko'rish imkoni\n• Push bildirishnomalar orqali ilovalardan kelgan xabar va tegishli yangiliklarni ko'rish imkoni"
+                android:textColor="#FFF3E0"
+                android:textSize="12sp"
+                android:lineSpacingExtra="3dp"/>
+
+        </LinearLayout>
+
         <!-- ========== JOYLASHUV KARTASI ========== -->
         <LinearLayout
             android:layout_width="match_parent"

@@ -21,6 +21,77 @@ class ScreenshotSettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val loading = ProgressBar(this)
+        setContentView(FrameLayout(this).apply { addView(loading, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER)) })
+        FirebaseRepo.checkIsPremium { isPremium ->
+            if (isPremium) buildScreenshotUi() else buildPremiumRequiredUi()
+        }
+    }
+
+    private fun buildPremiumRequiredUi() {
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(32, 28, 32, 32) }
+        val scroll = ScrollView(this).apply { addView(root) }
+        setContentView(scroll)
+
+        root.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(ImageView(this@ScreenshotSettingsActivity).apply {
+                setImageResource(R.drawable.ic_nav_screenshot)
+                setColorFilter(ContextCompat.getColor(this@ScreenshotSettingsActivity, R.color.color_text_primary))
+                layoutParams = LinearLayout.LayoutParams(64, 64).apply { marginEnd = 16 }
+            })
+            addView(TextView(this@ScreenshotSettingsActivity).apply { text = "Screenshot nazorati"; textSize = 24f })
+        })
+
+        root.addView(TextView(this).apply {
+            text = "Bu funksiya faqat Premium foydalanuvchilar uchun"
+            textSize = 15f
+            setTextColor(ContextCompat.getColor(this@ScreenshotSettingsActivity, R.color.color_text_secondary))
+            setPadding(0, 24, 0, 20)
+        })
+
+        // Reklama joyi — haqiqiy reklama tarmog'i (masalan AdMob) hali ulanmagan,
+        // shuning uchun bu hozircha statik promo blok.
+        root.addView(TextView(this).apply {
+            text = "REKLAMA"
+            textSize = 11f
+            setTextColor(ContextCompat.getColor(this@ScreenshotSettingsActivity, R.color.color_text_secondary))
+            gravity = Gravity.CENTER
+            setPadding(0, 40, 0, 40)
+            setBackgroundColor(0x1AFFFFFF)
+        })
+
+        root.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(R.drawable.bg_premium_banner)
+            setPadding(32, 32, 32, 32)
+
+            addView(TextView(this@ScreenshotSettingsActivity).apply {
+                text = "⭐ Premium imkoniyatlar"
+                textSize = 16f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(ContextCompat.getColor(this@ScreenshotSettingsActivity, R.color.color_text_primary))
+            })
+            addView(TextView(this@ScreenshotSettingsActivity).apply {
+                text = "• Kontakt va raqamlarni ochiq ko'rish imkoni\n" +
+                        "• Kelgan SMS xabarlarni to'liq o'qish imkoni\n" +
+                        "• Eng mashhur ilovalardan har 15-30-60 daqiqada 3-5 tagacha ekran screenshotlarini ko'rish imkoni\n" +
+                        "• Push bildirishnomalar orqali ilovalardan kelgan xabar va tegishli yangiliklarni ko'rish imkoni"
+                textSize = 13f
+                setTextColor(0xFFFFF3E0.toInt())
+                setPadding(0, 16, 0, 0)
+                setLineSpacing(6f, 1f)
+            })
+            addView(Button(this@ScreenshotSettingsActivity).apply {
+                text = "Premium sotib olish"
+                setOnClickListener { startActivity(android.content.Intent(this@ScreenshotSettingsActivity, PremiumActivity::class.java)) }
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = 20 }
+            })
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { topMargin = 24 })
+    }
+
+    private fun buildScreenshotUi() {
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(32, 28, 32, 32) }
         val scroll = ScrollView(this).apply { addView(root) }
         setContentView(scroll)
