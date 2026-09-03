@@ -1,8 +1,11 @@
 package uz.oilanazorati.parentcontrol.ui
 
 import android.os.Bundle
+import android.view.Gravity
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.model.ScreenshotSettings
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.screenshot.ScreenshotRepository
@@ -21,15 +24,38 @@ class ScreenshotSettingsActivity : AppCompatActivity() {
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(32, 28, 32, 32) }
         val scroll = ScrollView(this).apply { addView(root) }
         setContentView(scroll)
-        root.addView(TextView(this).apply { text = "📸 Screenshot nazorati"; textSize = 24f })
+        root.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(ImageView(this@ScreenshotSettingsActivity).apply {
+                setImageResource(R.drawable.ic_nav_screenshot)
+                setColorFilter(ContextCompat.getColor(this@ScreenshotSettingsActivity, R.color.color_text_primary))
+                layoutParams = LinearLayout.LayoutParams(64, 64).apply { marginEnd = 16 }
+            })
+            addView(TextView(this@ScreenshotSettingsActivity).apply { text = "Screenshot nazorati"; textSize = 24f })
+        })
         enabled = Switch(this).apply { text = "Screenshot olish" }; root.addView(enabled)
         autoTop3 = Switch(this).apply { text = "Avtomatik TOP 3 ilova" }; root.addView(autoTop3)
         root.addView(TextView(this).apply { text = "Chastota"; textSize = 16f })
         frequency = Spinner(this); frequency.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("15 daqiqa", "30 daqiqa", "60 daqiqa")); root.addView(frequency)
         root.addView(TextView(this).apply { text = "Bugungi ilovalar — qo'lda tanlash"; textSize = 18f })
         appsBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }; root.addView(appsBox)
-        root.addView(Button(this).apply { text = "💾 Saqlash"; setOnClickListener { save() } })
-        root.addView(Button(this).apply { text = "🖼 Screenshotlar tarixi"; setOnClickListener { startActivity(android.content.Intent(this@ScreenshotSettingsActivity, ScreenshotHistoryActivity::class.java)) } })
+        root.addView(Button(this).apply {
+            text = "Saqlash"
+            val icon = ContextCompat.getDrawable(this@ScreenshotSettingsActivity, R.drawable.ic_save)?.mutate()
+            icon?.setColorFilter(currentTextColor, android.graphics.PorterDuff.Mode.SRC_IN)
+            setCompoundDrawablesWithIntrinsicBounds(icon, null, null, null)
+            compoundDrawablePadding = 16
+            setOnClickListener { save() }
+        })
+        root.addView(Button(this).apply {
+            text = "Screenshotlar tarixi"
+            val icon = ContextCompat.getDrawable(this@ScreenshotSettingsActivity, R.drawable.ic_gallery)?.mutate()
+            icon?.setColorFilter(currentTextColor, android.graphics.PorterDuff.Mode.SRC_IN)
+            setCompoundDrawablesWithIntrinsicBounds(icon, null, null, null)
+            compoundDrawablePadding = 16
+            setOnClickListener { startActivity(android.content.Intent(this@ScreenshotSettingsActivity, ScreenshotHistoryActivity::class.java)) }
+        })
         ScreenshotRepository.listenSettings { s -> current = s; enabled.isChecked = s.enabled; autoTop3.isChecked = s.autoTop3Enabled; frequency.setSelection(listOf(15,30,60).indexOf(s.frequencyMinutes.coerceIn(15,60).toInt()).coerceAtLeast(0)); checks.values.forEach { it.isChecked = s.manualPackageNames.contains(it.tag as String) } }
         loadTodayApps()
     }
