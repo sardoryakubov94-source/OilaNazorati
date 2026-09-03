@@ -13,10 +13,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: JDK 17 o'rnatish
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
+
+      - name: Gradle 8.5 o'rnatish
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.5'
 
       - name: google-services.json faylini yaratish
         env:
@@ -35,23 +41,23 @@ jobs:
       - name: Release signing sozlamalarini tekshirish
         env:
           OILA_KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
-          OILA_KEYSTORE_PASSWORD: ${{ secrets.OILA_KEYSTORE_PASSWORD }}
-          OILA_KEY_ALIAS: ${{ secrets.OILA_KEY_ALIAS }}
-          OILA_KEY_PASSWORD: ${{ secrets.OILA_KEY_PASSWORD }}
+          OILA_KEYSTORE_PASSWORD: ${{ secrets.OILA_KEYSTORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+          OILA_KEY_ALIAS: ${{ secrets.OILA_KEY_ALIAS || secrets.KEY_ALIAS }}
+          OILA_KEY_PASSWORD: ${{ secrets.OILA_KEY_PASSWORD || secrets.KEY_PASSWORD }}
         run: |
           test -s "$OILA_KEYSTORE_PATH" || { echo "Keystore bo'sh yoki topilmadi"; exit 1; }
-          test -n "$OILA_KEYSTORE_PASSWORD" || { echo "OILA_KEYSTORE_PASSWORD secret topilmadi"; exit 1; }
-          test -n "$OILA_KEY_ALIAS" || { echo "OILA_KEY_ALIAS secret topilmadi"; exit 1; }
-          test -n "$OILA_KEY_PASSWORD" || { echo "OILA_KEY_PASSWORD secret topilmadi"; exit 1; }
+          test -n "$OILA_KEYSTORE_PASSWORD" || { echo "Keystore paroli Secret topilmadi"; exit 1; }
+          test -n "$OILA_KEY_ALIAS" || { echo "Keystore alias Secret topilmadi"; exit 1; }
+          test -n "$OILA_KEY_PASSWORD" || { echo "Key paroli Secret topilmadi"; exit 1; }
 
-      - name: Gradle build
+      - name: Release APK build
         env:
           OILA_KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
-          OILA_KEYSTORE_PASSWORD: ${{ secrets.OILA_KEYSTORE_PASSWORD }}
-          OILA_KEY_ALIAS: ${{ secrets.OILA_KEY_ALIAS }}
-          OILA_KEY_PASSWORD: ${{ secrets.OILA_KEY_PASSWORD }}
+          OILA_KEYSTORE_PASSWORD: ${{ secrets.OILA_KEYSTORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+          OILA_KEY_ALIAS: ${{ secrets.OILA_KEY_ALIAS || secrets.KEY_ALIAS }}
+          OILA_KEY_PASSWORD: ${{ secrets.OILA_KEY_PASSWORD || secrets.KEY_PASSWORD }}
         run: |
-          gradle --no-daemon assembleRelease
+          gradle --no-daemon clean assembleRelease
 
       - name: APK nomini tayyorlash
         run: |
