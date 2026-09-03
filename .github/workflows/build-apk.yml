@@ -35,21 +35,21 @@ jobs:
       - name: Release signing sozlamalarini tekshirish
         env:
           OILA_KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
-          OILA_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          OILA_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          OILA_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          OILA_KEYSTORE_PASSWORD: ${{ secrets.OILA_KEYSTORE_PASSWORD }}
+          OILA_KEY_ALIAS: ${{ secrets.OILA_KEY_ALIAS }}
+          OILA_KEY_PASSWORD: ${{ secrets.OILA_KEY_PASSWORD }}
         run: |
           test -s "$OILA_KEYSTORE_PATH" || { echo "Keystore bo'sh yoki topilmadi"; exit 1; }
-          test -n "$OILA_KEYSTORE_PASSWORD" || { echo "KEYSTORE_PASSWORD secret topilmadi"; exit 1; }
-          test -n "$OILA_KEY_ALIAS" || { echo "KEY_ALIAS secret topilmadi"; exit 1; }
-          test -n "$OILA_KEY_PASSWORD" || { echo "KEY_PASSWORD secret topilmadi"; exit 1; }
+          test -n "$OILA_KEYSTORE_PASSWORD" || { echo "OILA_KEYSTORE_PASSWORD secret topilmadi"; exit 1; }
+          test -n "$OILA_KEY_ALIAS" || { echo "OILA_KEY_ALIAS secret topilmadi"; exit 1; }
+          test -n "$OILA_KEY_PASSWORD" || { echo "OILA_KEY_PASSWORD secret topilmadi"; exit 1; }
 
       - name: Gradle build
         env:
           OILA_KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
-          OILA_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          OILA_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          OILA_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          OILA_KEYSTORE_PASSWORD: ${{ secrets.OILA_KEYSTORE_PASSWORD }}
+          OILA_KEY_ALIAS: ${{ secrets.OILA_KEY_ALIAS }}
+          OILA_KEY_PASSWORD: ${{ secrets.OILA_KEY_PASSWORD }}
         run: |
           gradle --no-daemon assembleRelease
 
