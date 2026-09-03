@@ -31,6 +31,29 @@ jobs:
           test -n "$GOOGLE_SERVICES_JSON_B64" || { echo "GOOGLE_SERVICES_JSON_B64 secret topilmadi"; exit 1; }
           echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > app/google-services.json
 
+      - name: Google Web OAuth client ID resursini tayyorlash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('app/google-services.json').read_text())
+          client_id = None
+          for client in data.get('client', []):
+              for oauth in client.get('oauth_client', []):
+                  if oauth.get('client_type') == 3 and oauth.get('client_id'):
+                      client_id = oauth['client_id']
+                      break
+              if client_id:
+                  break
+          if not client_id:
+              raise SystemExit('Firebase google-services.json ichida Web OAuth client (client_type=3) topilmadi. Google Sign-In uchun Firebase Authentication > Google provider va Web client sozlanishi kerak.')
+          out = Path('app/src/main/res/values/google_auth.xml')
+          out.parent.mkdir(parents=True, exist_ok=True)
+          escaped = client_id.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&apos;')
+          out.write_text('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <string name="default_web_client_id" translatable="false">' + escaped + '</string>\n</resources>\n')
+          print('Google Web OAuth client ID resursi tayyorlandi')
+          PY
+
       - name: Release keystore'ni tiklash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
