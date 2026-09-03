@@ -1,12 +1,14 @@
-name: Deploy website to GitHub Pages
+name: Deploy Oila Nazorati website to GitHub Pages
 
 on:
   push:
     branches: [main]
     paths:
-      - 'website/**'
-      - '.github/workflows/deploy-pages.yml'
       - 'index.html'
+      - 'site.css'
+      - 'privacy.html'
+      - 'downloads/**'
+      - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
 permissions:
@@ -31,15 +33,16 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
-      - name: Prepare site
+      - name: Prepare standalone site
         run: |
           rm -rf _site
           mkdir -p _site
-          cp -R website/. _site/
+          cp index.html site.css privacy.html _site/
+          if [ -d downloads ]; then cp -R downloads _site/downloads; fi
           touch _site/.nojekyll
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: _site
 
