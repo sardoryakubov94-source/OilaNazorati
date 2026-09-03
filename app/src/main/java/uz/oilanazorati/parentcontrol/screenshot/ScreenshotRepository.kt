@@ -27,7 +27,10 @@ object ScreenshotRepository {
         val code = uz.oilanazorati.parentcontrol.repo.FirebaseRepo.familyCode
         val cid = uz.oilanazorati.parentcontrol.repo.FirebaseRepo.childId
         val uid = auth.currentUser?.uid
-        if (code == null || cid == null || uid == null) { onResult(false); return }
+        if (code == null || cid == null || uid == null) {
+            onResult(false)
+            return
+        }
         db.collection("families").document(code).collection("children").document(cid)
             .collection("screenshot_settings").document("current")
             .set(settings.copy(updatedAt = System.currentTimeMillis(), updatedByUid = uid))
@@ -40,32 +43,60 @@ object ScreenshotRepository {
         val ref = child.collection("screenshot_trigger_state").document(key)
         db.runTransaction { tx ->
             val snap = tx.get(ref)
-            if (snap.exists()) false else {
+            if (snap.exists()) {
+                false
+            } else {
                 tx.set(ref, mapOf("status" to "reserved", "updatedAt" to System.currentTimeMillis()))
                 true
             }
-        }.addOnSuccessListener(onResult).addOnFailureListener { onResult(false) }
+        }
+            .addOnSuccessListener { reserved -> onResult(reserved) }
+            .addOnFailureListener { onResult(false) }
     }
 
     fun upload(file: java.io.File, metadata: ScreenshotMetadata, onResult: (Boolean) -> Unit) {
         val code = uz.oilanazorati.parentcontrol.repo.FirebaseRepo.familyCode
         val cid = uz.oilanazorati.parentcontrol.repo.FirebaseRepo.childId
-        if (code == null || cid == null) { onResult(false); return }
+        if (code == null || cid == null) {
+            onResult(false)
+            return
+        }
+
         val path = "families/$code/children/$cid/screenshots/${metadata.date}/${metadata.packageName.hashCode().toUInt().toString(16)}/${metadata.thresholdMinute}_${metadata.capturedAt}.jpg"
         val ref = storage.reference.child(path)
-        ref.putFile(android.net.Uri.fromFile(file)).continueWithTask { ref.downloadUrl }
-            .addOnSuccessTask { url ->
-                val finalMeta = metadata.copy(storagePath = path, status = "completed", createdAt = System.currentTimeMillis())
-                childDoc()!!.collection("screenshots").document(metadata.id).set(finalMeta).continueWith { true }
+
+        ref.putFile(android.net.Uri.fromFile(file))
+            .continueWithTask { ref.downloadUrl }
+            .addOnSuccessListener { url ->
+                // The URL is resolved successfully; metadata stores the Firebase Storage path.
+                // The actual document write determines the final callback result.
+                val finalMeta = metadata.copy(
+                    storagePath = path,
+                    status = "completed",
+                    createdAt = System.currentTimeMillis()
+                )
+                val child = childDoc()
+                if (child == null) {
+                    onResult(false)
+                    return@addOnSuccessListener
+                }
+                child.collection("screenshots")
+                    .document(metadata.id)
+                    .set(finalMeta)
+                    .addOnSuccessListener { onResult(true) }
+                    .addOnFailureListener { onResult(false) }
             }
-            .addOnSuccessListener { onResult(true) }
             .addOnFailureListener { onResult(false) }
     }
 
     fun fetchHistory(onResult: (List<ScreenshotMetadata>) -> Unit) {
         val col = childDoc()?.collection("screenshots") ?: return onResult(emptyList())
-        col.orderBy("capturedAt", com.google.firebase.firestore.Query.Direction.DESCENDING).limit(100).get()
-            .addOnSuccessListener { snap -> onResult(snap.documents.mapNotNull { it.toObject(ScreenshotMetadata::class.java) }) }
+        col.orderBy("capturedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(100)
+            .get()
+            .addOnSuccessListener { snap ->
+                onResult(snap.documents.mapNotNull { it.toObject(ScreenshotMetadata::class.java) })
+            }
             .addOnFailureListener { onResult(emptyList()) }
     }
 
