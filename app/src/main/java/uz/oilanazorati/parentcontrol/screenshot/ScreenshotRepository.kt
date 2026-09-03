@@ -67,9 +67,8 @@ object ScreenshotRepository {
 
         ref.putFile(android.net.Uri.fromFile(file))
             .continueWithTask { ref.downloadUrl }
-            .addOnSuccessListener { url ->
-                // The URL is resolved successfully; metadata stores the Firebase Storage path.
-                // The actual document write determines the final callback result.
+            .addOnSuccessListener {
+                // Download URL resolution succeeded; the Firestore write below is the final success signal.
                 val finalMeta = metadata.copy(
                     storagePath = path,
                     status = "completed",
