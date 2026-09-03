@@ -12,24 +12,41 @@ android {
         applicationId "uz.oilanazorati.parentcontrol"
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.0.1"
     }
 
+    // Release signing is supplied locally/through CI environment variables.
+    // Never store keystore passwords or the keystore itself in GitHub.
+    def keystorePath = System.getenv("OILA_KEYSTORE_PATH")
+    def keystorePassword = System.getenv("OILA_KEYSTORE_PASSWORD")
+    def keyAliasValue = System.getenv("OILA_KEY_ALIAS")
+    def keyPasswordValue = System.getenv("OILA_KEY_PASSWORD")
+
     signingConfigs {
-        debug {
-            storeFile file("release.keystore")
-            storePassword "OilaNazorati2026"
-            keyAlias "oila_nazorati"
-            keyPassword "OilaNazorati2026"
+        if (keystorePath && keystorePassword && keyAliasValue && keyPasswordValue) {
+            release {
+                storeFile file(keystorePath)
+                storePassword keystorePassword
+                keyAlias keyAliasValue
+                keyPassword keyPasswordValue
+            }
         }
     }
 
     buildTypes {
         release {
+            // Keep minification off for this release to avoid changing monitoring behavior.
             minifyEnabled false
+            if (keystorePath && keystorePassword && keyAliasValue && keyPasswordValue) {
+                signingConfig signingConfigs.release
+            }
+        }
+        debug {
+            // Debug builds use the normal Android debug signing key.
         }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
