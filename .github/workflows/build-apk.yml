@@ -5,10 +5,12 @@ on:
     branches: [ main, master, screenshot-feature ]
   workflow_dispatch:
 
+# Prevent simultaneous APK builds from racing to push website APK files.
 concurrency:
   group: build-release-apk-${{ github.ref }}
   cancel-in-progress: true
 
+# Release APK build workflow
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -62,77 +64,6 @@ jobs:
           print('Google Web OAuth client ID resursi tayyorlandi')
           PY
 
-      - name: Screenshot ruxsati integratsiyasini build oldidan tekshirish
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt')
-          s = p.read_text()
-          changed = False
-
-          listener = '''        binding.btnScreenCapture.setOnClickListener {
-              requestScreenCaptureConsent()
-          }
-'''
-          anchor = '''        binding.btnUsageAccess.setOnClickListener {
-              startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-          }
-'''
-          if 'binding.btnScreenCapture.setOnClickListener' not in s:
-              if anchor not in s:
-                  raise SystemExit('Screenshot listener uchun kutilgan ChildSetupActivity bloki topilmadi')
-              s = s.replace(anchor, anchor + listener, 1)
-              changed = True
-
-          method = '''    private fun requestScreenCaptureConsent() {
-              startActivity(Intent(this, ScreenCaptureConsentActivity::class.java))
-          }
-
-'''
-          marker = '    // ---------------- Oila kodi bilan bog\'lash ----------------'
-          if 'private fun requestScreenCaptureConsent()' not in s:
-              if marker not in s:
-                  raise SystemExit('Screenshot consent method joylashtirish nuqtasi topilmadi')
-              s = s.replace(marker, method + marker, 1)
-              changed = True
-
-          status = '''        val screenCaptureConsented = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
-              .getBoolean("screen_capture_consented", false)
-          binding.btnScreenCapture.text = if (screenCaptureConsented) {
-              "✅ Ekran nazorati ruxsati berilgan"
-          } else {
-              "📸 Ekran tasviriga ruxsat berish"
-          }
-'''
-          if 'val screenCaptureConsented' not in s:
-              resume_anchor = '''        binding.btnBatteryOptimization.text = if (pm.isIgnoringBatteryOptimizations(packageName)) {
-              "✅ Batareya tejashdan chiqarilgan"
-          } else {
-              "🔋 Batareya tejashdan chiqarish (muhim!)"
-          }
-'''
-              if resume_anchor not in s:
-                  raise SystemExit('Screenshot status uchun onResume bloki topilmadi')
-              s = s.replace(resume_anchor, resume_anchor + '\n' + status, 1)
-              changed = True
-
-          if changed:
-              p.write_text(s)
-              print('Screenshot permission integration was repaired for this build.')
-          else:
-              print('Screenshot permission integration already present.')
-
-          required = [
-              'binding.btnScreenCapture.setOnClickListener',
-              'private fun requestScreenCaptureConsent()',
-              'ScreenCaptureConsentActivity'
-          ]
-          for item in required:
-              if item not in s:
-                  raise SystemExit(f'Missing required screenshot integration: {item}')
-          print('Screenshot integration validation passed.')
-          PY
-
       - name: Release keystore'ni tiklash
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -169,8 +100,11 @@ jobs:
       - name: APKni saytning downloads papkasiga joylash
         if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[website-apk]') }}
         run: |
+          # Synchronize before staging/committing. Build steps create local files,
+          # so pulling after commit can fail with 'unstaged changes'.
           git fetch origin main
           git reset --hard origin/main
+
           mkdir -p downloads
           cp OilaNazorati-v1.0.1-release.apk downloads/oila-nazorati.apk
           cp OilaNazorati-v1.0.1-release.apk.sha256 downloads/oila-nazorati.apk.sha256
