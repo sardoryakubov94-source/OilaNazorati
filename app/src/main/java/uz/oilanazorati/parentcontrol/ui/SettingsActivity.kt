@@ -24,10 +24,6 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<android.view.View>(R.id.rowEnterCode).setOnClickListener { showEnterCodeDialog() }
         findViewById<android.view.View>(R.id.rowNewCode).setOnClickListener { createNewFamilyCode() }
         findViewById<android.view.View>(R.id.rowTheme).setOnClickListener { showThemePickerDialog() }
-        findViewById<android.view.View>(R.id.rowNotifications).setOnClickListener {
-            if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) Toast.makeText(this, "Avval oila kodini yuklab, farzandni tanlang", Toast.LENGTH_SHORT).show()
-            else startActivity(Intent(this, NotificationHistoryActivity::class.java))
-        }
         findViewById<android.view.View>(R.id.premiumBanner).setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
         findViewById<android.view.View>(R.id.btnPremiumCta).setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
 
