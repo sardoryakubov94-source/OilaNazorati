@@ -21,17 +21,22 @@ class App : Application() {
 
     companion object {
         fun restoreSavedPairing(context: Context) {
-            if (FirebaseRepo.familyCode != null && FirebaseRepo.childId != null) return
             val prefs = context.getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+            // Har safar process qayta ishga tushganda tanlangan oila kodi va
+            // farzand ID'sini diskdagi qiymatdan tiklaymiz. Theme almashtirilishi
+            // activity/process qayta yaratilganida pairing yo'qolib qolmasligi kerak.
             val savedCode = prefs.getString("family_code", null)
             val savedChildId = prefs.getString("child_id", null)
-            if (FirebaseRepo.familyCode == null) FirebaseRepo.familyCode = savedCode
-            if (FirebaseRepo.childId == null) FirebaseRepo.childId = savedChildId
+            if (!savedCode.isNullOrBlank()) FirebaseRepo.familyCode = savedCode
+            if (!savedChildId.isNullOrBlank()) FirebaseRepo.childId = savedChildId
         }
 
         fun applySavedTheme(context: Context) {
             val prefs = context.getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
-            AppCompatDelegate.setDefaultNightMode(if (prefs.getBoolean("light_theme", false)) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES)
+            AppCompatDelegate.setDefaultNightMode(
+                if (prefs.getBoolean("light_theme", false)) AppCompatDelegate.MODE_NIGHT_NO
+                else AppCompatDelegate.MODE_NIGHT_YES
+            )
         }
 
         private fun remindChildAboutScreenCaptureConsent(context: Context) {
