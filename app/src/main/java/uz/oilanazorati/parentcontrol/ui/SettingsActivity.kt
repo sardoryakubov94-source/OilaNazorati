@@ -27,16 +27,6 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<android.view.View>(R.id.premiumBanner).setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
         findViewById<android.view.View>(R.id.btnPremiumCta).setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
 
-        val outer = findViewById<android.view.ViewGroup>(android.R.id.content).getChildAt(0) as? android.view.ViewGroup
-        val target = if (outer is ScrollView && outer.childCount > 0) outer.getChildAt(0) as? android.view.ViewGroup else outer
-        target?.addView(Button(this).apply {
-            text = "📸 Screenshot nazorati"
-            setOnClickListener {
-                if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) Toast.makeText(this@SettingsActivity, "Avval farzandni tanlang", Toast.LENGTH_SHORT).show()
-                else startActivity(Intent(this@SettingsActivity, ScreenshotSettingsActivity::class.java))
-            }
-        })
-
         if (AdminConfig.isCurrentUserAdmin()) {
             findViewById<android.view.View>(R.id.adminSection).visibility = android.view.View.VISIBLE
             findViewById<android.view.View>(R.id.rowAdminPanel).setOnClickListener { startActivity(Intent(this, AdminPanelActivity::class.java)) }
