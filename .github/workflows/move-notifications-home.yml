@@ -1,8 +1,6 @@
 name: Move Notifications To Home
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -15,106 +13,6 @@ jobs:
       - name: Kodni olish
         uses: actions/checkout@v4
 
-      - name: Bildirishnomalar tugmasini bosh sahifaga qo'shish
+      - name: Tekshiruv
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          layout = Path('app/src/main/res/layout/activity_parent_dashboard.xml')
-          s = layout.read_text()
-
-          if 'android:id="@+id/btnNotificationHistory"' not in s:
-              marker = '        <!-- ========== BUGUNGI NAZORAT stats ========== -->'
-              card = '''        <!-- ========== BILDIRISHNOMALAR ========== -->
-          <LinearLayout
-              android:layout_width="match_parent"
-              android:layout_height="wrap_content"
-              android:orientation="horizontal"
-              android:gravity="center_vertical"
-              android:background="@color/color_surface"
-              android:padding="16dp"
-              android:layout_marginBottom="10dp"
-              android:elevation="3dp">
-
-              <LinearLayout
-                  android:layout_width="0dp"
-                  android:layout_height="wrap_content"
-                  android:layout_weight="1"
-                  android:orientation="vertical">
-                  <LinearLayout
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:orientation="horizontal"
-                      android:gravity="center_vertical"
-                      android:layout_marginBottom="6dp">
-                      <ImageView
-                          android:layout_width="14dp"
-                          android:layout_height="14dp"
-                          android:layout_marginEnd="4dp"
-                          android:src="@drawable/ic_bell"
-                          android:tint="#F39C12"
-                          android:contentDescription="Bildirishnomalar"/>
-                      <TextView
-                          android:layout_width="wrap_content"
-                          android:layout_height="wrap_content"
-                          android:text="BILDIRISHNOMALAR"
-                          android:textColor="#F39C12"
-                          android:textStyle="bold"
-                          android:textSize="11sp"/>
-                  </LinearLayout>
-                  <TextView
-                      android:layout_width="match_parent"
-                      android:layout_height="wrap_content"
-                      android:text="Ilovalardan kelgan bildirishnomalar"
-                      android:textColor="@color/color_text_primary"
-                      android:textStyle="bold"
-                      android:textSize="14sp"
-                      android:layout_marginBottom="8dp"/>
-                  <TextView
-                      android:id="@+id/btnNotificationHistory"
-                      android:layout_width="wrap_content"
-                      android:layout_height="wrap_content"
-                      android:text="Barchasini ko'rish →"
-                      android:textColor="#F39C12"
-                      android:textStyle="bold"
-                      android:textSize="13sp"
-                      android:background="@drawable/bg_pill_theme"
-                      android:paddingStart="12dp"
-                      android:paddingEnd="12dp"
-                      android:paddingTop="6dp"
-                      android:paddingBottom="6dp"/>
-              </LinearLayout>
-          </LinearLayout>
-
-'''
-              if marker not in s:
-                  raise SystemExit('Dashboard marker topilmadi')
-              s = s.replace(marker, card + marker, 1)
-              layout.write_text(s)
-
-          # Ota-ona bosh sahifasidagi tugmani NotificationHistoryActivity ga ulash.
-          kt = Path('app/src/main/java/uz/oilanazorati/parentcontrol/ui/ParentDashboardActivity.kt')
-          k = kt.read_text()
-          old = '        binding.btnLocationHistory.setOnClickListener { openIfChildSelected { LocationHistoryActivity::class.java } }'
-          new = old + '\n        binding.btnNotificationHistory.setOnClickListener { openIfChildSelected { NotificationHistoryActivity::class.java } }'
-          if 'binding.btnNotificationHistory.setOnClickListener' not in k:
-              if old not in k:
-                  raise SystemExit('Dashboard click joyi topilmadi')
-              k = k.replace(old, new, 1)
-              kt.write_text(k)
-          PY
-
-      - name: Sozlamalarda eski bildirishnoma qatori qolmaganini tekshirish
-        run: |
-          if grep -q 'rowNotifications"' app/src/main/res/layout/activity_settings.xml; then
-            echo 'Eski bildirishnoma qatori topildi' >&2
-            exit 1
-          fi
-
-      - name: Commit va push
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/res/layout/activity_parent_dashboard.xml app/src/main/java/uz/oilanazorati/parentcontrol/ui/ParentDashboardActivity.kt
-          git diff --cached --quiet || git commit -m 'Bildirishnomalar tugmasini bosh sahifaga kochirish'
-          git push
+          echo "Faqat qo'lda ishga tushiriladi; avtomatik push paytida kodni o'zgartirmaydi."
