@@ -19,57 +19,34 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
+          import subprocess
 
           p = Path('app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt')
           s = p.read_text()
-          changed = False
+          original = s
 
           if 'binding.btnScreenCapture.setOnClickListener' not in s:
-              anchor = '''        binding.btnUsageAccess.setOnClickListener {
-              startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-          }
-'''
-              addition = '''        binding.btnScreenCapture.setOnClickListener {
-              requestScreenCaptureConsent()
-          }
-'''
-              if anchor not in s:
-                  raise SystemExit('Could not find ChildSetupActivity usage-access listener anchor')
-              s = s.replace(anchor, anchor + addition, 1)
-              changed = True
+              pattern = r'(\s*binding\.btnUsageAccess\.setOnClickListener\s*\{\s*\n\s*startActivity\(Intent\(Settings\.ACTION_USAGE_ACCESS_SETTINGS\)\)\s*\n\s*\}\s*)'
+              m = re.search(pattern, s)
+              if not m:
+                  raise SystemExit('Could not find usage-access listener in ChildSetupActivity.kt')
+              addition = '\n        binding.btnScreenCapture.setOnClickListener {\n            requestScreenCaptureConsent()\n        }\n'
+              s = s[:m.end()] + addition + s[m.end():]
 
           if 'private fun requestScreenCaptureConsent()' not in s:
               marker = "    // ---------------- Oila kodi bilan bog'lash ----------------"
-              method = '''    private fun requestScreenCaptureConsent() {
-              startActivity(Intent(this, ScreenCaptureConsentActivity::class.java))
-          }
-
-'''
               if marker not in s:
-                  raise SystemExit('Could not find ChildSetupActivity insertion marker')
+                  raise SystemExit('Could not find pairing section marker')
+              method = '''    private fun requestScreenCaptureConsent() {\n        startActivity(Intent(this, ScreenCaptureConsentActivity::class.java))\n    }\n\n'''
               s = s.replace(marker, method + marker, 1)
-              changed = True
 
-          if 'val screenCaptureConsented' not in s:
-              anchor = '''        binding.btnBatteryOptimization.text = if (pm.isIgnoringBatteryOptimizations(packageName)) {
-              "✅ Batareya tejashdan chiqarilgan"
-          } else {
-              "🔋 Batareya tejashdan chiqarish (muhim!)"
-          }
-'''
-              addition = '''
-          val screenCaptureConsented = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
-              .getBoolean("screen_capture_consented", false)
-          binding.btnScreenCapture.text = if (screenCaptureConsented) {
-              "✅ Ekran nazorati ruxsati berilgan"
-          } else {
-              "📸 Ekran tasviriga ruxsat berish"
-          }
-'''
-              if anchor not in s:
-                  raise SystemExit('Could not find ChildSetupActivity battery-status anchor')
-              s = s.replace(anchor, anchor + addition, 1)
-              changed = True
+          if 'screen_capture_consented' not in s:
+              marker = '        updateRoleStatusUi()\n        updateDeviceAdminStatusUi()'
+              if marker not in s:
+                  raise SystemExit('Could not find onResume status marker')
+              addition = '''\n\n        val screenCaptureConsented = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)\n            .getBoolean("screen_capture_consented", false)\n        binding.btnScreenCapture.text = if (screenCaptureConsented) {\n            "✅ Ekran nazorati ruxsati berilgan"\n        } else {\n            "📸 Ekran tasviriga ruxsat berish"\n        }'''
+              s = s.replace(marker, marker + addition, 1)
 
           required = [
               'binding.btnScreenCapture.setOnClickListener',
@@ -80,14 +57,12 @@ jobs:
               if item not in s:
                   raise SystemExit('Missing screenshot integration: ' + item)
 
-          if changed:
+          if s != original:
               p.write_text(s)
-              git_message = 'fix: integrate screenshot permission into child setup'
-              import subprocess
               subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
               subprocess.run(['git', 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'], check=True)
               subprocess.run(['git', 'add', str(p)], check=True)
-              subprocess.run(['git', 'commit', '-m', git_message], check=True)
+              subprocess.run(['git', 'commit', '-m', 'fix: integrate screenshot permission into child setup'], check=True)
               subprocess.run(['git', 'push', 'origin', 'HEAD:main'], check=True)
               print('Screenshot permission integration committed and pushed.')
           else:
