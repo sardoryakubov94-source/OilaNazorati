@@ -42,8 +42,35 @@ class SettingsActivity : AppCompatActivity() {
             findViewById<android.view.View>(R.id.rowAdminPanel).setOnClickListener { startActivity(Intent(this, AdminPanelActivity::class.java)) }
         }
     }
-    private fun showThemePickerDialog() { val options=arrayOf("Tungi rejim (standart)","Kunduzgi rejim"); val current=getSharedPreferences("oila_nazorati",Context.MODE_PRIVATE).getBoolean("light_theme",false); AlertDialog.Builder(this).setTitle("Mavzu").setSingleChoiceItems(options,if(current)1 else 0){dialog,which->val light=which==1;getSharedPreferences("oila_nazorati",Context.MODE_PRIVATE).edit().putBoolean("light_theme",light).apply();AppCompatDelegate.setDefaultNightMode(if(light)AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES);dialog.dismiss()}.setNegativeButton("Bekor qilish",null).show() }
-    private fun showEnterCodeDialog(){val input=EditText(this).apply{hint="Oila kodi";setText(FirebaseRepo.familyCode.orEmpty())};val container=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;val pad=(16*resources.displayMetrics.density).toInt();setPadding(pad,pad,pad,0);addView(input)};AlertDialog.Builder(this).setTitle("Oila kodi").setView(container).setPositiveButton("Yuklash"){_,_->input.text?.toString()?.trim()?.uppercase()?.takeIf{it.isNotBlank()}?.let{saveFamilyCodeAndReturn(it)}}.setNegativeButton("Bekor qilish",null).show()}
+
+    private fun showThemePickerDialog() {
+        val options = arrayOf("Tungi rejim (standart)", "Kunduzgi rejim")
+        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        val current = prefs.getBoolean("light_theme", false)
+        AlertDialog.Builder(this)
+            .setTitle("Mavzu")
+            .setSingleChoiceItems(options, if (current) 1 else 0) { dialog, which ->
+                val light = which == 1
+                // Theme almashish Activity'ni qayta yaratishi mumkin. Shu sabab
+                // pairing ma'lumotlarini AppCompatDelegate chaqirilishidan oldin
+                // ham SharedPreferences, ham FirebaseRepo holatida saqlab qo'yamiz.
+                val code = FirebaseRepo.familyCode
+                val childId = FirebaseRepo.childId
+                prefs.edit().putBoolean("light_theme", light).apply()
+                if (!code.isNullOrBlank()) prefs.edit().putString("family_code", code).apply()
+                if (!childId.isNullOrBlank()) prefs.edit().putString("child_id", childId).apply()
+                FirebaseRepo.familyCode = code ?: prefs.getString("family_code", null)
+                FirebaseRepo.childId = childId ?: prefs.getString("child_id", null)
+                AppCompatDelegate.setDefaultNightMode(
+                    if (light) AppCompatDelegate.MODE_NIGHT_NO else AppCompatDelegate.MODE_NIGHT_YES
+                )
+                dialog.dismiss()
+            }
+            .setNegativeButton("Bekor qilish", null)
+            .show()
+    }
+
+    private fun showEnterCodeDialog(){val input=EditText(this).apply{hint="Oila kodi";setText(FirebaseRepo.familyCode.orEmpty())};val container=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;val pad=(16*resources.displayMetrics.density).toInt();setPadding(pad,pad,0,0);addView(input)};AlertDialog.Builder(this).setTitle("Oila kodi").setView(container).setPositiveButton("Yuklash"){_,_->input.text?.toString()?.trim()?.uppercase()?.takeIf{it.isNotBlank()}?.let{saveFamilyCodeAndReturn(it)}}.setNegativeButton("Bekor qilish",null).show()}
     private fun createNewFamilyCode(){AlertDialog.Builder(this).setTitle("Yangi oila kodi yaratish").setMessage("Bu yangi, hozirgi kodga bog'liq bo'lmagan oila yaratadi. Shu oilaga yana farzand qo'shish uchun yangi kod yaratmang.").setPositiveButton("Baribir yarataman"){_,_->generateAndCreateFamily()}.setNegativeButton("Bekor qilish",null).show()}
     private fun generateAndCreateFamily(){val code=generateFamilyCode();FirebaseRepo.createFamily(code){ok,err->if(ok)showGeneratedCodeDialog(code)else Toast.makeText(this,"Kod yaratishda xato: ${err?:"noma'lum"}",Toast.LENGTH_LONG).show()}}
     private fun generateFamilyCode():String{val chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";return(1..6).map{chars.random()}.joinToString("")}
