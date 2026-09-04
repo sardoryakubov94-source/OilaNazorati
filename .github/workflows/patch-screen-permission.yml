@@ -16,50 +16,44 @@ jobs:
         with:
           fetch-depth: 0
       - name: Integrate screenshot permission button
-        shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import re
           p = Path('app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt')
           s = p.read_text()
           original = s
 
           if 'binding.btnScreenCapture.setOnClickListener' not in s:
-              pattern = r'(\s*binding\.btnUsageAccess\.setOnClickListener\s*\{\s*\n\s*startActivity\(Intent\(Settings\.ACTION_USAGE_ACCESS_SETTINGS\)\)\s*\n\s*\}\s*)'
-              m = re.search(pattern, s)
-              if not m:
-                  raise SystemExit('usage-access listener not found')
-              s = s[:m.end()] + '\n        binding.btnScreenCapture.setOnClickListener {\n            requestScreenCaptureConsent()\n        }\n' + s[m.end():]
+              lines = s.splitlines(keepends=True)
+              idx = next((i for i, line in enumerate(lines) if 'binding.btnUsageAccess.setOnClickListener' in line), None)
+              if idx is None:
+                  raise SystemExit('usage access listener line not found')
+              end = next((i for i in range(idx + 1, len(lines)) if lines[i].strip() == '}'), None)
+              if end is None:
+                  raise SystemExit('usage access listener closing brace not found')
+              lines[end + 1:end + 1] = [
+                  '        binding.btnScreenCapture.setOnClickListener {\n',
+                  '            requestScreenCaptureConsent()\n',
+                  '        }\n'
+              ]
+              s = ''.join(lines)
 
           if 'private fun requestScreenCaptureConsent()' not in s:
               marker = "    // ---------------- Oila kodi bilan bog'lash ----------------"
               if marker not in s:
                   raise SystemExit('pairing marker not found')
-              method = '''    private fun requestScreenCaptureConsent() {\n        startActivity(Intent(this, ScreenCaptureConsentActivity::class.java))\n    }\n\n'''
+              method = '    private fun requestScreenCaptureConsent() {\n        startActivity(Intent(this, ScreenCaptureConsentActivity::class.java))\n    }\n\n'
               s = s.replace(marker, method + marker, 1)
 
-          if 'screen_capture_consented' not in s:
-              marker = '        updateRoleStatusUi()\n        updateDeviceAdminStatusUi()'
-              if marker not in s:
-                  raise SystemExit('onResume marker not found')
-              addition = '''\n\n        val screenCaptureConsented = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)\n            .getBoolean("screen_capture_consented", false)\n        binding.btnScreenCapture.text = if (screenCaptureConsented) {\n            "✅ Ekran nazorati ruxsati berilgan"\n        } else {\n            "📸 Ekran tasviriga ruxsat berish"\n        }'''
-              s = s.replace(marker, marker + addition, 1)
-
-          required = [
-              'binding.btnScreenCapture.setOnClickListener',
-              'private fun requestScreenCaptureConsent()',
-              'ScreenCaptureConsentActivity'
-          ]
-          for item in required:
-              if item not in s:
-                  raise SystemExit('missing: ' + item)
-
-          if s == original:
-              print('Screenshot integration already present; no source change needed.')
-          else:
+          if s != original:
               p.write_text(s)
               print('Screenshot integration patched.')
+          else:
+              print('Screenshot integration already present.')
+
+          for item in ['binding.btnScreenCapture.setOnClickListener', 'private fun requestScreenCaptureConsent()', 'ScreenCaptureConsentActivity']:
+              if item not in s:
+                  raise SystemExit('missing: ' + item)
           PY
       - name: Commit and push if changed
         run: |
