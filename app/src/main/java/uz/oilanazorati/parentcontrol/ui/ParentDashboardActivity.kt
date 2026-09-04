@@ -107,9 +107,76 @@ class ParentDashboardActivity : AppCompatActivity() {
     private fun showChildPickerDialog(code: String, preloaded: List<Pair<String, String>>? = null) {
         val show: (List<Pair<String, String>>) -> Unit = { children ->
             if (children.isEmpty()) Toast.makeText(this, "Bu kodga hali birorta farzand ulanmagan", Toast.LENGTH_SHORT).show()
-            else AlertDialog.Builder(this).setTitle("Qaysi farzand?").setItems(children.map { it.second }.toTypedArray()) { _, index -> setChildId(children[index].first); loadTodayStats() }.show()
+            else renderChildPickerDialog(code, children)
         }
         if (preloaded != null) show(preloaded) else FirebaseRepo.fetchChildren(code, show)
+    }
+
+    private fun renderChildPickerDialog(code: String, children: List<Pair<String, String>>) {
+        val density = resources.displayMetrics.density
+        fun dp(v: Int) = (v * density).toInt()
+        val container = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+        }
+        var dialog: AlertDialog? = null
+
+        fun renderRows(list: List<Pair<String, String>>) {
+            container.removeAllViews()
+            list.forEach { (childId, name) ->
+                val row = android.widget.LinearLayout(this).apply {
+                    orientation = android.widget.LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    setPadding(dp(14), dp(14), dp(14), dp(14))
+                }
+                val label = android.widget.TextView(this).apply {
+                    text = name
+                    textSize = 17f
+                    layoutParams = android.widget.LinearLayout.LayoutParams(
+                        0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
+                    )
+                    setOnClickListener {
+                        setChildId(childId); loadTodayStats(); dialog?.dismiss()
+                    }
+                }
+                val deleteBtn = android.widget.TextView(this).apply {
+                    text = "🗑"
+                    textSize = 20f
+                    setPadding(dp(14), dp(6), dp(6), dp(6))
+                    setOnClickListener {
+                        AlertDialog.Builder(this@ParentDashboardActivity)
+                            .setTitle("O'chirish")
+                            .setMessage("\"$name\" qurilmasi shu oiladan chiqarilsinmi?\n\nQurilma bloklanmaydi — keyin oila kodi orqali qayta ulash mumkin.")
+                            .setPositiveButton("Ha, chiqarish") { _, _ ->
+                                FirebaseRepo.unlinkChild(code, childId) { ok ->
+                                    if (ok) {
+                                        Toast.makeText(this@ParentDashboardActivity, "\"$name\" oiladan chiqarildi", Toast.LENGTH_SHORT).show()
+                                        if (FirebaseRepo.childId == childId) FirebaseRepo.childId = null
+                                        FirebaseRepo.fetchChildren(code) { updated ->
+                                            if (updated.isEmpty()) dialog?.dismiss() else renderRows(updated)
+                                        }
+                                    } else {
+                                        Toast.makeText(this@ParentDashboardActivity, "O'chirib bo'lmadi — internetni tekshiring", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                            .setNegativeButton("Bekor qilish", null)
+                            .show()
+                    }
+                }
+                row.addView(label)
+                row.addView(deleteBtn)
+                container.addView(row)
+            }
+        }
+        renderRows(children)
+
+        dialog = AlertDialog.Builder(this)
+            .setTitle("Qaysi farzand?")
+            .setView(container)
+            .setNegativeButton("Yopish", null)
+            .create()
+        dialog.show()
     }
 
     private fun loadTodayStats() {

@@ -114,6 +114,14 @@ object FirebaseRepo {
             .addOnFailureListener { onResult(emptyList()) }
     }
 
+    fun unlinkChild(code: String, childId: String, onResult: (Boolean) -> Unit) {
+        db.collection("families").document(code)
+            .collection("children").document(childId)
+            .delete()
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
+
     fun syncSavedContacts(contacts: List<ContactMapping>) {
         val col = childCollection("contacts") ?: return
         col.get().addOnSuccessListener { snap ->
