@@ -5,15 +5,15 @@
     android:viewportWidth="140"
     android:viewportHeight="140">
 
-    <!-- Qalqon: siz yuborgan logo, binafsha-pushti gradient bilan -->
+    <!-- Qalqon: yashil gradient bilan -->
     <path android:pathData="M70 28 C100 28 118 50 118 72 C118 98 94 116 70 128 C46 116 22 98 22 72 C22 50 40 28 70 28 Z">
         <aapt:attr name="android:fillColor">
             <gradient
                 android:type="linear"
                 android:startX="22" android:startY="28"
                 android:endX="118" android:endY="128"
-                android:startColor="#C084FC"
-                android:endColor="#F472B6"/>
+                android:startColor="#34D399"
+                android:endColor="#059669"/>
         </aapt:attr>
     </path>
 
@@ -21,19 +21,19 @@
     <path
         android:pathData="M50 68 L62 56 L72 66 L92 44"
         android:fillColor="#00000000"
-        android:strokeColor="#2A1440"
+        android:strokeColor="#064E3B"
         android:strokeWidth="5"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"/>
 
     <path
         android:pathData="M55 76 h30 v24 h-30 z"
-        android:fillColor="#2A1440"/>
+        android:fillColor="#064E3B"/>
 
     <path
         android:pathData="M62 76 v-8 c0 -6 4 -10 8 -10 c4 0 8 4 8 10 v8"
         android:fillColor="#00000000"
-        android:strokeColor="#2A1440"
+        android:strokeColor="#064E3B"
         android:strokeWidth="4"/>
 
 </vector>
