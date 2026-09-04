@@ -1,0 +1,48 @@
+name: Premium Banner Matn va Hajm
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-banner:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodni olish
+        uses: actions/checkout@v4
+
+      - name: Premium bannerini yangilash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          candidates = list(Path('app/src/main/res/layout').rglob('*.xml'))
+          for p in candidates:
+              s = p.read_text()
+              if 'premiumBannerHome' not in s:
+                  continue
+              s = s.replace('Eng mashhur ilovalardan har 15-30-60 daqiqada 3-5 tagacha ekran screenshotlarini ko\'rish imkoni', 'Eng ko\'p foydalaniladigan ilovalardan har 15-30-60 daqiqada 3-5 tagacha ekran screenshotlarini ko\'rish imkoni')
+              s = s.replace('Push bildirishnomalar orqali ilovalardan kelgan xabar va tegishli yangiliklarni ko\'rish imkoni', 'Ilovalardan kelgan bildirishnomalarni o\'qish imkoni')
+              s = s.replace('android:padding="16dp"', 'android:padding="14dp"')
+              s = s.replace('android:textSize="16sp"', 'android:textSize="15sp"')
+              s = s.replace('android:textSize="13sp"', 'android:textSize="12sp"')
+              s = s.replace('android:textSize="12sp"', 'android:textSize="11sp"')
+              s = s.replace('android:lineSpacingExtra="3dp"', 'android:lineSpacingExtra="2dp"')
+              s = s.replace('android:paddingTop="8dp"', 'android:paddingTop="6dp"')
+              s = s.replace('android:paddingBottom="8dp"', 'android:paddingBottom="6dp"')
+              s = s.replace('android:textSize="28sp"', 'android:textSize="24sp"')
+              p.write_text(s)
+              print('Yangilandi:', p)
+              break
+          else:
+              raise SystemExit('Premium banner joylashgan XML topilmadi')
+          PY
+
+      - name: Commit va push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/res/layout
+          git diff --cached --quiet || git commit -m 'Premium banner matnini qisqartirish va ixchamlashtirish'
+          git push
