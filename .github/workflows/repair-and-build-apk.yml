@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   repair-build-publish:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Kodni olish
@@ -23,25 +24,19 @@ jobs:
           from pathlib import Path
           p = Path('app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt')
           s = p.read_text()
-
           if 'binding.btnScreenCapture.setOnClickListener' not in s:
               marker = '        binding.btnUsageAccess.setOnClickListener {'
               start = s.find(marker)
-              if start < 0:
-                  raise SystemExit('Usage access listener topilmadi')
+              if start < 0: raise SystemExit('Usage access listener topilmadi')
               end = s.find('        }', start)
-              if end < 0:
-                  raise SystemExit('Usage access listener yopilishi topilmadi')
+              if end < 0: raise SystemExit('Usage access listener yopilishi topilmadi')
               end += len('        }')
               s = s[:end] + '\n        binding.btnScreenCapture.setOnClickListener {\n            requestScreenCaptureConsent()\n        }' + s[end:]
-
           if 'private fun requestScreenCaptureConsent()' not in s:
               marker = "    // ---------------- Oila kodi bilan bog'lash ----------------"
-              if marker not in s:
-                  raise SystemExit('Pairing marker topilmadi')
+              if marker not in s: raise SystemExit('Pairing marker topilmadi')
               method = '    private fun requestScreenCaptureConsent() {\n        startActivity(Intent(this, ScreenCaptureConsentActivity::class.java))\n    }\n\n'
               s = s.replace(marker, method + marker, 1)
-
           p.write_text(s)
           print('Screenshot integratsiyasi tayyor.')
           PY
@@ -75,15 +70,12 @@ jobs:
           for client in data.get('client', []):
               for oauth in client.get('oauth_client', []):
                   if oauth.get('client_type') == 3 and oauth.get('client_id'):
-                      client_id = oauth['client_id']
-                      break
-              if client_id:
-                  break
-          if not client_id:
-              raise SystemExit('Web OAuth client topilmadi')
+                      client_id = oauth['client_id']; break
+              if client_id: break
+          if not client_id: raise SystemExit('Web OAuth client topilmadi')
           out = Path('app/src/main/res/values/google_auth.xml')
           out.parent.mkdir(parents=True, exist_ok=True)
-          escaped = client_id.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&apos;')
+          escaped = client_id.replace('&','&amp;').replace('<','&lt;').replace('>','&gt;').replace('"','&quot;').replace("'",'&apos;')
           out.write_text('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <string name="default_web_client_id" translatable="false">' + escaped + '</string>\n</resources>\n')
           PY
 
@@ -130,8 +122,15 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt downloads/oila-nazorati.apk downloads/oila-nazorati.apk.sha256
-          git commit -m "fix: restore working APK and integrate screenshot permission"
-          git push origin HEAD:main
+          git diff --cached --quiet || git commit -m "fix: restore working APK and integrate screenshot permission"
+          git fetch origin main
+          git rebase origin/main
+          for i in 1 2 3 4 5; do
+            if git push origin HEAD:main; then break; fi
+            if [ "$i" = 5 ]; then echo "GitHub main branch bir necha marta o'zgardi, push muvaffaqiyatsiz bo'ldi."; exit 1; fi
+            git fetch origin main
+            git rebase origin/main
+          done
 
       - name: Release APK artifact
         uses: actions/upload-artifact@v4
