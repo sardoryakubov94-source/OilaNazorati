@@ -3,8 +3,6 @@ name: Premium Dashboard Spacing
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'app/src/main/res/layout/activity_parent_dashboard.xml'
   workflow_dispatch:
 
 permissions:
@@ -24,12 +22,11 @@ jobs:
           p = Path('app/src/main/res/layout/activity_parent_dashboard.xml')
           s = p.read_text()
 
-          # Scroll kontentiga yon bo'shliq beramiz: bo'limlar telefon chetiga yopishmaydi.
           s = s.replace(
               '<LinearLayout\n        android:layout_width="match_parent"\n        android:layout_height="wrap_content"\n        android:orientation="vertical">',
               '<LinearLayout\n        android:layout_width="match_parent"\n        android:layout_height="wrap_content"\n        android:orientation="vertical"\n        android:paddingStart="10dp"\n        android:paddingEnd="10dp"\n        android:paddingTop="10dp">', 1)
 
-          def style_after_marker(text, marker, extra_margin_bottom='10dp'):
+          def style_after_marker(text, marker, bottom='10dp'):
               pos = text.index(marker)
               start = text.index('<LinearLayout', pos)
               end = text.index('>', start)
@@ -41,18 +38,20 @@ jobs:
               if 'android:layout_marginEnd=' not in tag:
                   tag += '\n            android:layout_marginEnd="0dp"'
               if 'android:layout_marginBottom=' not in tag:
-                  tag += f'\n            android:layout_marginBottom="{extra_margin_bottom}"'
+                  tag += f'\n            android:layout_marginBottom="{bottom}"'
               if 'android:elevation=' not in tag:
                   tag += '\n            android:elevation="3dp"'
               return text[:start] + tag + text[end:]
 
-          # Header, location va asosiy bo'limlar — Premium banner kabi alohida kartalar.
-          s = style_after_marker(s, '<!-- ========== HEADER ========== -->', '10dp')
-          s = style_after_marker(s, '<!-- ========== JOYLASHUV KARTASI ========== -->', '10dp')
-          s = style_after_marker(s, '<!-- ========== QO\'NG\'IROQLAR bo\'limi ========== -->', '10dp')
-          s = style_after_marker(s, '<!-- ========== SMS bo\'limi ========== -->', '10dp')
-          s = style_after_marker(s, '<!-- ========== MULOQOTLAR bo\'limi ========== -->', '10dp')
-          s = style_after_marker(s, '<!-- ========== ILOVALAR bo\'limi ========== -->', '12dp')
+          for marker in [
+              '<!-- ========== HEADER ========== -->',
+              '<!-- ========== JOYLASHUV KARTASI ========== -->',
+              '<!-- ========== QO\'NG\'IROQLAR bo\'limi ========== -->',
+              '<!-- ========== SMS bo\'limi ========== -->',
+              '<!-- ========== MULOQOTLAR bo\'limi ========== -->',
+              '<!-- ========== ILOVALAR bo\'limi ========== -->',
+          ]:
+              s = style_after_marker(s, marker)
 
           p.write_text(s)
           PY
