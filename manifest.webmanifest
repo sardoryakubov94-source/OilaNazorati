@@ -1,5 +1,5 @@
 {
-  "name": "Oila Nazorati",
+  "name": "Oila Nazorati — Ota-ona paneli",
   "short_name": "Oila Nazorati",
   "description": "Ota-ona nazorati paneli",
   "start_url": "./panel.html",
@@ -7,8 +7,9 @@
   "display": "standalone",
   "background_color": "#08111f",
   "theme_color": "#08111f",
+  "orientation": "portrait",
   "icons": [
-    {"src":"icon-192.png","sizes":"192x192","type":"image/png"},
-    {"src":"icon-512.png","sizes":"512x512","type":"image/png"}
+    {"src":"icons/icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"icons/icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
   ]
 }
