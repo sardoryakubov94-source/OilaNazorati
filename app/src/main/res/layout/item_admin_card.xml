@@ -35,4 +35,14 @@
         android:textSize="12sp"
         android:layout_marginTop="6dp"/>
 
+    <TextView
+        android:id="@+id/cardPriceLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bir martalik to'lov: 199 000 so'm — bir marta to'lab, butunlay Premium foydalanuvchi bo'ling"
+        android:textColor="#FFD54A"
+        android:textStyle="bold"
+        android:textSize="13sp"
+        android:layout_marginTop="10dp"/>
+
 </LinearLayout>
