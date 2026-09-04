@@ -12,6 +12,7 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.model.ScreenshotMetadata
@@ -27,7 +28,7 @@ class ScreenCaptureService : Service() {
     private var virtualDisplay: android.hardware.display.VirtualDisplay? = null
     private var settings = ScreenshotSettings()
     private var settingsListener: com.google.firebase.firestore.ListenerRegistration? = null
-    private val handler = Handler(mainLooper)
+    private val handler = Handler(Looper.getMainLooper())
     private val prefs by lazy { getSharedPreferences("screenshot_trigger_state", MODE_PRIVATE) }
     private var pending: PendingCapture? = null
     private var captureInProgress = false
