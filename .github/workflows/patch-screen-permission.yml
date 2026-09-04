@@ -20,66 +20,55 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           p = Path('app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt')
           s = p.read_text()
-          old = '''        binding.btnUsageAccess.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-        }
-        binding.btnDefaultPhone.setOnClickListener { requestDefaultPhoneRole() }'''
-          new = '''        binding.btnUsageAccess.setOnClickListener {
-            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-        }
-        binding.btnScreenCapture.setOnClickListener {
-            requestScreenCaptureConsent()
-        }
-        binding.btnDefaultPhone.setOnClickListener { requestDefaultPhoneRole() }'''
-          if old not in s:
-              raise SystemExit('expected setup listener block not found')
-          s = s.replace(old, new, 1)
+          original = s
 
-          old = '''        binding.btnBatteryOptimization.text = if (pm.isIgnoringBatteryOptimizations(packageName)) {
-            "✅ Batareya tejashdan chiqarilgan"
-        } else {
-            "🔋 Batareya tejashdan chiqarish (muhim!)"
-        }
-    }
+          if 'binding.btnScreenCapture.setOnClickListener' not in s:
+              pattern = r'(\s*binding\.btnUsageAccess\.setOnClickListener\s*\{\s*\n\s*startActivity\(Intent\(Settings\.ACTION_USAGE_ACCESS_SETTINGS\)\)\s*\n\s*\}\s*)'
+              m = re.search(pattern, s)
+              if not m:
+                  raise SystemExit('usage-access listener not found')
+              s = s[:m.end()] + '\n        binding.btnScreenCapture.setOnClickListener {\n            requestScreenCaptureConsent()\n        }\n' + s[m.end():]
 
-    // ---------------- Oila kodi bilan bog'lash ----------------'''
-          new = '''        binding.btnBatteryOptimization.text = if (pm.isIgnoringBatteryOptimizations(packageName)) {
-            "✅ Batareya tejashdan chiqarilgan"
-        } else {
-            "🔋 Batareya tejashdan chiqarish (muhim!)"
-        }
+          if 'private fun requestScreenCaptureConsent()' not in s:
+              marker = "    // ---------------- Oila kodi bilan bog'lash ----------------"
+              if marker not in s:
+                  raise SystemExit('pairing marker not found')
+              method = '''    private fun requestScreenCaptureConsent() {\n        startActivity(Intent(this, ScreenCaptureConsentActivity::class.java))\n    }\n\n'''
+              s = s.replace(marker, method + marker, 1)
 
-        val screenCaptureConsented = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
-            .getBoolean("screen_capture_consented", false)
-        binding.btnScreenCapture.text = if (screenCaptureConsented) {
-            "✅ Ekran nazorati ruxsati berilgan"
-        } else {
-            "📸 Ekran tasviriga ruxsat berish"
-        }
-    }
+          if 'screen_capture_consented' not in s:
+              marker = '        updateRoleStatusUi()\n        updateDeviceAdminStatusUi()'
+              if marker not in s:
+                  raise SystemExit('onResume marker not found')
+              addition = '''\n\n        val screenCaptureConsented = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)\n            .getBoolean("screen_capture_consented", false)\n        binding.btnScreenCapture.text = if (screenCaptureConsented) {\n            "✅ Ekran nazorati ruxsati berilgan"\n        } else {\n            "📸 Ekran tasviriga ruxsat berish"\n        }'''
+              s = s.replace(marker, marker + addition, 1)
 
-    private fun requestScreenCaptureConsent() {
-        startActivity(Intent(this, ScreenCaptureConsentActivity::class.java))
-    }
+          required = [
+              'binding.btnScreenCapture.setOnClickListener',
+              'private fun requestScreenCaptureConsent()',
+              'ScreenCaptureConsentActivity'
+          ]
+          for item in required:
+              if item not in s:
+                  raise SystemExit('missing: ' + item)
 
-    // ---------------- Oila kodi bilan bog'lash ----------------'''
-          if old not in s:
-              raise SystemExit('expected onResume block not found')
-          s = s.replace(old, new, 1)
-          p.write_text(s)
+          if s == original:
+              print('Screenshot integration already present; no source change needed.')
+          else:
+              p.write_text(s)
+              print('Screenshot integration patched.')
           PY
-      - name: Commit and push
+      - name: Commit and push if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
-          git commit -m "fix: show screenshot permission in child setup"
-          git push origin HEAD:main
-      - name: Remove patch workflow
-        if: success()
-        run: |
-          git rm .github/workflows/patch-screen-permission.yml
-          git commit -m "chore: remove temporary screenshot patch workflow"
-          git push origin HEAD:main
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+          else
+            git commit -m "fix: show screenshot permission in child setup"
+            git push origin HEAD:main
+          fi
