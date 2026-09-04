@@ -1,0 +1,66 @@
+name: Premium Dashboard Spacing
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'app/src/main/res/layout/activity_parent_dashboard.xml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  redesign:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodni olish
+        uses: actions/checkout@v4
+
+      - name: Dashboard bo'limlarini premium kartalarga aylantirish
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/res/layout/activity_parent_dashboard.xml')
+          s = p.read_text()
+
+          # Scroll kontentiga yon bo'shliq beramiz: bo'limlar telefon chetiga yopishmaydi.
+          s = s.replace(
+              '<LinearLayout\n        android:layout_width="match_parent"\n        android:layout_height="wrap_content"\n        android:orientation="vertical">',
+              '<LinearLayout\n        android:layout_width="match_parent"\n        android:layout_height="wrap_content"\n        android:orientation="vertical"\n        android:paddingStart="10dp"\n        android:paddingEnd="10dp"\n        android:paddingTop="10dp">', 1)
+
+          def style_after_marker(text, marker, extra_margin_bottom='10dp'):
+              pos = text.index(marker)
+              start = text.index('<LinearLayout', pos)
+              end = text.index('>', start)
+              tag = text[start:end]
+              if 'android:background=' not in tag:
+                  tag += '\n            android:background="@drawable/bg_dashboard_section"'
+              if 'android:layout_marginStart=' not in tag:
+                  tag += '\n            android:layout_marginStart="0dp"'
+              if 'android:layout_marginEnd=' not in tag:
+                  tag += '\n            android:layout_marginEnd="0dp"'
+              if 'android:layout_marginBottom=' not in tag:
+                  tag += f'\n            android:layout_marginBottom="{extra_margin_bottom}"'
+              if 'android:elevation=' not in tag:
+                  tag += '\n            android:elevation="3dp"'
+              return text[:start] + tag + text[end:]
+
+          # Header, location va asosiy bo'limlar — Premium banner kabi alohida kartalar.
+          s = style_after_marker(s, '<!-- ========== HEADER ========== -->', '10dp')
+          s = style_after_marker(s, '<!-- ========== JOYLASHUV KARTASI ========== -->', '10dp')
+          s = style_after_marker(s, '<!-- ========== QO\'NG\'IROQLAR bo\'limi ========== -->', '10dp')
+          s = style_after_marker(s, '<!-- ========== SMS bo\'limi ========== -->', '10dp')
+          s = style_after_marker(s, '<!-- ========== MULOQOTLAR bo\'limi ========== -->', '10dp')
+          s = style_after_marker(s, '<!-- ========== ILOVALAR bo\'limi ========== -->', '12dp')
+
+          p.write_text(s)
+          PY
+
+      - name: O'zgarishni commit qilish
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/res/layout/activity_parent_dashboard.xml
+          git diff --cached --quiet || git commit -m 'Dashboard bo limlarini premium kartalarga moslash'
+          git push
