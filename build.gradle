@@ -10,6 +10,7 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         // Firebase (google-services.json fayli talab qilinadi — pastdagi README'ga qarang)
         classpath "com.google.gms:google-services:4.4.1"
+        classpath "com.google.firebase:firebase-crashlytics-gradle:2.9.9"
     }
 }
 

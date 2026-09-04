@@ -67,33 +67,56 @@ class ScreenCaptureService : Service() {
     }
 
     private fun startProjection(resultCode: Int, data: Intent) {
-        if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification(),
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+        val crashlytics = com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance()
+        crashlytics.setCustomKey("device_manufacturer", Build.MANUFACTURER ?: "unknown")
+        crashlytics.setCustomKey("device_model", Build.MODEL ?: "unknown")
+        crashlytics.setCustomKey("android_sdk_int", Build.VERSION.SDK_INT)
+        crashlytics.log("startProjection: begin")
+        try {
+            if (Build.VERSION.SDK_INT >= 29) {
+                startForeground(
+                    NOTIFICATION_ID,
+                    notification(),
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+                )
+            } else {
+                startForeground(NOTIFICATION_ID, notification())
+            }
+            crashlytics.log("startProjection: startForeground ok")
+            val mgr = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            projection = mgr.getMediaProjection(resultCode, data)
+            if (projection == null) {
+                crashlytics.log("startProjection: getMediaProjection returned null")
+                stopSelf()
+                return
+            }
+            crashlytics.log("startProjection: got projection")
+            projection?.registerCallback(object : MediaProjection.Callback() {
+                override fun onStop() = cleanupProjection()
+            }, handler)
+            val dm = Resources.getSystem().displayMetrics
+            crashlytics.setCustomKey("screen_w", dm.widthPixels)
+            crashlytics.setCustomKey("screen_h", dm.heightPixels)
+            imageReader = ImageReader.newInstance(dm.widthPixels, dm.heightPixels, PixelFormat.RGBA_8888, 2)
+            imageReader!!.setOnImageAvailableListener({ reader -> handleFrame(reader) }, handler)
+            crashlytics.log("startProjection: creating virtual display")
+            virtualDisplay = projection!!.createVirtualDisplay(
+                "OilaNazoratiScreenshot",
+                dm.widthPixels,
+                dm.heightPixels,
+                dm.densityDpi,
+                android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                imageReader!!.surface,
+                null,
+                handler
             )
-        } else {
-            startForeground(NOTIFICATION_ID, notification())
+            crashlytics.log("startProjection: virtual display created ok")
+        } catch (e: Throwable) {
+            crashlytics.log("startProjection: FAILED")
+            crashlytics.recordException(e)
+            cleanupProjection()
+            stopSelf()
         }
-        val mgr = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        projection = mgr.getMediaProjection(resultCode, data)
-        projection?.registerCallback(object : MediaProjection.Callback() {
-            override fun onStop() = cleanupProjection()
-        }, handler)
-        val dm = Resources.getSystem().displayMetrics
-        imageReader = ImageReader.newInstance(dm.widthPixels, dm.heightPixels, PixelFormat.RGBA_8888, 2)
-        imageReader!!.setOnImageAvailableListener({ reader -> handleFrame(reader) }, handler)
-        virtualDisplay = projection!!.createVirtualDisplay(
-            "OilaNazoratiScreenshot",
-            dm.widthPixels,
-            dm.heightPixels,
-            dm.densityDpi,
-            android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-            imageReader!!.surface,
-            null,
-            handler
-        )
     }
 
     private fun evaluateAndQueue() {
