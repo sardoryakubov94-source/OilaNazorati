@@ -1,2 +1,5 @@
 /* Android device requirement notice — shown on the main site and parent Web panel. */
 body::before{content:"⚠️  ASOSIY QOIDA: Bolaning kuzatiladigan qurilmasi Android bo‘lishi shart. Ota-ona esa iPhone yoki Android’dan Web panel orqali foydalanishi mumkin.";display:block;width:100%;box-sizing:border-box;padding:12px 18px;text-align:center;background:#fff7df;color:#6b4e00;border-bottom:1px solid #f0d98a;font:700 13px/1.45 Inter,system-ui,-apple-system,Segoe UI,sans-serif;letter-spacing:.01em;position:relative;z-index:100}@media(max-width:560px){body::before{padding:10px 13px;font-size:11px;line-height:1.4}}
+
+/* Use the same latest green app logo in the website brand instead of the old ON badge. */
+.brand span{background:url('icons/icon-192.png') center/cover no-repeat!important;color:transparent!important;font-size:0!important;border-radius:11px!important;}
