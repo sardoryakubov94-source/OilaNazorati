@@ -100,6 +100,11 @@ jobs:
       - name: APKni saytning downloads papkasiga joylash
         if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[website-apk]') }}
         run: |
+          # Synchronize before staging/committing. Build steps create local files,
+          # so pulling after commit can fail with 'unstaged changes'.
+          git fetch origin main
+          git reset --hard origin/main
+
           mkdir -p downloads
           cp OilaNazorati-v1.0.1-release.apk downloads/oila-nazorati.apk
           cp OilaNazorati-v1.0.1-release.apk.sha256 downloads/oila-nazorati.apk.sha256
@@ -110,7 +115,6 @@ jobs:
             echo "Website APK allaqachon eng yangi holatda."
           else
             git commit -m "chore: publish website APK [website-apk]"
-            git pull --rebase origin main
             git push origin HEAD:main
           fi
 
