@@ -5,6 +5,11 @@ on:
     branches: [ main, master, screenshot-feature ]
   workflow_dispatch:
 
+# Prevent simultaneous APK builds from racing to push website APK files.
+concurrency:
+  group: build-release-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 # Release APK build workflow
 jobs:
   build:
@@ -14,6 +19,8 @@ jobs:
     steps:
       - name: Kodni olish
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: JDK 17 o'rnatish
         uses: actions/setup-java@v5
@@ -103,7 +110,8 @@ jobs:
             echo "Website APK allaqachon eng yangi holatda."
           else
             git commit -m "chore: publish website APK [website-apk]"
-            git push
+            git pull --rebase origin main
+            git push origin HEAD:main
           fi
 
       - name: Release APK artifact
