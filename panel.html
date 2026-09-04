@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ota-ona paneli — Oila Nazorati</title>
+<link rel="stylesheet" href="site.css">
+<style>
+  body{background:#f6f8fc}
+  .panel-wrap{max-width:520px;margin:0 auto;padding:20px 16px 60px;min-height:100vh}
+  .panel-header{display:flex;align-items:center;gap:10px;padding:14px 0 22px}
+  .panel-header .logo{width:37px;height:37px;font-size:11px}
+  .panel-header b{font-size:16px}
+  .panel-header small{display:block;color:#8993a2;font-size:11px}
+  .panel-signout{margin-left:auto;background:none;border:1px solid #dce2eb;color:#596578;font-size:12px;font-weight:700;padding:8px 12px;border-radius:10px;cursor:pointer}
+  .screen{display:none}
+  .screen.active{display:block}
+  .center-card{background:#fff;border:1px solid #e3e8ef;border-radius:20px;padding:32px 24px;text-align:center;box-shadow:0 20px 50px rgba(16,24,40,.06)}
+  .center-card h2{font-size:22px;margin:14px 0 8px;letter-spacing:-.02em}
+  .center-card p{color:#697586;font-size:14px;margin:0 0 22px}
+  .g-btn{display:inline-flex;align-items:center;gap:10px;background:#111827;color:#fff;border:0;padding:13px 22px;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;width:100%;justify-content:center}
+  .g-btn:active{opacity:.85}
+  input.code-input{width:100%;padding:14px;border:1px solid #dce2eb;border-radius:12px;font-size:16px;text-align:center;letter-spacing:.08em;font-weight:800;margin-bottom:12px;box-sizing:border-box}
+  .err{color:#dc2626;font-size:13px;margin:8px 0 0}
+  .child-list{display:flex;flex-direction:column;gap:10px}
+  .child-item{background:#fff;border:1px solid #e3e8ef;border-radius:14px;padding:16px;display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left}
+  .child-item:active{background:#f2f5fb}
+  .child-item .av{width:38px;height:38px;border-radius:10px;background:#eef2ff;color:#4d6fd6;display:grid;place-items:center;font-weight:900}
+  .child-item b{display:block;font-size:14px}
+  .child-item small{color:#8993a2;font-size:11px}
+  .tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:12px;margin-bottom:16px;-webkit-overflow-scrolling:touch}
+  .tabs button{flex:none;border:1px solid #dce2eb;background:#fff;color:#596578;font-size:12px;font-weight:800;padding:9px 14px;border-radius:999px;cursor:pointer;white-space:nowrap}
+  .tabs button.active{background:#111827;color:#fff;border-color:#111827}
+  .card-row{background:#fff;border:1px solid #e3e8ef;border-radius:14px;padding:14px;margin-bottom:9px}
+  .card-row .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .card-row b{font-size:13px}
+  .card-row .badge{font-size:10px;font-weight:800;padding:3px 8px;border-radius:999px;background:#eef2ff;color:#4d6fd6;white-space:nowrap}
+  .card-row .badge.out{background:#fff1e8;color:#c2570c}
+  .card-row .badge.miss{background:#fde8e8;color:#dc2626}
+  .card-row p{margin:8px 0 0;font-size:13px;color:#465064}
+  .card-row small{display:block;margin-top:6px;color:#98a4b5;font-size:11px}
+  .card-row a.mapl{color:#4d6fd6;font-size:12px;font-weight:800;text-decoration:none}
+  .empty{text-align:center;color:#8993a2;font-size:13px;padding:40px 10px}
+  .loading{text-align:center;color:#8993a2;font-size:13px;padding:24px}
+  .summary-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+  .summary-grid .box{background:#fff;border:1px solid #e3e8ef;border-radius:14px;padding:16px}
+  .summary-grid .box b{display:block;font-size:20px}
+  .summary-grid .box small{color:#8993a2;font-size:11px}
+  .loc-card{background:#111c2b;color:#fff;border-radius:16px;padding:18px;margin-bottom:18px}
+  .loc-card small{color:#adb8c7;font-size:10px;font-weight:800;letter-spacing:.08em}
+  .loc-card b{display:block;font-size:17px;margin:6px 0}
+  .loc-card a{color:#8fb3ff;font-size:12px;font-weight:800;text-decoration:none}
+  .ss-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .ss-item{background:#fff;border:1px solid #e3e8ef;border-radius:12px;padding:10px;cursor:pointer;text-align:center}
+  .ss-item small{display:block;font-size:9px;color:#8993a2;margin-top:4px}
+  .lightbox{position:fixed;inset:0;background:rgba(10,14,22,.9);display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .lightbox.active{display:flex}
+  .lightbox img{max-width:100%;max-height:85vh;border-radius:10px}
+  .lightbox .close{position:absolute;top:18px;right:18px;background:#fff;border:0;width:36px;height:36px;border-radius:50%;font-weight:900;cursor:pointer}
+  .change-code{background:none;border:0;color:#4d6fd6;font-size:12px;font-weight:800;margin-top:14px;cursor:pointer}
+  .spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="panel-wrap">
+
+  <div class="panel-header">
+    <span class="logo">ON</span>
+    <div>
+      <b>Oila Nazorati</b>
+      <small id="headerSub">Ota-ona paneli</small>
+    </div>
+    <button class="panel-signout" id="btnSignOut" style="display:none">Chiqish</button>
+  </div>
+
+  <!-- 1) Kirish -->
+  <section class="screen active" id="screenLogin">
+    <div class="center-card">
+      <h2>Xush kelibsiz</h2>
+      <p>Farzandingiz qurilmasini kuzatish uchun Google hisobingiz bilan kiring — bu Android ilovadagi bilan bir xil hisob bo‘lishi kerak.</p>
+      <button class="g-btn" id="btnGoogleSignIn">Google bilan kirish</button>
+      <p class="err" id="loginErr"></p>
+    </div>
+  </section>
+
+  <!-- 2) Oila kodi -->
+  <section class="screen" id="screenCode">
+    <div class="center-card">
+      <h2>Oila kodini kiriting</h2>
+      <p>Bu — ilovada oila yaratganda olingan kod.</p>
+      <input class="code-input" id="familyCodeInput" placeholder="MASALAN: AB12CD" autocapitalize="characters">
+      <button class="g-btn" id="btnLoadFamily">Davom etish</button>
+      <p class="err" id="codeErr"></p>
+    </div>
+  </section>
+
+  <!-- 3) Farzand tanlash -->
+  <section class="screen" id="screenChildren">
+    <h2 style="margin:0 0 14px">Farzandni tanlang</h2>
+    <div class="child-list" id="childList"></div>
+    <button class="change-code" id="btnChangeCodeFromChildren">← Boshqa oila kodi</button>
+  </section>
+
+  <!-- 4) Dashboard -->
+  <section class="screen" id="screenDash">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <h2 style="margin:0" id="childNameTitle">Farzand</h2>
+      <button class="change-code" id="btnChangeChild">Boshqa farzand</button>
+    </div>
+
+    <div class="tabs" id="tabs">
+      <button data-tab="umumiy" class="active">Umumiy</button>
+      <button data-tab="lokatsiya">Lokatsiya</button>
+      <button data-tab="sms">SMS</button>
+      <button data-tab="calls">Qo‘ng‘iroqlar</button>
+      <button data-tab="apps">Ilovalar</button>
+      <button data-tab="notif">Bildirishnomalar</button>
+      <button data-tab="ss">Screenshot</button>
+    </div>
+
+    <div id="tabContent"><div class="loading">Yuklanmoqda…</div></div>
+  </section>
+
+</div>
+
+<div class="lightbox" id="lightbox">
+  <button class="close" id="lightboxClose">✕</button>
+  <img id="lightboxImg" src="">
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, collection, getDocs, query, orderBy, limit
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyB72y9YkdCifEodbo2g_43FbbcDbvg0QF4",
+  authDomain: "oilanazorat-3c8de.firebaseapp.com",
+  projectId: "oilanazorat-3c8de",
+  storageBucket: "oilanazorat-3c8de.firebasestorage.app",
+  messagingSenderId: "1086556994078",
+  appId: "1:1086556994078:web:5e576984e784d0bbdc4c0f",
+  measurementId: "G-NWER8TE97X"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const $ = (id) => document.getElementById(id);
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+let currentFamilyCode = null;
+let currentChildId = null;
+let currentChildName = '';
+
+// ---------- Auth ----------
+$('btnGoogleSignIn').addEventListener('click', async () => {
+  $('loginErr').textContent = '';
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (e) {
+    $('loginErr').textContent = 'Kirishda xato: ' + (e.code || e.message);
+  }
+});
+
+$('btnSignOut').addEventListener('click', () => signOut(auth));
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    $('btnSignOut').style.display = 'inline-block';
+    $('headerSub').textContent = user.email || 'Ota-ona paneli';
+    const savedCode = sessionStorage.getItem('oila_family_code');
+    if (savedCode) {
+      currentFamilyCode = savedCode;
+      loadChildren();
+    } else {
+      showScreen('screenCode');
+    }
+  } else {
+    $('btnSignOut').style.display = 'none';
+    currentFamilyCode = null;
+    currentChildId = null;
+    showScreen('screenLogin');
+  }
+});
+
+// ---------- Oila kodi ----------
+$('btnLoadFamily').addEventListener('click', async () => {
+  const code = $('familyCodeInput').value.trim().toUpperCase();
+  $('codeErr').textContent = '';
+  if (!code) { $('codeErr').textContent = 'Kodni kiriting.'; return; }
+  $('btnLoadFamily').textContent = 'Tekshirilmoqda…';
+  try {
+    const famRef = doc(db, 'families', code);
+    const famSnap = await getDoc(famRef);
+    if (!famSnap.exists()) {
+      $('codeErr').textContent = 'Bunday oila kodi topilmadi.';
+      $('btnLoadFamily').textContent = 'Davom etish';
+      return;
+    }
+    currentFamilyCode = code;
+    sessionStorage.setItem('oila_family_code', code);
+    await loadChildren();
+  } catch (e) {
+    $('codeErr').textContent = 'Ruxsat yo‘q — bu kod sizning hisobingiz bilan yaratilganini tekshiring.';
+  }
+  $('btnLoadFamily').textContent = 'Davom etish';
+});
+
+$('btnChangeCodeFromChildren').addEventListener('click', () => {
+  sessionStorage.removeItem('oila_family_code');
+  currentFamilyCode = null;
+  showScreen('screenCode');
+});
+$('btnChangeChild').addEventListener('click', () => loadChildren());
+
+// ---------- Farzandlar ----------
+async function loadChildren() {
+  showScreen('screenChildren');
+  $('childList').innerHTML = '<div class="loading">Yuklanmoqda…</div>';
+  try {
+    const col = collection(db, 'families', currentFamilyCode, 'children');
+    const snap = await getDocs(col);
+    if (snap.empty) {
+      $('childList').innerHTML = '<div class="empty">Bu oilada hali farzand qurilmasi ulanmagan.</div>';
+      return;
+    }
+    $('childList').innerHTML = '';
+    snap.forEach(d => {
+      const data = d.data();
+      const name = data.nomi || ('Farzand (' + d.id.slice(0,5) + ')');
+      const btn = document.createElement('button');
+      btn.className = 'child-item';
+      btn.innerHTML = `<span class="av">${name.slice(0,1).toUpperCase()}</span><span><b>${name}</b><small>ID: ${d.id.slice(0,8)}</small></span>`;
+      btn.addEventListener('click', () => openChild(d.id, name));
+      $('childList').appendChild(btn);
+    });
+    if (snap.size === 1) {
+      const only = snap.docs[0];
+      openChild(only.id, only.data().nomi || 'Farzand');
+    }
+  } catch (e) {
+    $('childList').innerHTML = '<div class="empty">Yuklashda xato yuz berdi.</div>';
+  }
+}
+
+function openChild(childId, name) {
+  currentChildId = childId;
+  currentChildName = name;
+  $('childNameTitle').textContent = name;
+  showScreen('screenDash');
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+  document.querySelector('#tabs button[data-tab="umumiy"]').classList.add('active');
+  loadTab('umumiy');
+}
+
+// ---------- Tabs ----------
+document.querySelectorAll('#tabs button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#tabs button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadTab(btn.dataset.tab);
+  });
+});
+
+function fmt(ms) {
+  if (!ms) return '—';
+  const d = new Date(ms);
+  return d.toLocaleString('uz-UZ', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function secToStr(s) {
+  s = s || 0;
+  const m = Math.floor(s / 60), r = s % 60;
+  return m > 0 ? `${m}d ${r}s` : `${r}s`;
+}
+async function fetchSub(name, order, lim) {
+  const col = collection(db, 'families', currentFamilyCode, 'children', currentChildId, name);
+  const q = query(col, orderBy(order, 'desc'), limit(lim));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+async function loadTab(tab) {
+  $('tabContent').innerHTML = '<div class="loading">Yuklanmoqda…</div>';
+  try {
+    if (tab === 'umumiy') return renderUmumiy();
+    if (tab === 'lokatsiya') return renderLokatsiya();
+    if (tab === 'sms') return renderSms();
+    if (tab === 'calls') return renderCalls();
+    if (tab === 'apps') return renderApps();
+    if (tab === 'notif') return renderNotif();
+    if (tab === 'ss') return renderScreenshots();
+  } catch (e) {
+    $('tabContent').innerHTML = '<div class="empty">Ma’lumot yuklanmadi.</div>';
+  }
+}
+
+async function renderUmumiy() {
+  const [locs, sms, calls, apps] = await Promise.all([
+    fetchSub('locations', 'vaqtMs', 1),
+    fetchSub('sms', 'vaqtMs', 30),
+    fetchSub('calls', 'boshlanishMs', 30),
+    fetchSub('app_usage', 'boshlanishMs', 30)
+  ]);
+  let html = '';
+  if (locs[0]) {
+    const l = locs[0];
+    html += `<div class="loc-card"><small>SO‘NGGI JOYLASHUV</small><b>${l.lat.toFixed(4)}°, ${l.lng.toFixed(4)}°</b>
+      <a href="https://maps.google.com/?q=${l.lat},${l.lng}" target="_blank">Xaritada ko‘rish →</a><br>
+      <small style="margin-top:6px">${fmt(l.vaqtMs)}</small></div>`;
+  } else {
+    html += `<div class="empty">Hali lokatsiya ma’lumoti yo‘q.</div>`;
+  }
+  html += `<div class="summary-grid">
+    <div class="box"><b>${sms.length}</b><small>So‘nggi SMS</small></div>
+    <div class="box"><b>${calls.length}</b><small>So‘nggi qo‘ng‘iroq</small></div>
+    <div class="box"><b>${apps.length}</b><small>Ilova sessiyasi</small></div>
+    <div class="box"><b id="ssCount">…</b><small>Screenshot</small></div>
+  </div>`;
+  $('tabContent').innerHTML = html;
+  fetchSub('screenshots', 'capturedAt', 200).then(list => {
+    const el = document.getElementById('ssCount');
+    if (el) el.textContent = list.length;
+  }).catch(() => {});
+}
+
+async function renderLokatsiya() {
+  const list = await fetchSub('locations', 'vaqtMs', 50);
+  if (!list.length) return $('tabContent').innerHTML = '<div class="empty">Hali lokatsiya ma’lumoti yo‘q.</div>';
+  $('tabContent').innerHTML = list.map(l => `
+    <div class="card-row">
+      <div class="top"><b>${l.lat.toFixed(4)}°, ${l.lng.toFixed(4)}°</b>
+      <a class="mapl" href="https://maps.google.com/?q=${l.lat},${l.lng}" target="_blank">Xarita →</a></div>
+      <small>${fmt(l.vaqtMs)}</small>
+    </div>`).join('');
+}
+
+async function renderSms() {
+  const list = await fetchSub('sms', 'vaqtMs', 100);
+  if (!list.length) return $('tabContent').innerHTML = '<div class="empty">Hali SMS ma’lumoti yo‘q.</div>';
+  $('tabContent').innerHTML = list.map(s => `
+    <div class="card-row">
+      <div class="top"><b>${s.raqam || 'Noma’lum raqam'}</b>
+      <span class="badge ${s.turi === 'chiquvchi' ? 'out' : ''}">${s.turi === 'chiquvchi' ? 'Chiquvchi' : 'Kiruvchi'}</span></div>
+      <p>${(s.matn || '').replace(/</g,'&lt;')}</p>
+      <small>${fmt(s.vaqtMs)}</small>
+    </div>`).join('');
+}
+
+async function renderCalls() {
+  const list = await fetchSub('calls', 'boshlanishMs', 100);
+  if (!list.length) return $('tabContent').innerHTML = '<div class="empty">Hali qo‘ng‘iroq ma’lumoti yo‘q.</div>';
+  $('tabContent').innerHTML = list.map(c => {
+    const badgeClass = c.turi === 'chiquvchi' ? 'out' : (c.turi === 'javobsiz' ? 'miss' : '');
+    const label = c.turi === 'chiquvchi' ? 'Chiquvchi' : (c.turi === 'javobsiz' ? 'Javobsiz' : 'Kiruvchi');
+    return `<div class="card-row">
+      <div class="top"><b>${c.raqam || 'Noma’lum raqam'}</b><span class="badge ${badgeClass}">${label}</span></div>
+      <p>Davomiyligi: ${secToStr(c.davomiylikSoniya)}</p>
+      <small>${fmt(c.boshlanishMs)}</small>
+    </div>`;
+  }).join('');
+}
+
+async function renderApps() {
+  const list = await fetchSub('app_usage', 'boshlanishMs', 100);
+  if (!list.length) return $('tabContent').innerHTML = '<div class="empty">Hali ilova faoliyati yo‘q.</div>';
+  $('tabContent').innerHTML = list.map(a => `
+    <div class="card-row">
+      <div class="top"><b>${a.ilovaNomi || a.paketNomi}</b><span class="badge">${secToStr(a.davomiylikSoniya)}</span></div>
+      <small>${fmt(a.boshlanishMs)}</small>
+    </div>`).join('');
+}
+
+async function renderNotif() {
+  const list = await fetchSub('notifications', 'vaqtMs', 100);
+  if (!list.length) return $('tabContent').innerHTML = '<div class="empty">Hali bildirishnoma yo‘q.</div>';
+  $('tabContent').innerHTML = list.map(n => `
+    <div class="card-row">
+      <div class="top"><b>${n.ilovaNomi || n.ilovaPaket}</b></div>
+      <p><b style="font-size:12px">${(n.sarlavha||'').replace(/</g,'&lt;')}</b><br>${(n.matn||'').replace(/</g,'&lt;')}</p>
+      <small>${fmt(n.vaqtMs)}</small>
+    </div>`).join('');
+}
+
+async function renderScreenshots() {
+  const list = await fetchSub('screenshots', 'capturedAt', 60);
+  if (!list.length) return $('tabContent').innerHTML = '<div class="empty">Hali screenshot yo‘q.</div>';
+  const grid = document.createElement('div');
+  grid.className = 'ss-grid';
+  list.forEach(s => {
+    const item = document.createElement('div');
+    item.className = 'ss-item';
+    item.innerHTML = `▣<small>${s.appLabel || s.packageName}</small><small>${fmt(s.capturedAt)}</small>`;
+    item.addEventListener('click', () => openScreenshot(s.id));
+    grid.appendChild(item);
+  });
+  $('tabContent').innerHTML = '';
+  $('tabContent').appendChild(grid);
+}
+
+async function openScreenshot(id) {
+  try {
+    const ref = doc(db, 'families', currentFamilyCode, 'children', currentChildId, 'screenshot_data', id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+    const data = snap.data();
+    const bytes = data.image.toUint8Array();
+    const blob = new Blob([bytes], { type: data.contentType || 'image/jpeg' });
+    const url = URL.createObjectURL(blob);
+    $('lightboxImg').src = url;
+    $('lightbox').classList.add('active');
+  } catch (e) {
+    alert('Rasmni yuklab bo‘lmadi.');
+  }
+}
+$('lightboxClose').addEventListener('click', () => {
+  $('lightbox').classList.remove('active');
+  $('lightboxImg').src = '';
+});
+$('lightbox').addEventListener('click', (e) => {
+  if (e.target.id === 'lightbox') { $('lightbox').classList.remove('active'); $('lightboxImg').src=''; }
+});
+</script>
+</body>
+</html>
