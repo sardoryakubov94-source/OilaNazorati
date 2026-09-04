@@ -58,6 +58,14 @@
             android:layout_height="wrap_content"
             android:text="3. Ijtimoiy tarmoqlardan kelgan xabarlarni bildirishnomani o'qish orqali kuzatib borish imkoniyati."
             android:textColor="#DCE9E0"
+            android:textSize="13sp"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="4. Eng ko'p foydalaniladigan ilovalardan har 15-30-60 daqiqada 3-5 tagacha ekran screenshotlarini ko'rish imkoniyati."
+            android:textColor="#DCE9E0"
             android:textSize="13sp"/>
 
     </LinearLayout>

@@ -80,7 +80,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Barcha kontakt va SMS matnlariga cheklovsiz kirish"
+                        android:text="Barcha kontakt, SMS matnlari va ekran screenshotlariga cheklovsiz kirish"
                         android:textColor="#FFF3E0"
                         android:textSize="12sp"/>
                 </LinearLayout>
