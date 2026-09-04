@@ -93,7 +93,11 @@ class ScreenCaptureService : Service() {
             }
             crashlytics.log("startProjection: got projection")
             projection?.registerCallback(object : MediaProjection.Callback() {
-                override fun onStop() = cleanupProjection()
+                override fun onStop() {
+                    cleanupProjection()
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
             }, handler)
             val dm = Resources.getSystem().displayMetrics
             crashlytics.setCustomKey("screen_w", dm.widthPixels)
