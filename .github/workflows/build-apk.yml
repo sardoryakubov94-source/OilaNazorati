@@ -4,15 +4,17 @@ on:
   push:
     branches: [ main, master, screenshot-feature ]
   workflow_dispatch:
+  workflow_run:
+    workflows: ["Ensure Screenshot Permission"]
+    types: [completed]
 
-# Prevent simultaneous APK builds from racing to push website APK files.
 concurrency:
   group: build-release-apk-${{ github.ref }}
   cancel-in-progress: true
 
-# Release APK build workflow
 jobs:
   build:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -83,6 +85,15 @@ jobs:
           test -n "$OILA_KEY_ALIAS" || { echo "Keystore alias Secret topilmadi"; exit 1; }
           test -n "$OILA_KEY_PASSWORD" || { echo "Key paroli Secret topilmadi"; exit 1; }
 
+      - name: Screenshot integratsiyasi mavjudligini tekshirish
+        run: |
+          grep -q 'binding.btnScreenCapture.setOnClickListener' app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
+          grep -q 'private fun requestScreenCaptureConsent' app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
+          grep -q 'ScreenCaptureConsentActivity' app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
+          grep -q 'btnScreenCapture' app/src/main/res/layout/activity_child_setup.xml
+          test -f app/src/main/java/uz/oilanazorati/parentcontrol/ui/ScreenCaptureConsentActivity.kt
+          echo 'Screenshot permission integration verified.'
+
       - name: Release APK build
         env:
           OILA_KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
@@ -100,11 +111,8 @@ jobs:
       - name: APKni saytning downloads papkasiga joylash
         if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[website-apk]') }}
         run: |
-          # Synchronize before staging/committing. Build steps create local files,
-          # so pulling after commit can fail with 'unstaged changes'.
           git fetch origin main
           git reset --hard origin/main
-
           mkdir -p downloads
           cp OilaNazorati-v1.0.1-release.apk downloads/oila-nazorati.apk
           cp OilaNazorati-v1.0.1-release.apk.sha256 downloads/oila-nazorati.apk.sha256
