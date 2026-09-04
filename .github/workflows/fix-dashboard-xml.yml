@@ -1,8 +1,6 @@
 name: Fix Dashboard XML
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -14,29 +12,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Restore dashboard and apply safe UI edits
-        run: |
-          git checkout eac602bd7a1ee2e1c717b3801df596309672ef1b -- app/src/main/res/layout/activity_parent_dashboard.xml
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('app/src/main/res/layout/activity_parent_dashboard.xml')
-          s = p.read_text()
-          replacements = {
-              'android:padding="16dp"\n            android:clickable="true"': 'android:padding="14dp"\n            android:clickable="true"',
-              'android:textSize="28sp"\n                    android:layout_marginEnd="10dp"': 'android:textSize="24sp"\n                    android:layout_marginEnd="8dp"',
-              'android:textSize="16sp"/>\n\n                <TextView\n                    android:id="@+id/btnPremiumCtaHome"': 'android:textSize="15sp"/>\n\n                <TextView\n                    android:id="@+id/btnPremiumCtaHome"',
-              'android:textSize="13sp"\n                    android:background="#33000000"\n                    android:paddingStart="12dp"\n                    android:paddingEnd="12dp"\n                    android:paddingTop="8dp"\n                    android:paddingBottom="8dp"': 'android:textSize="12sp"\n                    android:background="#33000000"\n                    android:paddingStart="10dp"\n                    android:paddingEnd="10dp"\n                    android:paddingTop="6dp"\n                    android:paddingBottom="6dp"',
-              'android:layout_marginTop="10dp"\n                android:text="• Kontakt va raqamlarni ochiq ko\'rish imkoni\\n• Kelgan SMS xabarlarni to\'liq o\'qish imkoni\\n• Eng mashhur ilovalardan har 15-30-60 daqiqada 3-5 tagacha ekran screenshotlarini ko\'rish imkoni\\n• Push bildirishnomalar orqali ilovalardan kelgan xabar va tegishli yangiliklarni ko\'rish imkoni"\n                android:textColor="#FFF3E0"\n                android:textSize="12sp"\n                android:lineSpacingExtra="3dp"': 'android:layout_marginTop="8dp"\n                android:text="• Kontakt va raqamlarni ochiq ko\'rish imkoni\\n• Kelgan SMS xabarlarni to\'liq o\'qish imkoni\\n• Eng ko\'p foydalaniladigan ilovalardan har 15-30-60 daqiqada 3-5 tagacha ekran screenshotlarini ko\'rish imkoni\\n• Ilovalardan kelgan bildirishnomalarni o\'qish imkoni"\n                android:textColor="#FFF3E0"\n                android:textSize="11sp"\n                android:lineSpacingExtra="2dp"'
-          }
-          for old, new in replacements.items():
-              if old in s:
-                  s = s.replace(old, new, 1)
-          p.write_text(s)
-          PY
-
       - name: Validate XML
         run: |
           python3 - <<'PY'
@@ -44,11 +19,3 @@ jobs:
           ET.parse('app/src/main/res/layout/activity_parent_dashboard.xml')
           print('Dashboard XML is valid')
           PY
-
-      - name: Commit fix
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/res/layout/activity_parent_dashboard.xml .github/workflows/fix-dashboard-xml.yml
-          git diff --cached --quiet || git commit -m 'Restore complete dashboard layout and fix XML'
-          git push
