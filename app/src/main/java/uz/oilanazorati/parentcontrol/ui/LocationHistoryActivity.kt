@@ -7,7 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
-import android.widget.RecyclerView
+import androidx.recyclerview.widget.RecyclerView
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
@@ -90,7 +90,6 @@ class LocationHistoryActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onMapReady(map: GoogleMap) {
         googleMap = map
-        // Bola markerlari yashil rangda qoladi.
         renderMapForCurrentEvents()
         val fineGranted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val coarseGranted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -102,7 +101,6 @@ class LocationHistoryActivity : AppCompatActivity(), OnMapReadyCallback {
         val coarseGranted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         if (!fineGranted && !coarseGranted) return
         googleMap?.apply {
-            // Google Maps'ning standart ko'k "Mening joylashuvim" nuqtasi ota-ona telefonini bildiradi.
             isMyLocationEnabled = true
             uiSettings.isMyLocationButtonEnabled = true
         }
@@ -134,7 +132,6 @@ class LocationHistoryActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun renderMapForCurrentEvents() {
         val map = googleMap ?: return
-        // Faqat bola tarix markerlari va yo'lini tozalaymiz; keyin standart ota-ona My Location qatlamini Android/Google Maps qayta chizadi.
         map.clear()
         markersByTimeMs.clear()
         if (currentEvents.isEmpty()) return
