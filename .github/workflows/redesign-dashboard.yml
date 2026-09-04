@@ -1,8 +1,6 @@
 name: Premium Dashboard Spacing
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -21,28 +19,19 @@ jobs:
           from pathlib import Path
           p = Path('app/src/main/res/layout/activity_parent_dashboard.xml')
           s = p.read_text()
-
-          s = s.replace(
-              '<LinearLayout\n        android:layout_width="match_parent"\n        android:layout_height="wrap_content"\n        android:orientation="vertical">',
-              '<LinearLayout\n        android:layout_width="match_parent"\n        android:layout_height="wrap_content"\n        android:orientation="vertical"\n        android:paddingStart="10dp"\n        android:paddingEnd="10dp"\n        android:paddingTop="10dp">', 1)
-
-          def style_after_marker(text, marker, bottom='10dp'):
+          s = s.replace('android:orientation="vertical">', 'android:orientation="vertical"\n        android:paddingStart="10dp"\n        android:paddingEnd="10dp"\n        android:paddingTop="10dp">', 1)
+          def style_after_marker(text, marker):
               pos = text.index(marker)
               start = text.index('<LinearLayout', pos)
               end = text.index('>', start)
               tag = text[start:end]
               if 'android:background=' not in tag:
                   tag += '\n            android:background="@drawable/bg_dashboard_section"'
-              if 'android:layout_marginStart=' not in tag:
-                  tag += '\n            android:layout_marginStart="0dp"'
-              if 'android:layout_marginEnd=' not in tag:
-                  tag += '\n            android:layout_marginEnd="0dp"'
               if 'android:layout_marginBottom=' not in tag:
-                  tag += f'\n            android:layout_marginBottom="{bottom}"'
+                  tag += '\n            android:layout_marginBottom="10dp"'
               if 'android:elevation=' not in tag:
                   tag += '\n            android:elevation="3dp"'
               return text[:start] + tag + text[end:]
-
           for marker in [
               '<!-- ========== HEADER ========== -->',
               '<!-- ========== JOYLASHUV KARTASI ========== -->',
@@ -51,11 +40,10 @@ jobs:
               '<!-- ========== MULOQOTLAR bo\'limi ========== -->',
               '<!-- ========== ILOVALAR bo\'limi ========== -->',
           ]:
-              s = style_after_marker(s, marker)
-
+              if marker in s:
+                  s = style_after_marker(s, marker)
           p.write_text(s)
           PY
-
       - name: O'zgarishni commit qilish
         run: |
           git config user.name 'github-actions[bot]'
