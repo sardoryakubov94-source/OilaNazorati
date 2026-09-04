@@ -1,8 +1,6 @@
 name: Fix Premium Banner
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -17,23 +15,4 @@ jobs:
 
       - name: Original dashboardni tiklash va Premium bannerini tuzatish
         run: |
-          git checkout e1261db02952d76efb18a479fc24c3c19ec982c1 -- app/src/main/res/layout/activity_parent_dashboard.xml
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('app/src/main/res/layout/activity_parent_dashboard.xml')
-          s = p.read_text()
-          s = s.replace('android:padding="16dp"\n            android:clickable="true"\n            android:focusable="true"\n            android:layout_marginTop="10dp"\n            android:layout_marginBottom="10dp"\n            android:layout_marginStart="12dp"\n            android:layout_marginEnd="12dp">', 'android:padding="14dp"\n            android:clickable="true"\n            android:focusable="true"\n            android:layout_marginTop="8dp"\n            android:layout_marginBottom="8dp"\n            android:layout_marginStart="12dp"\n            android:layout_marginEnd="12dp">', 1)
-          s = s.replace('android:text="⭐"\n                    android:textSize="28sp"\n                    android:layout_marginEnd="10dp"', 'android:text="⭐"\n                    android:textSize="24sp"\n                    android:layout_marginEnd="8dp"', 1)
-          s = s.replace('android:textStyle="bold"\n                    android:textSize="16sp"/>\n\n                <TextView\n                    android:id="@+id/btnPremiumCtaHome"', 'android:textStyle="bold"\n                    android:textSize="15sp"/>\n\n                <TextView\n                    android:id="@+id/btnPremiumCtaHome"', 1)
-          s = s.replace('android:textSize="13sp"\n                    android:background="#33000000"\n                    android:paddingStart="12dp"\n                    android:paddingEnd="12dp"\n                    android:paddingTop="8dp"\n                    android:paddingBottom="8dp"/>', 'android:textSize="12sp"\n                    android:background="#33000000"\n                    android:paddingStart="10dp"\n                    android:paddingEnd="10dp"\n                    android:paddingTop="6dp"\n                    android:paddingBottom="6dp"/>', 1)
-          s = s.replace('android:layout_marginTop="10dp"\n                android:text="• Kontakt va raqamlarni ochiq ko\'rish imkoni\\n• Kelgan SMS xabarlarni to\'liq o\'qish imkoni\\n• Eng mashhur ilovalardan har 15-30-60 daqiqada 3-5 tagacha ekran screenshotlarini ko\'rish imkoni\\n• Push bildirishnomalar orqali ilovalardan kelgan xabar va tegishli yangiliklarni ko\'rish imkoni"\n                android:textColor="#FFF3E0"\n                android:textSize="12sp"\n                android:lineSpacingExtra="3dp"', 'android:layout_marginTop="8dp"\n                android:text="• Kontakt va raqamlarni ochiq ko\'rish imkoni\\n• Kelgan SMS xabarlarni to\'liq o\'qish imkoni\\n• Eng ko\'p foydalaniladigan ilovalardan har 15-30-60 daqiqada 3-5 tagacha ekran screenshotlarini ko\'rish imkoni\\n• Ilovalardan kelgan bildirishnomalarni o\'qish imkoni"\n                android:textColor="#FFF3E0"\n                android:textSize="11sp"\n                android:lineSpacingExtra="2dp"', 1)
-          p.write_text(s)
-          PY
-
-      - name: Commit qilish
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/res/layout/activity_parent_dashboard.xml
-          git diff --cached --quiet || git commit -m 'Premium banner matnlarini qisqartirish va kichraytirish'
-          git push
+          echo "Faqat qo'lda ishga tushiriladi; avtomatik push paytida kodni o'zgartirmaydi."
