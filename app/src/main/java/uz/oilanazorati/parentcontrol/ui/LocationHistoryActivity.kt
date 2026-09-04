@@ -82,9 +82,12 @@ class LocationHistoryActivity : AppCompatActivity(), OnMapReadyCallback {
     private val selectedCalendar: Calendar = Calendar.getInstance()
 
     private val locationPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) enableMyLocationOnMap()
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        if (result[android.Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+            result[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true) {
+            enableMyLocationOnMap()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -127,21 +130,38 @@ class LocationHistoryActivity : AppCompatActivity(), OnMapReadyCallback {
         // "Mening joylashuvim" (ko'k nuqta + markazlashtirish tugmasi) —
         // bu ANIQ SHU (ota-ona) qurilmaning joylashuv ruxsatiga bog'liq,
         // bolaning joylashuviga hech qanday aloqasi yo'q.
-        val granted = ContextCompat.checkSelfPermission(
+        val fineGranted = ContextCompat.checkSelfPermission(
             this, android.Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-        if (granted) {
+        val coarseGranted = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (fineGranted || coarseGranted) {
             enableMyLocationOnMap()
         } else {
-            locationPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            // Android 12+ da foydalanuvchi "aniq" yoki "taxminiy"
+            // joylashuvni tanlashi mumkin. Ikkalasini ham so'raymiz,
+            // shunda Google Maps'ning "Mening joylashuvim" tugmasi
+            // taxminiy ruxsat berilganda ham ishlaydi.
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                    android.Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
     }
 
     private fun enableMyLocationOnMap() {
-        val granted = ContextCompat.checkSelfPermission(
+        val fineGranted = ContextCompat.checkSelfPermission(
             this, android.Manifest.permission.ACCESS_FINE_LOCATION
         ) == PackageManager.PERMISSION_GRANTED
-        if (!granted) return
+        val coarseGranted = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!fineGranted && !coarseGranted) return
+
         googleMap?.isMyLocationEnabled = true
         googleMap?.uiSettings?.isMyLocationButtonEnabled = true
     }
