@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- TUNGI mavzu ranglari — izchil, bir xil oltin/sarg'ish (amber) palitra, yashil rang aralashmagan -->
 <resources>
-    <color name="color_bg">#241A09</color>
-    <color name="color_surface">#3A2910</color>
-    <color name="color_surface_alt">#5C4419</color>
+    <color name="color_bg">#1B1305</color>
+    <color name="color_surface">#4A3818</color>
+    <color name="color_surface_alt">#6B5024</color>
     <color name="color_text_primary">#FFFFFF</color>
-    <color name="color_text_secondary">#CDBB96</color>
+    <color name="color_text_secondary">#D9C79A</color>
     <color name="color_border">#22FFFFFF</color>
-    <color name="color_nav_inactive">#A08E6C</color>
+    <color name="color_nav_inactive">#A6906A</color>
 </resources>
