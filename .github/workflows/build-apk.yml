@@ -9,6 +9,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Kodni olish
         uses: actions/checkout@v4
@@ -87,6 +89,22 @@ jobs:
         run: |
           cp app/build/outputs/apk/release/app-release.apk OilaNazorati-v1.0.1-release.apk
           sha256sum OilaNazorati-v1.0.1-release.apk > OilaNazorati-v1.0.1-release.apk.sha256
+
+      - name: APKni saytning downloads papkasiga joylash
+        if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[website-apk]') }}
+        run: |
+          mkdir -p downloads
+          cp OilaNazorati-v1.0.1-release.apk downloads/oila-nazorati.apk
+          cp OilaNazorati-v1.0.1-release.apk.sha256 downloads/oila-nazorati.apk.sha256
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add downloads/oila-nazorati.apk downloads/oila-nazorati.apk.sha256
+          if git diff --cached --quiet; then
+            echo "Website APK allaqachon eng yangi holatda."
+          else
+            git commit -m "chore: publish website APK [website-apk]"
+            git push
+          fi
 
       - name: Release APK artifact
         uses: actions/upload-artifact@v4
