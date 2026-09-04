@@ -1,0 +1,54 @@
+name: Fix Parent Location Button
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix-location:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodni olish
+        uses: actions/checkout@v4
+
+      - name: Ota-ona joylashuv ruxsatini tuzatish
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/uz/oilanazorati/parentcontrol/ui/LocationHistoryActivity.kt')
+          s = p.read_text()
+
+          s = s.replace(
+              'import android.content.pm.PackageManager\n',
+              'import android.content.pm.PackageManager\n'
+          )
+
+          s = s.replace(
+              '    private val locationPermissionLauncher = registerForActivityResult(\n        ActivityResultContracts.RequestPermission()\n    ) { granted ->\n        if (granted) enableMyLocationOnMap()\n    }',
+              '''    private val locationPermissionLauncher = registerForActivityResult(\n        ActivityResultContracts.RequestMultiplePermissions()\n    ) { result ->\n        if (result[android.Manifest.permission.ACCESS_FINE_LOCATION] == true ||\n            result[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true) {\n            enableMyLocationOnMap()\n        }\n    }'''
+          )
+
+          s = s.replace(
+              '''        val granted = ContextCompat.checkSelfPermission(\n            this, android.Manifest.permission.ACCESS_FINE_LOCATION\n        ) == PackageManager.PERMISSION_GRANTED\n        if (granted) {\n            enableMyLocationOnMap()\n        } else {\n            locationPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)\n        }''',
+              '''        val fineGranted = ContextCompat.checkSelfPermission(\n            this, android.Manifest.permission.ACCESS_FINE_LOCATION\n        ) == PackageManager.PERMISSION_GRANTED\n        val coarseGranted = ContextCompat.checkSelfPermission(\n            this, android.Manifest.permission.ACCESS_COARSE_LOCATION\n        ) == PackageManager.PERMISSION_GRANTED\n\n        if (fineGranted || coarseGranted) {\n            enableMyLocationOnMap()\n        } else {\n            // Android 12+ da foydalanuvchi "aniq" yoki "taxminiy"\n            // joylashuvni tanlashi mumkin. Ikkalasini ham so'raymiz,\n            // shunda Google Maps'ning "Mening joylashuvim" tugmasi\n            // taxminiy ruxsat berilganda ham ishlaydi.\n            locationPermissionLauncher.launch(\n                arrayOf(\n                    android.Manifest.permission.ACCESS_FINE_LOCATION,\n                    android.Manifest.permission.ACCESS_COARSE_LOCATION\n                )\n            )\n        }'''
+          )
+
+          s = s.replace(
+              '''        val granted = ContextCompat.checkSelfPermission(\n            this, android.Manifest.permission.ACCESS_FINE_LOCATION\n        ) == PackageManager.PERMISSION_GRANTED\n        if (!granted) return\n        googleMap?.isMyLocationEnabled = true\n        googleMap?.uiSettings?.isMyLocationButtonEnabled = true''',
+              '''        val fineGranted = ContextCompat.checkSelfPermission(\n            this, android.Manifest.permission.ACCESS_FINE_LOCATION\n        ) == PackageManager.PERMISSION_GRANTED\n        val coarseGranted = ContextCompat.checkSelfPermission(\n            this, android.Manifest.permission.ACCESS_COARSE_LOCATION\n        ) == PackageManager.PERMISSION_GRANTED\n        if (!fineGranted && !coarseGranted) return\n\n        googleMap?.isMyLocationEnabled = true\n        googleMap?.uiSettings?.isMyLocationButtonEnabled = true'''
+          )
+
+          p.write_text(s)
+          PY
+
+      - name: O'zgarishni commit qilish
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/uz/oilanazorati/parentcontrol/ui/LocationHistoryActivity.kt
+          git diff --cached --quiet || git commit -m 'Fix ota-ona xaritadagi mening joylashuvim tugmasi'
+          git push
