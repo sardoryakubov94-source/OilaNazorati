@@ -68,6 +68,9 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnUsageAccess.setOnClickListener {
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
         }
+        binding.btnScreenCapture.setOnClickListener {
+            requestScreenCaptureConsent()
+        }
         binding.btnDefaultPhone.setOnClickListener { requestDefaultPhoneRole() }
         binding.btnDefaultSms.setOnClickListener { requestDefaultSmsRole() }
         binding.btnNotificationAccess.setOnClickListener { requestNotificationAccess() }
@@ -157,6 +160,10 @@ class ChildSetupActivity : AppCompatActivity() {
         } else {
             "🔋 Batareya tejashdan chiqarish (muhim!)"
         }
+    }
+
+    private fun requestScreenCaptureConsent() {
+        startActivity(Intent(this, ScreenCaptureConsentActivity::class.java))
     }
 
     // ---------------- Oila kodi bilan bog'lash ----------------
