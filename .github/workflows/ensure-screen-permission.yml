@@ -1,0 +1,95 @@
+name: Ensure Screenshot Permission
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  ensure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure screenshot permission integration
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt')
+          s = p.read_text()
+          changed = False
+
+          if 'binding.btnScreenCapture.setOnClickListener' not in s:
+              anchor = '''        binding.btnUsageAccess.setOnClickListener {
+              startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+          }
+'''
+              addition = '''        binding.btnScreenCapture.setOnClickListener {
+              requestScreenCaptureConsent()
+          }
+'''
+              if anchor not in s:
+                  raise SystemExit('Could not find ChildSetupActivity usage-access listener anchor')
+              s = s.replace(anchor, anchor + addition, 1)
+              changed = True
+
+          if 'private fun requestScreenCaptureConsent()' not in s:
+              marker = "    // ---------------- Oila kodi bilan bog'lash ----------------"
+              method = '''    private fun requestScreenCaptureConsent() {
+              startActivity(Intent(this, ScreenCaptureConsentActivity::class.java))
+          }
+
+'''
+              if marker not in s:
+                  raise SystemExit('Could not find ChildSetupActivity insertion marker')
+              s = s.replace(marker, method + marker, 1)
+              changed = True
+
+          if 'val screenCaptureConsented' not in s:
+              anchor = '''        binding.btnBatteryOptimization.text = if (pm.isIgnoringBatteryOptimizations(packageName)) {
+              "✅ Batareya tejashdan chiqarilgan"
+          } else {
+              "🔋 Batareya tejashdan chiqarish (muhim!)"
+          }
+'''
+              addition = '''
+          val screenCaptureConsented = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+              .getBoolean("screen_capture_consented", false)
+          binding.btnScreenCapture.text = if (screenCaptureConsented) {
+              "✅ Ekran nazorati ruxsati berilgan"
+          } else {
+              "📸 Ekran tasviriga ruxsat berish"
+          }
+'''
+              if anchor not in s:
+                  raise SystemExit('Could not find ChildSetupActivity battery-status anchor')
+              s = s.replace(anchor, anchor + addition, 1)
+              changed = True
+
+          required = [
+              'binding.btnScreenCapture.setOnClickListener',
+              'private fun requestScreenCaptureConsent()',
+              'ScreenCaptureConsentActivity'
+          ]
+          for item in required:
+              if item not in s:
+                  raise SystemExit('Missing screenshot integration: ' + item)
+
+          if changed:
+              p.write_text(s)
+              git_message = 'fix: integrate screenshot permission into child setup'
+              import subprocess
+              subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=True)
+              subprocess.run(['git', 'config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com'], check=True)
+              subprocess.run(['git', 'add', str(p)], check=True)
+              subprocess.run(['git', 'commit', '-m', git_message], check=True)
+              subprocess.run(['git', 'push', 'origin', 'HEAD:main'], check=True)
+              print('Screenshot permission integration committed and pushed.')
+          else:
+              print('Screenshot permission integration already present; nothing to commit.')
+          PY
