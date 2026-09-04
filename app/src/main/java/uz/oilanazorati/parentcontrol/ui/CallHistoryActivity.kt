@@ -1,7 +1,6 @@
 package uz.oilanazorati.parentcontrol.ui
 
 import android.app.DatePickerDialog
-import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -15,91 +14,47 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-/**
- * Tanlangan kun uchun BARCHA qo'ng'iroqlarni vaqt, yo'nalish va
- * davomiylik bilan ro'yxat qilib ko'rsatadi. Har bir kontakt (raqam
- * hech qachon ko'rsatilmasdan) barqaror rang bilan ajratiladi — bitta
- * odam kuni bo'yicha necha marta qo'ng'iroq qilgan/qabul qilgan bo'lsa,
- * hammasi bir xil rangda ko'rinadi.
- */
 class CallHistoryActivity : AppCompatActivity() {
-
     private lateinit var selectedDateText: TextView
     private lateinit var btnPickDate: Button
     private lateinit var listTitle: TextView
     private lateinit var emptyStateText: TextView
     private lateinit var historyList: RecyclerView
-
     private val adapter = CallHistoryAdapter()
     private val selectedCalendar: Calendar = Calendar.getInstance()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_call_history)
-
         selectedDateText = findViewById(R.id.selectedDateText)
         btnPickDate = findViewById(R.id.btnPickDate)
         listTitle = findViewById(R.id.listTitle)
         emptyStateText = findViewById(R.id.emptyStateText)
         historyList = findViewById(R.id.historyList)
-
         historyList.layoutManager = LinearLayoutManager(this)
         historyList.adapter = adapter
-
         btnPickDate.setOnClickListener { showDatePicker() }
-
-        FirebaseRepo.listenSavedContacts { contacts ->
-            adapter.setNames(contacts.associate { it.kontaktHash to it.nomi })
-        }
+        FirebaseRepo.listenSavedContacts { contacts -> adapter.setNames(contacts.associate { it.kontaktHash to it.nomi }) }
         FirebaseRepo.checkIsPremium { isPremium -> adapter.setPremium(isPremium) }
-
-        updateDateLabel()
-        loadDataForSelectedDay()
-
-        bindBottomNav(NavTab.CALLS)
+        updateDateLabel(); loadDataForSelectedDay(); bindBottomNav(NavTab.CALLS)
     }
-
     private fun showDatePicker() {
-        DatePickerDialog(
-            this,
-            { _, year, month, dayOfMonth ->
-                selectedCalendar.set(Calendar.YEAR, year)
-                selectedCalendar.set(Calendar.MONTH, month)
-                selectedCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                updateDateLabel()
-                loadDataForSelectedDay()
-            },
-            selectedCalendar.get(Calendar.YEAR),
-            selectedCalendar.get(Calendar.MONTH),
-            selectedCalendar.get(Calendar.DAY_OF_MONTH)
-        ).apply {
-            datePicker.maxDate = System.currentTimeMillis()
-        }.show()
+        DatePickerDialog(this, { _, year, month, dayOfMonth ->
+            selectedCalendar.set(Calendar.YEAR, year); selectedCalendar.set(Calendar.MONTH, month); selectedCalendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+            updateDateLabel(); loadDataForSelectedDay()
+        }, selectedCalendar.get(Calendar.YEAR), selectedCalendar.get(Calendar.MONTH), selectedCalendar.get(Calendar.DAY_OF_MONTH)).apply { datePicker.maxDate = System.currentTimeMillis() }.show()
     }
-
-    private fun updateDateLabel() {
-        val fmt = SimpleDateFormat("dd.MM.yyyy", Locale.US)
-        selectedDateText.text = fmt.format(selectedCalendar.time)
-    }
-
+    private fun updateDateLabel() { selectedDateText.text = SimpleDateFormat("dd.MM.yyyy", Locale.US).format(selectedCalendar.time) }
     private fun loadDataForSelectedDay() {
-        val dayStart = (selectedCalendar.clone() as Calendar).apply {
-            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
+        val dayStart = (selectedCalendar.clone() as Calendar).apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis
         val dayEnd = dayStart + 24 * 60 * 60 * 1000L
-
         FirebaseRepo.fetchCallsInRange(dayStart, dayEnd) { calls ->
             val sorted = calls.sortedByDescending { it.boshlanishMs }
-            adapter.setData(sorted)
-            emptyStateText.visibility = if (sorted.isEmpty()) View.VISIBLE else View.GONE
-            historyList.visibility = if (sorted.isEmpty()) View.GONE else View.VISIBLE
-            listTitle.text = "Qo'ng'iroqlar ro'yxati — ${sorted.size} ta"
+            adapter.setData(sorted); emptyStateText.visibility = if (sorted.isEmpty()) View.VISIBLE else View.GONE; historyList.visibility = if (sorted.isEmpty()) View.GONE else View.VISIBLE; listTitle.text = "Qo'ng'iroqlar ro'yxati — ${sorted.size} ta"
         }
     }
-
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
-        moveTaskToBack(true)
+        startActivity(Intent(this, ParentDashboardActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP })
+        finish()
     }
 }
