@@ -66,6 +66,14 @@
             android:layout_height="wrap_content"
             android:text="4. Eng ko'p foydalaniladigan ilovalardan har 15-30-60 daqiqada 3-5 tagacha ekran screenshotlarini ko'rish imkoniyati."
             android:textColor="#DCE9E0"
+            android:textSize="13sp"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="5. 1 ta oila kodi orqali bir nechta bola qurilmasini qo'shib kuzatish, bir nechta oila kodi yaratish va boshqa oilalarni qo'shish."
+            android:textColor="#DCE9E0"
             android:textSize="13sp"/>
 
     </LinearLayout>
