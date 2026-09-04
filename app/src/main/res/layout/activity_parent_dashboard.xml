@@ -308,6 +308,64 @@
 
         </LinearLayout>
 
+        <!-- ========== BILDIRISHNOMALAR KARTASI ========== -->
+        <LinearLayout
+            android:id="@+id/notificationsCardHome"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card_theme"
+            android:padding="16dp"
+            android:layout_marginBottom="10dp"
+            android:elevation="3dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="6dp">
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="4dp"
+                    android:src="@drawable/ic_bell"
+                    android:tint="#3498DB"
+                    android:contentDescription="Bildirishnomalar"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="PUSH BILDIRISHNOMALAR"
+                    android:textColor="#3498DB"
+                    android:textStyle="bold"
+                    android:textSize="11sp"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/notificationsSummary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Telegram, WhatsApp, Instagram va boshqa ilovalardan kelgan xabarlarni bu yerdan kuzatishingiz mumkin."
+                android:textColor="@color/color_text_secondary"
+                android:textSize="12sp"
+                android:layout_marginBottom="10dp"/>
+
+            <TextView
+                android:id="@+id/btnNotificationsHome"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Barchasini ko'rish →"
+                android:textColor="#3498DB"
+                android:textStyle="bold"
+                android:textSize="13sp"
+                android:background="@drawable/bg_pill_theme"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp"/>
+
+        </LinearLayout>
+
         <!-- ========== BUGUNGI NAZORAT stats ========== -->
         <TextView
             android:layout_width="match_parent"

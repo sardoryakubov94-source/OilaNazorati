@@ -64,6 +64,7 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding.btnSmsHistory.setOnClickListener { openIfChildSelected { SmsHistoryActivity::class.java } }
         binding.btnSavedContacts.setOnClickListener { startActivity(Intent(this, SavedContactsActivity::class.java)) }
         binding.btnTrends.setOnClickListener { startActivity(Intent(this, TrendsActivity::class.java)) }
+        binding.btnNotificationsHome.setOnClickListener { openIfChildSelected { NotificationHistoryActivity::class.java } }
         binding.cardStatCalls.setOnClickListener { openIfChildSelected { CallHistoryActivity::class.java } }
         binding.cardStatSms.setOnClickListener { openIfChildSelected { SmsHistoryActivity::class.java } }
         binding.cardStatContacts.setOnClickListener { startActivity(Intent(this, SavedContactsActivity::class.java)) }
