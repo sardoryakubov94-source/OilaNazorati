@@ -1,0 +1,143 @@
+name: Repair and Build APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair-build-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodni olish
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Screenshot integratsiyasini tuzatish
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt')
+          s = p.read_text()
+
+          if 'binding.btnScreenCapture.setOnClickListener' not in s:
+              marker = '        binding.btnUsageAccess.setOnClickListener {'
+              start = s.find(marker)
+              if start < 0:
+                  raise SystemExit('Usage access listener topilmadi')
+              end = s.find('        }', start)
+              if end < 0:
+                  raise SystemExit('Usage access listener yopilishi topilmadi')
+              end += len('        }')
+              s = s[:end] + '\n        binding.btnScreenCapture.setOnClickListener {\n            requestScreenCaptureConsent()\n        }' + s[end:]
+
+          if 'private fun requestScreenCaptureConsent()' not in s:
+              marker = "    // ---------------- Oila kodi bilan bog'lash ----------------"
+              if marker not in s:
+                  raise SystemExit('Pairing marker topilmadi')
+              method = '    private fun requestScreenCaptureConsent() {\n        startActivity(Intent(this, ScreenCaptureConsentActivity::class.java))\n    }\n\n'
+              s = s.replace(marker, method + marker, 1)
+
+          p.write_text(s)
+          print('Screenshot integratsiyasi tayyor.')
+          PY
+
+      - name: JDK 17 o'rnatish
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Gradle 8.5 o'rnatish
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.5'
+
+      - name: google-services.json faylini yaratish
+        env:
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          test -n "$GOOGLE_SERVICES_JSON_B64" || { echo "GOOGLE_SERVICES_JSON_B64 secret topilmadi"; exit 1; }
+          echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > app/google-services.json
+
+      - name: Google Web OAuth client ID resursini tayyorlash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('app/google-services.json').read_text())
+          client_id = None
+          for client in data.get('client', []):
+              for oauth in client.get('oauth_client', []):
+                  if oauth.get('client_type') == 3 and oauth.get('client_id'):
+                      client_id = oauth['client_id']
+                      break
+              if client_id:
+                  break
+          if not client_id:
+              raise SystemExit('Web OAuth client topilmadi')
+          out = Path('app/src/main/res/values/google_auth.xml')
+          out.parent.mkdir(parents=True, exist_ok=True)
+          escaped = client_id.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&apos;')
+          out.write_text('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <string name="default_web_client_id" translatable="false">' + escaped + '</string>\n</resources>\n')
+          PY
+
+      - name: Release keystore'ni tiklash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo "KEYSTORE_BASE64 secret topilmadi"; exit 1; }
+          echo "$KEYSTORE_BASE64" | base64 -d > app/release.keystore
+
+      - name: Signing sozlamalarini tekshirish
+        env:
+          OILA_KEYSTORE_PASSWORD: ${{ secrets.OILA_KEYSTORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+          OILA_KEY_ALIAS: ${{ secrets.OILA_KEY_ALIAS || secrets.KEY_ALIAS }}
+          OILA_KEY_PASSWORD: ${{ secrets.OILA_KEY_PASSWORD || secrets.KEY_PASSWORD }}
+        run: |
+          test -s app/release.keystore
+          test -n "$OILA_KEYSTORE_PASSWORD"
+          test -n "$OILA_KEY_ALIAS"
+          test -n "$OILA_KEY_PASSWORD"
+
+      - name: Screenshot integratsiyasini tekshirish
+        run: |
+          grep -q 'binding.btnScreenCapture.setOnClickListener' app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
+          grep -q 'private fun requestScreenCaptureConsent' app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
+          grep -q 'btnScreenCapture' app/src/main/res/layout/activity_child_setup.xml
+          test -f app/src/main/java/uz/oilanazorati/parentcontrol/ui/ScreenCaptureConsentActivity.kt
+
+      - name: Release APK build
+        env:
+          OILA_KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
+          OILA_KEYSTORE_PASSWORD: ${{ secrets.OILA_KEYSTORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+          OILA_KEY_ALIAS: ${{ secrets.OILA_KEY_ALIAS || secrets.KEY_ALIAS }}
+          OILA_KEY_PASSWORD: ${{ secrets.OILA_KEY_PASSWORD || secrets.KEY_PASSWORD }}
+        run: gradle --no-daemon clean assembleRelease
+
+      - name: APKni saytga va sourcega saqlash
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk OilaNazorati-v1.0.1-release.apk
+          sha256sum OilaNazorati-v1.0.1-release.apk > OilaNazorati-v1.0.1-release.apk.sha256
+          mkdir -p downloads
+          cp OilaNazorati-v1.0.1-release.apk downloads/oila-nazorati.apk
+          cp OilaNazorati-v1.0.1-release.apk.sha256 downloads/oila-nazorati.apk.sha256
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt downloads/oila-nazorati.apk downloads/oila-nazorati.apk.sha256
+          git commit -m "fix: restore working APK and integrate screenshot permission"
+          git push origin HEAD:main
+
+      - name: Release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OilaNazorati-working-release
+          path: |
+            OilaNazorati-v1.0.1-release.apk
+            OilaNazorati-v1.0.1-release.apk.sha256
+          retention-days: 30
