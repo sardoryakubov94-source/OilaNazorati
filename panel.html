@@ -19,13 +19,30 @@
 <script type="module" src="pwa-family.js"></script>
 <script type="module">
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import{getAuth,GoogleAuthProvider,signInWithRedirect,getRedirectResult,setPersistence,browserLocalPersistence,onAuthStateChanged,signOut}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import{getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,getRedirectResult,setPersistence,browserLocalPersistence,onAuthStateChanged,signOut}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import{getFirestore,doc,getDoc,collection,getDocs,query,orderBy,limit,deleteDoc}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 const app=initializeApp({apiKey:'AIzaSyB72y9YkdCifEodbo2g_43FbbcDbvg0QF4',authDomain:'oilanazorat-3c8de.firebaseapp.com',projectId:'oilanazorat-3c8de',storageBucket:'oilanazorat-3c8de.firebasestorage.app',messagingSenderId:'1086556994078',appId:'1:1086556994078:web:5e576984e784d0bbdc4c0f',measurementId:'G-NWER8TE97X'});const auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);let family=null,child=null,childName='';
 const show=id=>{document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));$(id).classList.add('active');scrollTo(0,0)};const esc=v=>String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));const fmt=v=>v?new Date(Number(v)).toLocaleString('uz-UZ',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';const dur=s=>{s=Number(s||0);return s>=60?Math.floor(s/60)+' daq '+s%60+' sek':s+' sek'};
 async function sub(name,field,n=100){const q=query(collection(db,'families',family,'children',child,name),orderBy(field,'desc'),limit(n));return(await getDocs(q)).docs.map(d=>({id:d.id,...d.data()}))}
 $('start').onclick=()=>{if(auth.currentUser){show('codeScreen')}else login()};$('out').onclick=()=>signOut(auth);$('newCode').onclick=()=>{sessionStorage.removeItem('family');family=null;show('codeScreen')};$('backChildren').onclick=loadChildren;
-async function login(){try{await setPersistence(auth,browserLocalPersistence);await signInWithRedirect(auth,new GoogleAuthProvider())}catch(e){console.error(e);alert('Google orqali kirishda xatolik: '+(e.code||e.message||e))}}
+async function login(){
+  try{
+    await signInWithPopup(auth,new GoogleAuthProvider());
+  }catch(e){
+    console.error('popup sign-in failed',e);
+    if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment'||e.code==='auth/cancelled-popup-request'){
+      try{
+        await setPersistence(auth,browserLocalPersistence);
+        await signInWithRedirect(auth,new GoogleAuthProvider());
+      }catch(e2){
+        console.error(e2);
+        alert('Google orqali kirishda xatolik: '+(e2.code||e2.message||e2));
+      }
+    }else if(e.code!=='auth/popup-closed-by-user'){
+      alert('Google orqali kirishda xatolik: '+(e.code||e.message||e));
+    }
+  }
+}
 getRedirectResult(auth).catch(e=>{console.error('redirect result error',e);alert('Kirish natijasini olishda xatolik: '+(e.code||e.message||e))});
 onAuthStateChanged(auth,u=>{if(u){$('out').style.display='block';$('sub').textContent=u.email||'Ota-ona paneli';family=sessionStorage.getItem('family');if(family)loadChildren();else show('codeScreen')}else{$('out').style.display='none';show('welcome')}});
 window.addEventListener('pwa-family-selected',e=>{family=e.detail?.code||sessionStorage.getItem('family');if(family)loadChildren()});
