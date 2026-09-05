@@ -6,6 +6,7 @@ import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.recyclerview.widget.RecyclerView
@@ -24,10 +25,11 @@ class AdminCardAdapter(
     }
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
+        val root: View = view.findViewById(R.id.cardRoot)
         val type: TextView = view.findViewById(R.id.cardTypeLabel)
         val number: TextView = view.findViewById(R.id.cardNumberLabel)
         val holder: TextView = view.findViewById(R.id.cardHolderLabel)
-        val copyBtn: TextView = view.findViewById(R.id.btnCopyCard)
+        val copyBtn: ImageView = view.findViewById(R.id.btnCopyCard)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -40,6 +42,13 @@ class AdminCardAdapter(
         holder.type.text = card.turi
         holder.number.text = card.raqam
         holder.holder.text = card.egasi
+
+        val bg = when {
+            card.turi.contains("UZCARD", ignoreCase = true) -> R.drawable.bg_card_uzcard
+            card.turi.contains("HUMO", ignoreCase = true) -> R.drawable.bg_card_humo
+            else -> R.drawable.bg_card_default
+        }
+        holder.root.setBackgroundResource(bg)
 
         holder.copyBtn.setOnClickListener {
             val ctx = holder.itemView.context

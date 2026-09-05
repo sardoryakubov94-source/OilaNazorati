@@ -87,6 +87,24 @@
         android:textSize="13sp"
         android:layout_marginBottom="16dp"/>
 
+    <!-- Bir martalik to'lov narxi -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Bir martalik to'lov. Bir marta to'lab, butunlay Premium foydalanuvchi bo'ling:"
+        android:textColor="#8B96A5"
+        android:textSize="13sp"
+        android:layout_marginBottom="4dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="199 000 so'm"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:textSize="26sp"
+        android:layout_marginBottom="18dp"/>
+
     <!-- Kartalar -->
     <TextView
         android:layout_width="wrap_content"
