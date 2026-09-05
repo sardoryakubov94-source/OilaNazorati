@@ -36,13 +36,19 @@
 
     <TextView
         android:id="@+id/cardNumberLabel"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="0000 0000 0000 0000"
         android:textColor="#FFFFFF"
         android:textStyle="bold"
         android:textSize="24sp"
-        android:letterSpacing="0.03"
+        android:letterSpacing="0.01"
+        android:singleLine="true"
+        android:ellipsize="none"
+        android:autoSizeTextType="uniform"
+        android:autoSizeMinTextSize="14sp"
+        android:autoSizeMaxTextSize="24sp"
+        android:autoSizeStepGranularity="1sp"
         android:layout_marginTop="26dp"/>
 
     <LinearLayout
