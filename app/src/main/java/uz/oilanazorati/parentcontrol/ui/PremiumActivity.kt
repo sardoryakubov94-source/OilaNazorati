@@ -45,6 +45,7 @@ class PremiumActivity : AppCompatActivity() {
         setContentView(R.layout.activity_premium)
 
         premiumStatusText = findViewById(R.id.premiumStatusText)
+        val premiumActiveBadge = findViewById<View>(R.id.premiumActiveBadge)
         screenshotStatusText = findViewById(R.id.screenshotStatusText)
         cardsList = findViewById(R.id.cardsList)
         cardsList.layoutManager = LinearLayoutManager(this)
@@ -58,8 +59,9 @@ class PremiumActivity : AppCompatActivity() {
         FirebaseRepo.listenAdminCards { cards -> cardAdapter.setData(cards) }
 
         FirebaseRepo.checkIsPremium { isPremium ->
+            premiumActiveBadge.visibility = if (isPremium) View.VISIBLE else View.GONE
             premiumStatusText.text = if (isPremium) {
-                "✅ Sizda Premium allaqachon faol"
+                ""
             } else {
                 "Hozircha Premium faol emas — kartalardan biriga to'lov qilib, so'rov yuboring"
             }

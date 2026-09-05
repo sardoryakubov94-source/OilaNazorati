@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/bg_app_gradient">
@@ -75,6 +76,53 @@
             android:text="5. 1 ta oila kodi orqali bir nechta bola qurilmasini qo'shib kuzatish, bir nechta oila kodi yaratish va boshqa oilalarni qo'shish."
             android:textColor="#DCE9E0"
             android:textSize="13sp"/>
+
+    </LinearLayout>
+
+    <!-- Premium faol - katta belgi -->
+    <LinearLayout
+        android:id="@+id/premiumActiveBadge"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@drawable/bg_premium_badge"
+        android:padding="18dp"
+        android:layout_marginBottom="16dp"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="34dp"
+            android:layout_height="34dp"
+            android:src="@drawable/ic_star"
+            app:tint="#3A2D00"
+            android:contentDescription="Premium"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PREMIUM FAOL"
+                android:textColor="#2A2000"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:letterSpacing="0.03"/>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Barcha imkoniyatlar ochilgan — cheklovsiz foydalanmoqdasiz"
+                android:textColor="#4A3B10"
+                android:textSize="13sp"
+                android:layout_marginTop="2dp"/>
+
+        </LinearLayout>
 
     </LinearLayout>
 
