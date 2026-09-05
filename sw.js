@@ -8,7 +8,7 @@ self.addEventListener('fetch', (e) => {
     return;
   }
   e.respondWith(
-    fetch(e.request).then(async (res) => {
+    fetch(e.request, {cache: 'no-store'}).then(async (res) => {
       const url = new URL(e.request.url);
       const isSitePage = url.pathname.endsWith('/index.html') || url.pathname.endsWith('/panel.html') || url.pathname === '/';
       if (!isSitePage || !res.ok) return res;
