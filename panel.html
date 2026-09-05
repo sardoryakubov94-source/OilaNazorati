@@ -5,6 +5,8 @@
 <title>Ota-ona paneli — Oila Nazorati</title>
 <link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="theme-color" content="#111827"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Oila Nazorati">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#111827;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{max-width:720px;margin:auto;padding:0 14px}.top{position:sticky;top:0;z-index:20;background:rgba(245,247,251,.96);backdrop-filter:blur(18px);border-bottom:1px solid #e3e8ef}.head{height:68px;display:flex;align-items:center;gap:10px}.logo{width:38px;height:38px;border-radius:11px;background:#111827;color:#fff;display:grid;place-items:center;font-size:11px;font-weight:900}.head b{font-size:16px}.head small{display:block;color:#8993a2;font-size:11px}.head button{margin-left:auto;border:1px solid #dce2eb;background:#fff;border-radius:10px;padding:8px 11px;font-weight:800;color:#596578}.screen{display:none;padding:24px 0 100px}.screen.active{display:block}.card{background:#fff;border:1px solid #e1e6ee;border-radius:22px;padding:22px;box-shadow:0 12px 40px #1018280d}h1,h2{letter-spacing:-.035em;margin:0 0 10px}h1{font-size:29px}h2{font-size:23px}.muted{color:#697586;font-size:14px;line-height:1.6}.primary{width:100%;border:0;border-radius:13px;background:#111827;color:#fff;padding:14px;font-size:14px;font-weight:850;cursor:pointer}.code{width:100%;padding:14px;border:1px solid #dce2eb;border-radius:13px;text-align:center;font-size:18px;font-weight:850;letter-spacing:.12em;margin:8px 0 12px}.err{color:#dc2626;font-size:13px;margin:10px 0}.hero{background:linear-gradient(145deg,#111827,#26364d);color:#fff;border-radius:24px;padding:24px;margin-bottom:14px}.hero p{color:#c6d0dc}.hero button{background:#fff;color:#111827;border:0;border-radius:12px;padding:12px 16px;font-weight:850}.steps{display:grid;gap:9px;margin:15px 0}.step{display:flex;gap:12px;padding:13px;border:1px solid #e3e8ef;border-radius:14px;background:#fff}.num{min-width:30px;height:30px;border-radius:9px;background:#eef2ff;color:#4d6fd6;display:grid;place-items:center;font-weight:900}.step b{font-size:13px}.step p{margin:3px 0 0;color:#697586;font-size:12px}.children{display:grid;gap:10px}.child{width:100%;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid #e1e6ee;background:#fff;border-radius:16px;padding:15px}.av{width:42px;height:42px;border-radius:12px;background:#eef2ff;color:#4d6fd6;display:grid;place-items:center;font-weight:900}.child b{display:block}.child small{color:#8993a2}.title{display:flex;align-items:center;gap:10px;margin-bottom:15px}.title button{margin-left:auto;border:0;background:none;color:#4d6fd6;font-weight:800}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:16px}.tabs button{border:1px solid #dce2eb;background:#fff;color:#596578;border-radius:13px;padding:12px 3px 10px;font-size:10px;font-weight:850}.tabs button.active{background:#111827;color:#fff;border-color:#111827}
 .tabs button svg{width:24px;height:24px;display:block;margin:0 auto 6px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.summary{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.box,.row{background:#fff;border:1px solid #e1e6ee;border-radius:15px;padding:15px}.box b{font-size:21px;display:block}.box small,.row small{color:#8993a2;font-size:11px}.loc{background:#111c2b;color:#fff;border-radius:17px;padding:18px;margin-bottom:12px}.loc small{color:#aeb9c7;font-size:10px}.loc b{display:block;font-size:17px;margin:5px 0}.loc a,.map{color:#8fb3ff;font-size:12px;font-weight:800;text-decoration:none}.row{margin-bottom:9px}.rowtop{display:flex;justify-content:space-between;gap:8px}.badge{font-size:10px;font-weight:850;padding:4px 8px;border-radius:99px;background:#eef2ff;color:#4d6fd6;white-space:nowrap}.out{background:#fff1e8;color:#c2570c}.miss{background:#fde8e8;color:#dc2626}.row p{font-size:13px;color:#465064;margin:8px 0}.empty,.loading{text-align:center;color:#8993a2;padding:45px 10px;font-size:13px}.ssgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.ss{background:#fff;border:1px solid #e1e6ee;border-radius:13px;padding:14px 7px;text-align:center}.ss small{display:block;color:#8993a2;margin-top:5px;font-size:9px}.lightbox{display:none;position:fixed;inset:0;background:#080c14eb;z-index:50;align-items:center;justify-content:center;padding:18px}.lightbox.active{display:flex}.lightbox img{max-width:100%;max-height:88vh;border-radius:10px}.close{position:absolute;right:18px;top:18px;border:0;border-radius:50%;width:38px;height:38px}.modal{display:none;position:fixed;inset:0;background:#080c1499;z-index:60;align-items:flex-end}.modal.active{display:flex}.sheet{background:#fff;width:100%;max-width:720px;margin:auto;border-radius:22px 22px 0 0;padding:24px 20px 30px}.sheet button{width:100%;border:0;background:#111827;color:#fff;padding:13px;border-radius:12px;font-weight:850}@media(max-width:430px){.tabs{grid-template-columns:repeat(3,1fr)}}
@@ -17,6 +19,16 @@
 .box{box-shadow:0 6px 18px #1018280a}
 .badge{letter-spacing:.02em}
 .primary:active,.secondary:active{transform:scale(.98)}
+.routeMap{width:100%;height:260px;border-radius:16px;overflow:hidden;border:1px solid #e1e6ee;margin:12px 0}
+.dateRow{display:flex;gap:8px;margin-bottom:10px}
+.dateRow input[type=date]{flex:1;padding:12px;border:1px solid #dce2eb;border-radius:12px;font-weight:800;font-size:13px}
+.liveRow{display:flex;align-items:center;gap:10px;background:#111c2b;color:#fff;border-radius:15px;padding:14px;margin-bottom:12px}
+.liveRow .liveTxt{flex:1;font-size:12px;color:#aeb9c7}
+.liveRow .liveTxt b{display:block;color:#fff;font-size:13px;margin-bottom:2px}
+.liveBtn{border:0;border-radius:11px;padding:11px 14px;font-weight:850;font-size:12px;white-space:nowrap;cursor:pointer}
+.liveBtn.off{background:#dc2626;color:#fff}
+.liveBtn.on{background:#eef2ff;color:#111827}
+.dirLink{color:#4d6fd6;font-weight:800;text-decoration:none;font-size:12px;display:inline-flex;align-items:center;gap:4px}
 </style></head>
 <body>
 <div class="top"><div class="wrap head"><span class="logo">ON</span><div><b>Oila Nazorati</b><small id="sub">Ota-ona paneli</small></div><button id="install" style="display:none">📲</button><button id="out" style="display:none">Chiqish</button></div></div>
@@ -29,11 +41,11 @@
 <script type="module">
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import{getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,getRedirectResult,setPersistence,browserLocalPersistence,onAuthStateChanged,signOut}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import{getFirestore,doc,getDoc,setDoc,collection,getDocs,query,where,orderBy,limit,deleteDoc}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import{getFirestore,doc,getDoc,setDoc,collection,getDocs,query,where,orderBy,limit,deleteDoc,onSnapshot}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 const app=initializeApp({apiKey:'AIzaSyB72y9YkdCifEodbo2g_43FbbcDbvg0QF4',authDomain:'oilanazorat-3c8de.firebaseapp.com',projectId:'oilanazorat-3c8de',storageBucket:'oilanazorat-3c8de.firebasestorage.app',messagingSenderId:'1086556994078',appId:'1:1086556994078:web:5e576984e784d0bbdc4c0f',measurementId:'G-NWER8TE97X'});const auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);let family=null,child=null,childName='',isPremium=false,ownedFamilies=[];
 const show=id=>{document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));$(id).classList.add('active');scrollTo(0,0)};const esc=v=>String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));const fmt=v=>v?new Date(Number(v)).toLocaleString('uz-UZ',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';const dur=s=>{s=Number(s||0);return s>=60?Math.floor(s/60)+' daq '+s%60+' sek':s+' sek'};
 async function sub(name,field,n=100){const q=query(collection(db,'families',family,'children',child,name),orderBy(field,'desc'),limit(n));return(await getDocs(q)).docs.map(d=>({id:d.id,...d.data()}))}
-$('start').onclick=()=>{if(auth.currentUser){show('codeScreen');renderFamilyScreen()}else login()};$('out').onclick=()=>signOut(auth);$('newCode').onclick=()=>{sessionStorage.removeItem('family');family=null;show('codeScreen');renderFamilyScreen()};$('backChildren').onclick=loadChildren;
+$('start').onclick=()=>{if(auth.currentUser){show('codeScreen');renderFamilyScreen()}else login()};$('out').onclick=()=>signOut(auth);$('newCode').onclick=()=>{sessionStorage.removeItem('family');family=null;show('codeScreen');renderFamilyScreen()};$('backChildren').onclick=()=>{stopLiveListeners();loadChildren()};
 async function login(){
   try{
     await signInWithPopup(auth,new GoogleAuthProvider());
@@ -65,10 +77,60 @@ async function loadChildren(){show('children');$('childList').innerHTML='<div cl
 async function unlinkChildDirect(id,name){if(!family)return;if(!confirm(name+' qurilmasi shu oiladan chiqarilsinmi?\n\nQurilma bloklanmaydi. Keyin oila kodi orqali qayta ulash mumkin.'))return;try{await deleteDoc(doc(db,'families',family,'children',id));loadChildren()}catch(e){console.error(e);alert('Qurilmani oiladan chiqarib bo\u2018lmadi. Internet yoki Firebase ruxsatini tekshiring.')}}
 function openChild(id,n){child=id;childName=n;$('childName').textContent=n;$('childId').textContent='Qurilma ID: '+id.slice(0,12);show('dashboard');document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));document.querySelector('[data-tab=home]').classList.add('active');load('home')}
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');load(b.dataset.tab)});
-async function load(t){$('content').innerHTML='<div class="loading">Yuklanmoqda…</div>';try{if(t==='home')return home();if(t==='loc')return loc();if(t==='sms')return sms();if(t==='calls')return calls();if(t==='apps')return apps();if(t==='notif')return notif();if(t==='ss')return shots()}catch(e){console.error(e);$('content').innerHTML='<div class="empty">Ma’lumot yuklanmadi. Internet yoki Firebase ruxsatini tekshiring.</div>'}}
+let liveDocUnsub=null,liveLocUnsub=null,routeMapInst=null;
+function stopLiveListeners(){if(liveDocUnsub){liveDocUnsub();liveDocUnsub=null}if(liveLocUnsub){liveLocUnsub();liveLocUnsub=null}}
+async function load(t){stopLiveListeners();$('content').innerHTML='<div class="loading">Yuklanmoqda…</div>';try{if(t==='home')return home();if(t==='loc')return loc();if(t==='sms')return sms();if(t==='calls')return calls();if(t==='apps')return apps();if(t==='notif')return notif();if(t==='ss')return shots()}catch(e){console.error(e);$('content').innerHTML='<div class="empty">Ma’lumot yuklanmadi. Internet yoki Firebase ruxsatini tekshiring.</div>'}}
 async function home(){const[l,s,c,a]=await Promise.all([sub('locations','vaqtMs',1),sub('sms','vaqtMs',30),sub('calls','boshlanishMs',30),sub('app_usage','boshlanishMs',30)]);let h=l[0]?'<div class="loc"><small>SO‘NGGI JOYLASHUV</small><b>'+Number(l[0].lat).toFixed(4)+'°, '+Number(l[0].lng).toFixed(4)+'°</b><small>'+fmt(l[0].vaqtMs)+'</small>'+miniMap(l[0].lat,l[0].lng)+'</div>':'<div class="empty">Joylashuv ma’lumoti yo‘q.</div>';$('content').innerHTML=h+'<div class="summary"><div class="box"><small>SMS</small><b>'+s.length+'</b></div><div class="box"><small>Qo‘ng‘iroqlar</small><b>'+c.length+'</b></div><div class="box"><small>Ilovalar</small><b>'+a.length+'</b></div><div class="box"><small>Holat</small><b>Faol</b></div></div>'}
 function miniMap(lat,lng){const d=0.006;const bbox=(lng-d)+','+(lat-d)+','+(lng+d)+','+(lat+d);return'<a class="mapEmbedWrap" target="_blank" href="https://www.google.com/maps?q='+lat+','+lng+'"><iframe class="mapEmbed" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox='+bbox+'&marker='+lat+','+lng+'&layer=mapnik"></iframe><span class="mapOpen">Kattalashtirish ↗</span></a>'}
-async function loc(){const x=await sub('locations','vaqtMs',50);if(!x.length){$('content').innerHTML='<div class="empty">Joylashuv ma’lumoti yo‘q.</div>';return}$('content').innerHTML='<div class="loc"><small>SO‘NGGI JOYLASHUV</small><b>'+Number(x[0].lat).toFixed(4)+'°, '+Number(x[0].lng).toFixed(4)+'°</b><small>'+fmt(x[0].vaqtMs)+'</small>'+miniMap(x[0].lat,x[0].lng)+'</div><h3 style="margin:18px 0 8px">Tarix</h3>'+x.map(v=>'<div class="row"><div class="rowtop"><b>'+Number(v.lat).toFixed(5)+'°, '+Number(v.lng).toFixed(5)+'°</b><span class="badge">'+fmt(v.vaqtMs)+'</span></div><p><a class="map" target="_blank" href="https://www.google.com/maps?q='+v.lat+','+v.lng+'">Google Maps’da ochish →</a></p></div>').join('')}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function dayRangeMs(dateStr){const s=new Date(dateStr+'T00:00:00');const start=s.getTime();return[start,start+86400000-1]}
+async function loadLocationsForDate(dateStr){const[start,end]=dayRangeMs(dateStr);const q=query(collection(db,'families',family,'children',child,'locations'),where('vaqtMs','>=',start),where('vaqtMs','<=',end),orderBy('vaqtMs','desc'));return(await getDocs(q)).docs.map(d=>({id:d.id,...d.data()}))}
+function drawRoute(points){const box=$('routeMapBox');if(!box||!window.L)return;if(routeMapInst){routeMapInst.remove();routeMapInst=null}if(!points.length)return;const coords=points.slice().reverse().map(p=>[p.lat,p.lng]);routeMapInst=L.map('routeMapBox',{zoomControl:true});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(routeMapInst);if(coords.length>1)L.polyline(coords,{color:'#16a34a',weight:4,opacity:.85}).addTo(routeMapInst);coords.forEach((c,i)=>{const isLast=i===coords.length-1;L.circleMarker(c,{radius:isLast?8:5,color:'#fff',weight:2,fillColor:isLast?'#dc2626':'#16a34a',fillOpacity:1}).addTo(routeMapInst)});routeMapInst.fitBounds(coords.length>1?coords:[coords[0],coords[0]],{padding:[26,26],maxZoom:16})}
+async function loc(){
+  const dateStr=$('locDate')?$('locDate').value:todayStr();
+  const childRef=doc(db,'families',family,'children',child);
+  $('content').innerHTML='<div class="liveRow"><div class="liveTxt" id="liveTxt"><b>Jonli kuzatish o‘chirilgan</b>Yoqilsa, farzand qurilmasi 5 daqiqa davomida har 8 soniyada joylashuvini yuboradi.</div><button id="liveBtn" class="liveBtn off">🔴 Jonli kuzatish</button></div><div class="dateRow"><input type="date" id="locDate" value="'+dateStr+'" max="'+todayStr()+'"></div><div id="routeMapBox" class="routeMap"></div><div id="locList"><div class="loading">Yuklanmoqda…</div></div>';
+  $('locDate').onchange=loc;
+  $('liveBtn').onclick=async()=>{
+    if(liveDocUnsub){
+      await setDoc(childRef,{liveTrackingUntilMs:0},{merge:true});
+      stopLiveListeners();
+      $('liveTxt').innerHTML='<b>Jonli kuzatish o‘chirilgan</b>Yoqilsa, farzand qurilmasi 5 daqiqa davomida har 8 soniyada joylashuvini yuboradi.';
+      $('liveBtn').textContent='🔴 Jonli kuzatish';$('liveBtn').className='liveBtn off';
+    }else{
+      await setDoc(childRef,{liveTrackingUntilMs:Date.now()+5*60000},{merge:true});
+      watchLive(childRef);
+    }
+  };
+  const x=await loadLocationsForDate(dateStr);
+  drawRoute(x);
+  $('locList').innerHTML=x.length?'<h3 style="margin:18px 0 8px">Ro‘yxat ('+x.length+' ta yozuv)</h3>'+x.map(v=>'<div class="row"><div class="rowtop"><b>'+Number(v.lat).toFixed(5)+'°, '+Number(v.lng).toFixed(5)+'°</b><span class="badge">'+fmt(v.vaqtMs)+'</span></div><p><a class="dirLink" target="_blank" href="https://www.google.com/maps?q='+v.lat+','+v.lng+'">📍 Yo‘nalish →</a></p></div>').join(''):'<div class="empty">Bu sana uchun joylashuv ma’lumoti yo‘q.</div>';
+  // Agar jonli kuzatish allaqachon yoqilgan bo'lsa, uni aniqlab UI'ni yangilaymiz
+  const snap=await getDoc(childRef);
+  const untilMs=snap.exists()?(snap.data().liveTrackingUntilMs||0):0;
+  if(untilMs>Date.now())watchLive(childRef);
+}
+function watchLive(childRef){
+  stopLiveListeners();
+  liveDocUnsub=onSnapshot(childRef,snap=>{
+    const untilMs=snap.data()?.liveTrackingUntilMs||0;
+    const remain=Math.max(0,Math.round((untilMs-Date.now())/1000));
+    if(untilMs<=Date.now()){
+      stopLiveListeners();
+      if($('liveTxt')){$('liveTxt').innerHTML='<b>Jonli kuzatish o‘chirilgan</b>Yoqilsa, farzand qurilmasi 5 daqiqa davomida har 8 soniyada joylashuvini yuboradi.';$('liveBtn').textContent='🔴 Jonli kuzatish';$('liveBtn').className='liveBtn off'}
+      return;
+    }
+    if($('liveTxt')){$('liveTxt').innerHTML='<b>Jonli kuzatish yoqilgan — '+Math.floor(remain/60)+':'+String(remain%60).padStart(2,'0')+' qoldi</b>Farzand qurilmasidan joylashuv real vaqtda kelmoqda.';$('liveBtn').textContent='⏹ To‘xtatish';$('liveBtn').className='liveBtn on'}
+  });
+  liveLocUnsub=onSnapshot(query(collection(db,'families',family,'children',child,'locations'),orderBy('vaqtMs','desc'),limit(1)),snap=>{
+    if(snap.empty||!window.L)return;
+    const v=snap.docs[0].data();
+    if(!routeMapInst){routeMapInst=L.map('routeMapBox').setView([v.lat,v.lng],16);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(routeMapInst)}
+    if(window._liveMarker)routeMapInst.removeLayer(window._liveMarker);
+    window._liveMarker=L.circleMarker([v.lat,v.lng],{radius:9,color:'#fff',weight:3,fillColor:'#2563eb',fillOpacity:1}).addTo(routeMapInst);
+    routeMapInst.panTo([v.lat,v.lng]);
+  });
+}
 async function sms(){const x=await sub('sms','vaqtMs',100);$('content').innerHTML=x.length?x.map(v=>'<div class="row"><div class="rowtop"><b>'+esc(v.raqam||v.number||'Noma’lum')+'</b><span class="badge">'+fmt(v.vaqtMs)+'</span></div><p>'+esc(v.matn||v.body||'')+'</p></div>').join(''):'<div class="empty">SMS topilmadi.</div>'}
 async function calls(){const x=await sub('calls','boshlanishMs',100);$('content').innerHTML=x.length?x.map(v=>'<div class="row"><div class="rowtop"><b>'+esc(v.raqam||v.number||'Noma’lum')+'</b><span class="badge">'+fmt(v.boshlanishMs)+'</span></div><p>'+esc(v.tur||v.type||'Qo‘ng‘iroq')+' · '+dur(v.davomiylikSek||v.durationSec)+'</p></div>').join(''):'<div class="empty">Qo‘ng‘iroqlar topilmadi.</div>'}
 async function apps(){const x=await sub('app_usage','boshlanishMs',100);$('content').innerHTML=x.length?x.map(v=>'<div class="row"><div class="rowtop"><b>'+esc(v.appName||v.packageName||'Ilova')+'</b><span class="badge">'+dur(v.davomiylikSek||v.durationSec)+'</span></div><small>'+fmt(v.boshlanishMs)+'</small></div>').join(''):'<div class="empty">Ilova statistikasi topilmadi.</div>'}
