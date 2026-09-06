@@ -1,0 +1,42 @@
+/* Oila Nazorati — iPhone/Safari parent panel enhancement */
+:root{--ios-bg:#f5f7fb;--ios-line:#e3e8ef;--ios-muted:#7b8798;--ios-blue:#4169c7}
+html{background:var(--ios-bg);-webkit-text-size-adjust:100%}
+body{background:var(--ios-bg)!important;min-height:100vh;padding-bottom:env(safe-area-inset-bottom)!important}
+.wrap{max-width:760px!important;padding-left:16px!important;padding-right:16px!important}
+.top{box-shadow:0 4px 18px rgba(17,24,39,.05)!important}
+.head{height:64px!important;padding-top:env(safe-area-inset-top)!important;height:calc(64px + env(safe-area-inset-top))!important}
+.logo{width:40px!important;height:40px!important;border-radius:13px!important;box-shadow:0 6px 16px rgba(17,24,39,.14)}
+.head b{font-size:16px!important}.head small{font-size:11px!important}
+.head button{border-radius:12px!important;padding:8px 10px!important}
+.screen{padding-top:18px!important;padding-bottom:90px!important}
+.title{margin-bottom:12px!important;align-items:center!important;gap:8px!important}.title h2{font-size:22px!important;margin-bottom:3px!important}#childId{font-size:11px!important}
+#dashboard>.title{gap:7px!important}.title button{font-size:12px!important;padding:8px 9px!important;white-space:nowrap}
+.tabs{grid-template-columns:repeat(4,1fr)!important;gap:8px!important;margin:0 0 15px!important;position:sticky;top:64px;z-index:15;padding:7px 0;background:rgba(245,247,251,.94);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.tabs button{min-height:70px!important;border-radius:16px!important;padding:9px 2px!important;font-size:9px!important;box-shadow:0 3px 10px rgba(17,24,39,.035);-webkit-tap-highlight-color:transparent}
+.tabs button svg{width:22px!important;height:22px!important;margin-bottom:4px!important}
+.tabs button.active{background:#111827!important;color:#fff!important;border-color:#111827!important;box-shadow:0 7px 18px rgba(17,24,39,.16)!important}
+#content{min-height:260px}
+.summary{grid-template-columns:repeat(2,1fr)!important;gap:9px!important;margin-top:12px}
+.box{padding:14px 8px!important;border-radius:16px!important;text-align:center;min-width:0;box-shadow:0 5px 16px rgba(17,24,39,.045)}
+.box b{font-size:19px!important;margin-top:3px}.box small{font-size:9px!important}
+.loc{border-radius:20px!important;padding:17px!important;box-shadow:0 10px 26px rgba(17,24,39,.14)}
+.mapEmbedWrap{margin-top:12px!important;border-radius:15px!important}.mapEmbed{height:175px!important}
+.row{border-radius:16px!important;padding:14px!important;margin-bottom:8px!important;box-shadow:0 4px 14px rgba(17,24,39,.035)}.row p{font-size:12px!important}.rowtop b{font-size:13px}
+.ssgrid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important}.ss{min-height:105px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:16px!important;box-shadow:0 5px 16px rgba(17,24,39,.04);-webkit-tap-highlight-color:transparent}
+.children{gap:9px!important}.child{border-radius:17px!important;padding:14px!important;box-shadow:0 4px 14px rgba(17,24,39,.035)}
+.pwa-family .family-card{border-radius:17px!important;box-shadow:0 4px 14px rgba(17,24,39,.035)}
+.upsell{border-radius:20px!important;box-shadow:0 10px 24px rgba(58,45,0,.15)}.premiumBadge{border-radius:20px!important}
+.premiumNavBtn{font-size:11px!important}
+.liveRow{border-radius:17px!important}.dateRow input[type=date]{border-radius:14px!important}
+.primary,.secondary{border-radius:14px!important}
+@media(max-width:430px){
+  .wrap{padding-left:14px!important;padding-right:14px!important}
+  .tabs{grid-template-columns:repeat(4,1fr)!important;gap:6px!important;top:calc(64px + env(safe-area-inset-top))}
+  .tabs button{min-height:68px!important;padding:8px 1px!important;font-size:8.5px!important;border-radius:14px!important}
+  .tabs button svg{width:20px!important;height:20px!important}
+  .title h2{font-size:21px!important}
+  .title button{font-size:11px!important;padding:7px 8px!important}
+  .summary{grid-template-columns:repeat(2,1fr)!important}
+}
+@media(min-width:431px){.summary{grid-template-columns:repeat(4,1fr)!important}}
+@media(min-width:700px){.tabs{position:sticky;top:0}}
