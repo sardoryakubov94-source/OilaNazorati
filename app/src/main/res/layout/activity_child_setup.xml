@@ -58,6 +58,13 @@
         android:layout_marginBottom="8dp"/>
 
     <Button
+        android:id="@+id/btnMicrophonePermission"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="🎙️ Mikrofon ruxsatini berish"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
         android:id="@+id/btnUsageAccess"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
