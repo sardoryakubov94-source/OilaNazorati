@@ -1,5 +1,6 @@
 package uz.oilanazorati.parentcontrol.ui
 
+import android.graphics.Typeface
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
@@ -24,22 +25,36 @@ class AmbientListenActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Ovoz oynasi ham ilovaning umumiy mavzusidagi fon va matn ranglaridan foydalanadi.
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(28, 28, 28, 28)
+            setBackgroundColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_bg))
         }
         val title = TextView(this).apply {
             text = "🎙️ Ovoz"
             textSize = 24f
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary))
         }
         status = TextView(this).apply {
             text = "Tayyor"
             textSize = 14f
             setPadding(0, 18, 0, 18)
+            setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
         }
-        startButton = Button(this).apply { text = "▶️ Eshitishni boshlash" }
-        stopButton = Button(this).apply { text = "⏹️ To'xtatish"; isEnabled = false }
+        startButton = Button(this).apply {
+            text = "▶️ Eshitishni boshlash"
+            setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary))
+            setBackgroundResource(uz.oilanazorati.parentcontrol.R.drawable.bg_card_theme)
+        }
+        stopButton = Button(this).apply {
+            text = "⏹️ To'xtatish"
+            isEnabled = false
+            setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary))
+            setBackgroundResource(uz.oilanazorati.parentcontrol.R.drawable.bg_card_theme)
+        }
         root.addView(title)
         root.addView(status)
         root.addView(startButton)
