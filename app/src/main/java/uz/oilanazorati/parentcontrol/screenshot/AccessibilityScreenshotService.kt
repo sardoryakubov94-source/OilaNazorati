@@ -12,6 +12,7 @@ import android.os.Looper
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import android.widget.Toast
+import java.util.concurrent.Executor
 
 /**
  * Optional, user-enabled accessibility screenshot test path.
@@ -19,6 +20,7 @@ import android.widget.Toast
  */
 class AccessibilityScreenshotService : AccessibilityService() {
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val mainExecutor = Executor { command -> mainHandler.post(command) }
 
     private val testReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -46,7 +48,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
             onResult(null)
             return
         }
-        takeScreenshot(Display.DEFAULT_DISPLAY, mainHandler.executor, object : TakeScreenshotCallback {
+        takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
             override fun onSuccess(screenshot: ScreenshotResult) {
                 val buffer = screenshot.hardwareBuffer
                 val bitmap = Bitmap.wrapHardwareBuffer(buffer, screenshot.colorSpace)
