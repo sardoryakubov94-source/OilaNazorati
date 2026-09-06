@@ -134,3 +134,5 @@ jobs:
             OilaNazorati-v1.0.1-release.apk
             OilaNazorati-v1.0.1-release.apk.sha256
           retention-days: 30
+
+# Trigger release build after the latest audio/screenshot fixes.
