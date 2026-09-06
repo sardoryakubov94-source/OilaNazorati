@@ -25,6 +25,12 @@ service cloud.firestore {
           allow delete: if isRealOwner();
         }
 
+        match /screenshot_requests/{docId} {
+          allow read: if isRealOwner() || isThisChildsOwnSession();
+          allow create, update: if isRealOwner() || isThisChildsOwnSession();
+          allow delete: if isRealOwner();
+        }
+
         match /screenshots/{docId} {
           allow read: if isRealOwner();
           allow create: if isThisChildsOwnSession();
@@ -43,6 +49,7 @@ service cloud.firestore {
           allow read, write: if (isRealOwner() || isThisChildsOwnSession())
             && subcollection != 'screenshot_settings'
             && subcollection != 'screenshot_trigger_state'
+            && subcollection != 'screenshot_requests'
             && subcollection != 'screenshots'
             && subcollection != 'screenshot_data';
         }
