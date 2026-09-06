@@ -1,9 +1,14 @@
 package uz.oilanazorati.parentcontrol.ui
 
+import android.app.Dialog
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -36,9 +41,6 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         buildUi()
         loadHistory()
-
-        // Eski requested/processing so'rov panelni band qilib qo'ymasligi uchun
-        // mavjud stale so'rovni tekshiramiz va keyin doimiy watchdog ishlaydi.
         ScreenshotRepository.failStaleScreenshotRequest()
         staleRequestHandler.post(staleRequestWatchdog)
 
@@ -193,8 +195,12 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
 
         val image = ImageView(this).apply {
             layoutParams = ViewGroup.LayoutParams(-1, 500)
-            scaleType = ImageView.ScaleType.CENTER_CROP
-            contentDescription = "Screenshot"
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            contentDescription = "Screenshot — kattalashtirish uchun bosing"
+            setOnClickListener {
+                val bmp = tag as? Bitmap
+                if (bmp != null) showFullScreenImage(bmp)
+            }
         }
         card.addView(image)
         parent.addView(card)
@@ -203,8 +209,62 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
             if (bytes == null || bytes.isEmpty()) return@loadImageBytes
             executor.execute {
                 val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                runOnUiThread { if (bmp != null && !isFinishing) image.setImageBitmap(bmp) }
+                runOnUiThread {
+                    if (bmp != null && !isFinishing) {
+                        image.tag = bmp
+                        image.setImageBitmap(bmp)
+                    }
+                }
             }
+        }
+    }
+
+    private fun showFullScreenImage(bitmap: Bitmap) {
+        val dialog = Dialog(this)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.BLACK))
+
+        val root = FrameLayout(this).apply {
+            setBackgroundColor(Color.BLACK)
+        }
+
+        val image = ImageView(this).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            adjustViewBounds = true
+            setImageBitmap(bitmap)
+            contentDescription = "Screenshot to'liq ko'rinish"
+        }
+        root.addView(image)
+
+        val close = Button(this).apply {
+            text = "✕"
+            textSize = 18f
+            setOnClickListener { dialog.dismiss() }
+        }
+        val closeParams = FrameLayout.LayoutParams(56, 56, Gravity.TOP or Gravity.END).apply {
+            topMargin = 16
+            rightMargin = 16
+        }
+        root.addView(close, closeParams)
+
+        image.setOnClickListener { /* yopilmaydi */ }
+        root.setOnClickListener { /* faqat rasm tashqarisi ham oynani yopmaydi */ }
+
+        dialog.setContentView(root)
+        dialog.setOnShowListener {
+            dialog.window?.apply {
+                setBackgroundDrawable(ColorDrawable(Color.BLACK))
+                setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                setDimAmount(0f)
+            }
+        }
+        dialog.show()
+        dialog.window?.apply {
+            setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+            setBackgroundDrawable(ColorDrawable(Color.BLACK))
         }
     }
 
