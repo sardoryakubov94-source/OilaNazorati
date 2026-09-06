@@ -27,6 +27,7 @@ let nextPlayTime = 0;
 let seen = new Set();
 let currentSession = null;
 let starting = false;
+let voiceTab = null;
 
 function familyCode() { return localStorage.getItem('family'); }
 async function selectedChild() {
@@ -138,25 +139,46 @@ async function cleanupAudio(closeContext) {
 
 function buildUi() {
   const dashboard = document.getElementById('dashboard');
-  const content = document.getElementById('content');
-  const homeTab = document.querySelector('[data-tab="home"]');
-  if (!dashboard || !content || !homeTab || !homeTab.classList.contains('active')) return;
-  if (card?.isConnected) return;
-  card = document.createElement('div');
-  card.style.cssText = 'background:#f5f7fb;border:1px solid #e3e8ef;border-radius:18px;padding:16px;margin:0 0 22px;box-shadow:0 4px 14px rgba(17,24,39,.035)';
-  card.innerHTML = '<div style="display:flex;align-items:center;gap:12px"><div style="font-size:27px">🎙️</div><div style="flex:1"><b style="display:block;font-size:16px">Ovoz</b><span style="color:#697586;font-size:12px">Jonli eshitish</span></div><span style="color:#4d6fd6;font-size:25px">›</span></div>';
-  card.onclick = () => { modal.classList.add('active'); setStatus('Tayyor'); };
-  content.parentNode.insertBefore(card, content);
-  modal = document.createElement('div');
-  modal.className = 'modal';
-  modal.innerHTML = '<div class="sheet"><h2 style="margin:0 0 8px">🎙️ Ovoz</h2><p id="micStatus" class="muted" style="margin:0 0 14px">Tayyor</p><button id="micStart">▶️ Eshitishni boshlash</button><button id="micStop" style="margin-top:8px;background:#dc2626" disabled>⏹️ To‘xtatish</button><button id="micClose" style="margin-top:8px;background:#eef2ff;color:#111827">Yopish</button></div>';
-  document.body.appendChild(modal);
-  statusEl = modal.querySelector('#micStatus');
-  startBtn = modal.querySelector('#micStart');
-  stopBtn = modal.querySelector('#micStop');
-  startBtn.onclick = openAudio;
-  stopBtn.onclick = stopAudio;
-  modal.querySelector('#micClose').onclick = () => { if (!stopBtn.disabled) stopAudio(); modal.classList.remove('active'); };
+  const tabs = document.getElementById('tabs');
+  if (!dashboard || !tabs) return;
+
+  const screenshotTab = tabs.querySelector('[data-tab="ss"]');
+  if (!screenshotTab) return;
+
+  if (!voiceTab?.isConnected) {
+    voiceTab = document.createElement('button');
+    voiceTab.type = 'button';
+    voiceTab.dataset.tab = 'voice';
+    voiceTab.innerHTML = '<span aria-hidden="true" style="font-size:24px;line-height:24px">🎙️</span><br>Ovoz';
+    voiceTab.title = 'Jonli eshitish';
+    voiceTab.onclick = () => { modal?.classList.add('active'); setStatus('Tayyor'); };
+    tabs.insertBefore(voiceTab, screenshotTab.nextSibling);
+  } else if (voiceTab.previousElementSibling !== screenshotTab) {
+    tabs.insertBefore(voiceTab, screenshotTab.nextSibling);
+  }
+
+  if (!document.getElementById('voiceTabStyle')) {
+    const style = document.createElement('style');
+    style.id = 'voiceTabStyle';
+    style.textContent = '#tabs{grid-template-columns:repeat(5,1fr)}#tabs [data-tab="voice"]{border-color:#dce2eb;background:#fff;color:#596578}#tabs [data-tab="voice"]:active{transform:scale(.97)}@media(max-width:430px){#tabs{grid-template-columns:repeat(3,1fr)}}';
+    document.head.appendChild(style);
+  }
+
+  if (card?.isConnected) card.remove();
+  card = null;
+
+  if (!modal?.isConnected) {
+    modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = '<div class="sheet"><h2 style="margin:0 0 8px">🎙️ Ovoz</h2><p id="micStatus" class="muted" style="margin:0 0 14px">Tayyor</p><button id="micStart">▶️ Eshitishni boshlash</button><button id="micStop" style="margin-top:8px;background:#dc2626" disabled>⏹️ To‘xtatish</button><button id="micClose" style="margin-top:8px;background:#eef2ff;color:#111827">Yopish</button></div>';
+    document.body.appendChild(modal);
+    statusEl = modal.querySelector('#micStatus');
+    startBtn = modal.querySelector('#micStart');
+    stopBtn = modal.querySelector('#micStop');
+    startBtn.onclick = openAudio;
+    stopBtn.onclick = stopAudio;
+    modal.querySelector('#micClose').onclick = () => { if (!stopBtn.disabled) stopAudio(); modal.classList.remove('active'); };
+  }
 }
 
 const observer = new MutationObserver(buildUi);
