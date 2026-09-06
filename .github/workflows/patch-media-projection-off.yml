@@ -1,0 +1,133 @@
+name: Stop MediaProjection when screenshot is OFF
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message != 'fix: stop MediaProjection when screenshot is disabled'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch screenshot service
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/uz/oilanazorati/parentcontrol/screenshot/ScreenCaptureService.kt')
+          s = p.read_text()
+          original = s
+
+          old = 'settingsListener = ScreenshotRepository.listenSettings { settings = it }'
+          new = '''settingsListener = ScreenshotRepository.listenSettings {
+              settings = it
+              if (!it.enabled) {
+                  handler.post { stopProjectionBecauseScreenshotDisabled() }
+              }
+          }'''
+          if old in s:
+              s = s.replace(old, new, 1)
+
+          old = '''requestListener = ScreenshotRepository.listenScreenshotRequests { requestId ->
+              if (projection == null) {
+                  waitingRemoteRequestId = requestId
+              } else {
+                  queueRemoteCapture(requestId)
+              }
+          }'''
+          new = '''requestListener = ScreenshotRepository.listenScreenshotRequests { requestId ->
+              if (!settings.enabled || !isScreenshotAllowedLocally()) return@listenScreenshotRequests
+              if (projection == null) {
+                  waitingRemoteRequestId = requestId
+              } else {
+                  queueRemoteCapture(requestId)
+              }
+          }'''
+          if old in s:
+              s = s.replace(old, new, 1)
+
+          old = '''if (projection == null && intent != null) {
+            val code = intent.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)'''
+          new = '''if (projection == null && intent != null && isScreenshotAllowedLocally() && settings.enabled) {
+            val code = intent.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)'''
+          if old in s:
+              s = s.replace(old, new, 1)
+
+          marker = '    private fun startProjection(resultCode: Int, data: Intent) {'
+          guard = '''    private fun startProjection(resultCode: Int, data: Intent) {
+        if (!isScreenshotAllowedLocally() || !settings.enabled) {
+            return
+        }
+'''
+          if marker in s and guard not in s:
+              s = s.replace(marker, guard, 1)
+
+          marker = '    private fun queueRemoteCapture(requestId: String) {'
+          guard = '''    private fun queueRemoteCapture(requestId: String) {
+        if (!isScreenshotAllowedLocally() || !settings.enabled) return
+'''
+          if marker in s and guard not in s:
+              s = s.replace(marker, guard, 1)
+
+          marker = '    private fun cleanupProjection() {'
+          method = '''    private fun isScreenshotAllowedLocally(): Boolean =
+        getSharedPreferences("oila_nazorati", MODE_PRIVATE)
+            .getBoolean("screenshot_allowed", true)
+
+    private fun stopProjectionBecauseScreenshotDisabled() {
+        if (isScreenshotAllowedLocally() && settings.enabled) return
+        handler.removeCallbacks(evalRunnable)
+        handler.removeCallbacks(pollRunnable)
+        handler.removeCallbacks(captureTimeoutRunnable)
+        waitingRemoteRequestId = null
+        val activeProjection = projection
+        if (activeProjection != null) {
+            try {
+                activeProjection.stop()
+            } catch (_: Throwable) {
+                cleanupProjection()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+        } else {
+            cleanupProjection()
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
+    }
+
+'''
+          if marker in s and 'private fun stopProjectionBecauseScreenshotDisabled()' not in s:
+              s = s.replace(marker, method + marker, 1)
+
+          if s == original:
+              print('No patch changes needed.')
+          else:
+              p.write_text(s)
+              print('MediaProjection OFF patch applied.')
+          PY
+
+      - name: Verify patch
+        run: |
+          grep -q 'stopProjectionBecauseScreenshotDisabled' app/src/main/java/uz/oilanazorati/parentcontrol/screenshot/ScreenCaptureService.kt
+          grep -q 'activeProjection.stop()' app/src/main/java/uz/oilanazorati/parentcontrol/screenshot/ScreenCaptureService.kt
+          grep -q 'isScreenshotAllowedLocally' app/src/main/java/uz/oilanazorati/parentcontrol/screenshot/ScreenCaptureService.kt
+          echo 'Verified: screenshot OFF stops MediaProjection and blocks restart.'
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/uz/oilanazorati/parentcontrol/screenshot/ScreenCaptureService.kt
+          if git diff --cached --quiet; then
+            echo 'No source changes to commit.'
+          else
+            git commit -m 'fix: stop MediaProjection when screenshot is disabled'
+            git push origin HEAD:main
+          fi
