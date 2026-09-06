@@ -2,8 +2,13 @@ package uz.oilanazorati.parentcontrol.ui
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.view.Gravity
 import android.view.View
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -30,7 +35,7 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding = uz.oilanazorati.parentcontrol.databinding.ActivityParentDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
         if (!ensureAuth()) return
-        setupLists(); setupHeader(); setupBottomNav(); setupSectionButtons()
+        setupLists(); setupHeader(); setupBottomNav(); setupSectionButtons(); installAmbientAudioCard()
         FirebaseRepo.checkIsPremium { isPremium ->
             isPremiumUser = isPremium
             contactSummaryAdapter.setPremium(isPremium)
@@ -70,9 +75,47 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding.cardStatContacts.setOnClickListener { startActivity(Intent(this, SavedContactsActivity::class.java)) }
         binding.premiumBannerHome.setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
         binding.btnPremiumCtaHome.setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
-        binding.cardStatScreenshot.setOnClickListener {
-            openIfChildSelected { ScreenshotHistoryActivity::class.java }
+        binding.cardStatScreenshot.setOnClickListener { openIfChildSelected { ScreenshotHistoryActivity::class.java } }
+    }
+
+    private fun installAmbientAudioCard() {
+        val scroll = binding.root.getChildAt(0) as? android.widget.ScrollView ?: return
+        val content = scroll.getChildAt(0) as? LinearLayout ?: return
+        if (content.findViewWithTag<View>("ambient_audio_card") != null) return
+
+        val card = LinearLayout(this).apply {
+            tag = "ambient_audio_card"
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(18, 16, 18, 16)
+            background = GradientDrawable().apply {
+                cornerRadius = 22f
+                setColor(Color.WHITE)
+                setStroke(1, Color.parseColor("#E1E6EE"))
+            }
+            elevation = 3f
+            isClickable = true
+            isFocusable = true
+            setOnClickListener { openIfChildSelected { AmbientListenActivity::class.java } }
         }
+        val icon = TextView(this).apply { text = "🎙️"; textSize = 28f; setPadding(0, 0, 14, 0) }
+        val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) }
+        texts.addView(TextView(this).apply {
+            text = "Ovoz"
+            textSize = 16f
+            setTextColor(Color.parseColor("#111827"))
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        })
+        texts.addView(TextView(this).apply {
+            text = "Jonli eshitish"
+            textSize = 12f
+            setTextColor(Color.parseColor("#697586"))
+            setPadding(0, 4, 0, 0)
+        })
+        val arrow = TextView(this).apply { text = "›"; textSize = 28f; setTextColor(Color.parseColor("#4D6FD6")) }
+        card.addView(icon); card.addView(texts); card.addView(arrow)
+        val premiumIndex = content.indexOfChild(binding.premiumBannerHome)
+        content.addView(card, if (premiumIndex >= 0) premiumIndex + 1 else 1)
     }
 
     private fun openIfChildSelected(activityClass: () -> Class<*>) {
@@ -86,8 +129,7 @@ class ParentDashboardActivity : AppCompatActivity() {
     }
 
     private fun loadFamily(code: String) {
-        FirebaseRepo.familyCode = code
-        binding.headerFamilyCode.text = code
+        FirebaseRepo.familyCode = code; binding.headerFamilyCode.text = code
         getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit().putString("family_code", code).apply()
         FirebaseRepo.fetchChildren(code) { children ->
             when {
@@ -105,8 +147,7 @@ class ParentDashboardActivity : AppCompatActivity() {
 
     private fun showChildPickerDialog(code: String, preloaded: List<Pair<String, String>>? = null) {
         val show: (List<Pair<String, String>>) -> Unit = { children ->
-            if (children.isEmpty()) Toast.makeText(this, "Bu kodga hali birorta farzand ulanmagan", Toast.LENGTH_SHORT).show()
-            else renderChildPickerDialog(code, children)
+            if (children.isEmpty()) Toast.makeText(this, "Bu kodga hali birorta farzand ulanmagan", Toast.LENGTH_SHORT).show() else renderChildPickerDialog(code, children)
         }
         if (preloaded != null) show(preloaded) else FirebaseRepo.fetchChildren(code, show)
     }
@@ -114,34 +155,19 @@ class ParentDashboardActivity : AppCompatActivity() {
     private fun renderChildPickerDialog(code: String, children: List<Pair<String, String>>) {
         val density = resources.displayMetrics.density
         fun dp(v: Int) = (v * density).toInt()
-        val container = android.widget.LinearLayout(this).apply {
-            orientation = android.widget.LinearLayout.VERTICAL
-            setPadding(dp(4), dp(4), dp(4), dp(4))
-        }
+        val container = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(4), dp(4), dp(4), dp(4)) }
         var dialog: AlertDialog? = null
-
         fun renderRows(list: List<Pair<String, String>>) {
             container.removeAllViews()
             list.forEach { (childId, name) ->
-                val row = android.widget.LinearLayout(this).apply {
-                    orientation = android.widget.LinearLayout.HORIZONTAL
-                    gravity = android.view.Gravity.CENTER_VERTICAL
-                    setPadding(dp(14), dp(14), dp(14), dp(14))
+                val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(14), dp(14), dp(14), dp(14)) }
+                val label = TextView(this).apply {
+                    text = name; textSize = 17f
+                    layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    setOnClickListener { setChildId(childId); loadTodayStats(); dialog?.dismiss() }
                 }
-                val label = android.widget.TextView(this).apply {
-                    text = name
-                    textSize = 17f
-                    layoutParams = android.widget.LinearLayout.LayoutParams(
-                        0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f
-                    )
-                    setOnClickListener {
-                        setChildId(childId); loadTodayStats(); dialog?.dismiss()
-                    }
-                }
-                val deleteBtn = android.widget.TextView(this).apply {
-                    text = "🗑"
-                    textSize = 20f
-                    setPadding(dp(14), dp(6), dp(6), dp(6))
+                val deleteBtn = TextView(this).apply {
+                    text = "🗑"; textSize = 20f; setPadding(dp(14), dp(6), dp(6), dp(6))
                     setOnClickListener {
                         AlertDialog.Builder(this@ParentDashboardActivity)
                             .setTitle("O'chirish")
@@ -151,30 +177,17 @@ class ParentDashboardActivity : AppCompatActivity() {
                                     if (ok) {
                                         Toast.makeText(this@ParentDashboardActivity, "\"$name\" oiladan chiqarildi", Toast.LENGTH_SHORT).show()
                                         if (FirebaseRepo.childId == childId) FirebaseRepo.childId = null
-                                        FirebaseRepo.fetchChildren(code) { updated ->
-                                            if (updated.isEmpty()) dialog?.dismiss() else renderRows(updated)
-                                        }
-                                    } else {
-                                        Toast.makeText(this@ParentDashboardActivity, "O'chirib bo'lmadi — internetni tekshiring", Toast.LENGTH_SHORT).show()
-                                    }
+                                        FirebaseRepo.fetchChildren(code) { updated -> if (updated.isEmpty()) dialog?.dismiss() else renderRows(updated) }
+                                    } else Toast.makeText(this@ParentDashboardActivity, "O'chirib bo'lmadi — internetni tekshiring", Toast.LENGTH_SHORT).show()
                                 }
-                            }
-                            .setNegativeButton("Bekor qilish", null)
-                            .show()
+                            }.setNegativeButton("Bekor qilish", null).show()
                     }
                 }
-                row.addView(label)
-                row.addView(deleteBtn)
-                container.addView(row)
+                row.addView(label); row.addView(deleteBtn); container.addView(row)
             }
         }
         renderRows(children)
-
-        dialog = AlertDialog.Builder(this)
-            .setTitle("Qaysi farzand?")
-            .setView(container)
-            .setNegativeButton("Yopish", null)
-            .create()
+        dialog = AlertDialog.Builder(this).setTitle("Qaysi farzand?").setView(container).setNegativeButton("Yopish", null).create()
         dialog.show()
     }
 
@@ -197,17 +210,14 @@ class ParentDashboardActivity : AppCompatActivity() {
             if (loc == null) return@listenLatestLocation
             val time = timeFmt.format(Date(loc.vaqtMs)); val minutesAgo = ((System.currentTimeMillis() - loc.vaqtMs) / 60000).coerceAtLeast(0)
             binding.locationTimeAgo.text = "$time • $minutesAgo daqiqa oldin"; binding.locationCoords.text = "${"%.5f".format(Locale.US, loc.lat)}, ${"%.5f".format(Locale.US, loc.lng)}"; binding.headerStatus.text = if (minutesAgo <= 45) "● FAOL" else "● NOFAOL"
-            binding.headerStatus.setTextColor(android.graphics.Color.parseColor(if (minutesAgo <= 45) "#2ECC71" else "#8B96A5"))
+            binding.headerStatus.setTextColor(Color.parseColor(if (minutesAgo <= 45) "#2ECC71" else "#8B96A5"))
         }
     }
 
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
         val now = System.currentTimeMillis()
-        if (now - lastBackPressMs <= doubleBackWindowMs) {
-            finishAndRemoveTask()
-            return
-        }
+        if (now - lastBackPressMs <= doubleBackWindowMs) { finishAndRemoveTask(); return }
         lastBackPressMs = now
         Toast.makeText(this, "Chiqish uchun yana bir marta 'Ortga' tugmasini bosing", Toast.LENGTH_SHORT).show()
     }
