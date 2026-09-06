@@ -2,6 +2,8 @@ package uz.oilanazorati.parentcontrol.ui
 
 import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -14,6 +16,7 @@ import java.util.concurrent.Executors
 
 class ScreenshotHistoryActivity : AppCompatActivity() {
     private val executor = Executors.newSingleThreadExecutor()
+    private val staleRequestHandler = Handler(Looper.getMainLooper())
     private lateinit var box: LinearLayout
     private lateinit var requestButton: Button
     private lateinit var statusText: TextView
@@ -22,10 +25,23 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
     private var projectionStatusListener: ListenerRegistration? = null
     private var activeRequestId: String? = null
 
+    private val staleRequestWatchdog = object : Runnable {
+        override fun run() {
+            ScreenshotRepository.failStaleScreenshotRequest()
+            staleRequestHandler.postDelayed(this, 5_000L)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         buildUi()
         loadHistory()
+
+        // Eski requested/processing so'rov panelni band qilib qo'ymasligi uchun
+        // mavjud stale so'rovni tekshiramiz va keyin doimiy watchdog ishlaydi.
+        ScreenshotRepository.failStaleScreenshotRequest()
+        staleRequestHandler.post(staleRequestWatchdog)
+
         statusListener = ScreenshotRepository.listenScreenshotRequestStatus { requestId, status ->
             runOnUiThread { handleRequestStatus(requestId, status) }
         }
@@ -133,7 +149,7 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
                 activeRequestId = null
                 requestButton.isEnabled = true
                 requestButton.text = "📸 Hozir screenshot olish"
-                statusText.text = "❌ Screenshot olish muvaffaqiyatsiz bo'ldi. Bola qurilmasida ekran yozish ruxsati va internetni tekshiring."
+                statusText.text = "❌ Screenshot olish o'z vaqtida yakunlanmadi. Bola qurilmasida ekran yozish ruxsati va internetni tekshiring."
                 loadHistory()
             }
         }
@@ -193,6 +209,7 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        staleRequestHandler.removeCallbacksAndMessages(null)
         statusListener?.remove()
         projectionStatusListener?.remove()
         executor.shutdownNow()
