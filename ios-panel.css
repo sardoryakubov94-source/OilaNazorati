@@ -1,50 +1,26 @@
 /* iOS/Safari parent panel visual layer */
-:root{--ios-bg:#f5f7fb;--ios-card:#fff;--ios-ink:#111827;--ios-muted:#7b8798;--ios-line:#e4e8ef;--ios-blue:#4169c7}
-body{background:var(--ios-bg)!important;padding-bottom:82px!important}
+:root{--ios-bg:#f5f7fb;--ios-line:#e3e8ef;--ios-muted:#7b8798;--ios-blue:#4169c7}
+body{background:var(--ios-bg)!important}
 .wrap{max-width:760px!important;padding-left:16px!important;padding-right:16px!important}
 .top{box-shadow:0 4px 18px rgba(17,24,39,.04)!important}
-.head{height:64px!important}
-.logo{width:40px!important;height:40px!important;border-radius:13px!important;box-shadow:0 6px 16px rgba(17,24,39,.14)}
+.head{height:64px!important}.logo{width:40px!important;height:40px!important;border-radius:13px!important;box-shadow:0 6px 16px rgba(17,24,39,.14)}
 .head b{font-size:16px!important}.head small{font-size:11px!important}
-.screen{padding-top:18px!important;padding-bottom:96px!important}
-.title{margin-bottom:12px!important;align-items:flex-start!important}
-.title h2{font-size:22px!important;margin-bottom:3px!important}
-#childId{font-size:11px!important}
-#dashboard>.title{position:relative;padding:2px 0 0}
-#dashboard>.title>button{margin-top:4px!important}
-.tabs{display:none!important}
+.screen{padding-top:18px!important;padding-bottom:80px!important}
+.title{margin-bottom:12px!important;align-items:center!important}.title h2{font-size:22px!important;margin-bottom:3px!important}#childId{font-size:11px!important}
+#dashboard>.title{gap:7px!important}.title button{font-size:12px!important;padding:8px 9px!important}
+.tabs{grid-template-columns:repeat(4,1fr)!important;gap:8px!important;margin:0 0 14px!important;position:sticky;top:64px;z-index:15;padding:7px 0;background:rgba(245,247,251,.96);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.tabs button{min-height:74px!important;border-radius:16px!important;padding:9px 3px!important;font-size:10px!important;box-shadow:0 3px 10px rgba(17,24,39,.035)}
+.tabs button svg{width:23px!important;height:23px!important;margin-bottom:4px!important}
+.tabs button.active{box-shadow:0 6px 16px rgba(17,24,39,.16)!important}
 #content{min-height:260px}
-.ios-bottom-nav{position:fixed;left:0;right:0;bottom:0;z-index:45;display:grid;grid-template-columns:repeat(5,1fr);gap:3px;padding:8px 8px calc(8px + env(safe-area-inset-bottom));background:rgba(255,255,255,.96);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border-top:1px solid var(--ios-line);box-shadow:0 -8px 28px rgba(17,24,39,.08)}
-.ios-bottom-nav button{min-width:0;border:0;background:transparent;border-radius:13px;color:#778294;padding:7px 2px 5px;font-size:9px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:3px}
-.ios-bottom-nav button span{height:23px;display:grid;place-items:center;font-size:20px;line-height:1;font-weight:500}
-.ios-bottom-nav button b{font-size:9px;font-weight:800;white-space:nowrap}
-.ios-bottom-nav button.active{background:#111827;color:#fff;box-shadow:0 5px 14px rgba(17,24,39,.18)}
-.ios-child-status{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--ios-line);border-radius:16px;padding:11px 13px;margin:0 0 13px;box-shadow:0 5px 18px rgba(17,24,39,.05)}
-.ios-status-dot{width:9px;height:9px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 5px #dcfce7;flex:0 0 9px}
-.ios-child-status b{display:block;font-size:12px}.ios-child-status small{display:block;color:var(--ios-muted);font-size:10px;margin-top:2px}
 .summary{grid-template-columns:repeat(4,1fr)!important;gap:9px!important;margin-top:12px}
-.box{padding:13px 9px!important;border-radius:16px!important;text-align:center;min-width:0}
+.box{padding:13px 8px!important;border-radius:16px!important;text-align:center;min-width:0;box-shadow:0 5px 16px rgba(17,24,39,.04)}
 .box b{font-size:19px!important;margin-top:3px}.box small{font-size:9px!important}
 .loc{border-radius:20px!important;padding:17px!important;box-shadow:0 10px 26px rgba(17,24,39,.14)}
 .mapEmbedWrap{margin-top:12px!important}.mapEmbed{height:175px!important}
-.row{border-radius:16px!important;padding:14px!important;margin-bottom:8px!important;box-shadow:0 4px 14px rgba(17,24,39,.035)}
-.row p{font-size:12px!important}.rowtop b{font-size:13px}
-.ssgrid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important}
-.ss{min-height:105px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:16px!important;box-shadow:0 5px 16px rgba(17,24,39,.04)}
-.upsell{border-radius:20px!important;box-shadow:0 10px 24px rgba(58,45,0,.15)}
-.premiumBadge{border-radius:20px!important}
-.ios-sheet-backdrop{position:fixed;inset:0;background:rgba(8,12,20,.42);z-index:70;display:none;align-items:flex-end;padding:0}
-.ios-sheet-backdrop.open{display:flex}
-.ios-sheet{width:100%;max-width:760px;margin:0 auto;background:#fff;border-radius:24px 24px 0 0;padding:10px 14px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -18px 50px rgba(0,0,0,.18);animation:iosSheetIn .18s ease-out}
-.ios-sheet-grab{width:38px;height:4px;border-radius:9px;background:#d2d7df;margin:3px auto 14px}
-.ios-sheet-title{font-size:18px;font-weight:900;padding:0 4px 10px}
-.ios-sheet-actions{display:grid;gap:7px}
-.ios-sheet-action{width:100%;border:1px solid var(--ios-line);background:#f9fafc;border-radius:15px;padding:12px;display:flex;align-items:center;text-align:left;gap:11px;color:#111827}
-.ios-sheet-icon{width:38px;height:38px;border-radius:12px;background:#eef2ff;display:grid;place-items:center;font-size:19px;flex:0 0 38px}
-.ios-sheet-action b{display:block;font-size:13px}.ios-sheet-action small{display:block;color:#7b8798;font-size:10px;margin-top:2px}
-.ios-chevron{margin-left:auto;color:#9aa5b5;font-size:23px}
-.ios-sheet-cancel{width:100%;border:0;background:#111827;color:#fff;border-radius:14px;padding:13px;margin-top:10px;font-weight:850}
-.ios-logout{font-size:12px!important;padding:9px 12px!important;border-radius:12px!important}
-@keyframes iosSheetIn{from{transform:translateY(18px);opacity:.7}to{transform:translateY(0);opacity:1}}
-@media(min-width:700px){.ios-bottom-nav{display:none}body{padding-bottom:0!important}.screen{padding-bottom:100px!important}}
-@media(max-width:380px){.summary{grid-template-columns:repeat(2,1fr)!important}.ios-bottom-nav button b{font-size:8px}}
+.row{border-radius:16px!important;padding:14px!important;margin-bottom:8px!important;box-shadow:0 4px 14px rgba(17,24,39,.035)}.row p{font-size:12px!important}.rowtop b{font-size:13px}
+.ssgrid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important}.ss{min-height:105px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:16px!important;box-shadow:0 5px 16px rgba(17,24,39,.04)}
+.upsell{border-radius:20px!important;box-shadow:0 10px 24px rgba(58,45,0,.15)}.premiumBadge{border-radius:20px!important}
+.premiumNavBtn{font-size:11px!important}
+@media(max-width:430px){.tabs{grid-template-columns:repeat(4,1fr)!important}.tabs button{min-height:70px!important;font-size:9px!important}.tabs button svg{width:21px!important;height:21px!important}.summary{grid-template-columns:repeat(2,1fr)!important}.screen{padding-bottom:90px!important}}
+@media(min-width:700px){.tabs{position:sticky;top:0}}
