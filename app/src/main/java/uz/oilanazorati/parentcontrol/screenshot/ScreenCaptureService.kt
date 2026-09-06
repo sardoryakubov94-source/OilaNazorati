@@ -67,6 +67,11 @@ class ScreenCaptureService : Service() {
         settingsListener = ScreenshotRepository.listenSettings { settings = it }
         ensureRequestListener()
         handler.post(evalRunnable)
+        // Jarayon yangi boshlanganda avvalgi proyeksiya albatta tugagan
+        // bo'ladi (MediaProjection process bilan birga yashaydi) — shu
+        // sababli holatni "nofaol" deb yangilab, ota-ona paneli eski
+        // ("faol") holatda qolib ketmasligini ta'minlaymiz.
+        ScreenshotRepository.updateProjectionStatus(false)
     }
 
     private fun ensureRequestListener() {
@@ -155,6 +160,7 @@ class ScreenCaptureService : Service() {
             )
             crashlytics.log("startProjection: virtual display created ok")
             hasLiveProjection = true
+            ScreenshotRepository.updateProjectionStatus(true)
             waitingRemoteRequestId?.let {
                 waitingRemoteRequestId = null
                 queueRemoteCapture(it)
@@ -371,6 +377,7 @@ class ScreenCaptureService : Service() {
 
     private fun cleanupProjection() {
         cancelPendingCaptureWatch()
+        if (hasLiveProjection) ScreenshotRepository.updateProjectionStatus(false)
         hasLiveProjection = false
         virtualDisplay?.release()
         virtualDisplay = null

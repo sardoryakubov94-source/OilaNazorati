@@ -17,7 +17,9 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
     private lateinit var box: LinearLayout
     private lateinit var requestButton: Button
     private lateinit var statusText: TextView
+    private lateinit var connectionStatusText: TextView
     private var statusListener: ListenerRegistration? = null
+    private var projectionStatusListener: ListenerRegistration? = null
     private var activeRequestId: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,6 +28,20 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
         loadHistory()
         statusListener = ScreenshotRepository.listenScreenshotRequestStatus { requestId, status ->
             runOnUiThread { handleRequestStatus(requestId, status) }
+        }
+        projectionStatusListener = ScreenshotRepository.listenProjectionStatus { active, updatedAt ->
+            runOnUiThread { handleProjectionStatus(active, updatedAt) }
+        }
+    }
+
+    private fun handleProjectionStatus(active: Boolean, updatedAt: Long) {
+        connectionStatusText.text = if (active) {
+            "🟢 Ekran nazorati ulangan"
+        } else {
+            val whenText = if (updatedAt > 0) {
+                " (" + SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(updatedAt)) + ")"
+            } else ""
+            "🔴 Ekran nazorati ulanmagan$whenText — farzand qurilmasida ilova ochilishi kerak"
         }
     }
 
@@ -42,6 +58,13 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
             textSize = 24f
             setPadding(0, 0, 0, 18)
         })
+
+        connectionStatusText = TextView(this).apply {
+            text = "Ulanish holati tekshirilmoqda..."
+            textSize = 13f
+            setPadding(0, 0, 0, 14)
+        }
+        box.addView(connectionStatusText)
 
         requestButton = Button(this).apply {
             text = "📸 Hozir screenshot olish"
@@ -171,6 +194,7 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         statusListener?.remove()
+        projectionStatusListener?.remove()
         executor.shutdownNow()
         super.onDestroy()
     }

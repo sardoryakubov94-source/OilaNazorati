@@ -1,22 +1,15 @@
 package uz.oilanazorati.parentcontrol
 
 import android.app.Application
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.core.app.NotificationCompat
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
-import uz.oilanazorati.parentcontrol.ui.ScreenCaptureConsentActivity
 
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
         restoreSavedPairing(this)
         applySavedTheme(this)
-        remindChildAboutScreenCaptureConsent(this)
     }
 
     companion object {
@@ -36,37 +29,6 @@ class App : Application() {
             AppCompatDelegate.setDefaultNightMode(
                 if (prefs.getBoolean("light_theme", false)) AppCompatDelegate.MODE_NIGHT_NO
                 else AppCompatDelegate.MODE_NIGHT_YES
-            )
-        }
-
-        // MUHIM: bu yerda avvalgidek doimiy "screen_capture_consented" bayrog'iga
-        // qarab abadiy yashirilmaydi — chunki Android MediaProjection ruxsati
-        // vaqtinchalik: qurilma qayta yuklanganda yoki ilova jarayoni tizim
-        // tomonidan tugatilganda ruxsat yo'qoladi va foydalanuvchi buni bilmay
-        // qoladi, screenshot esa sukut bilan ishlamay qolaveradi. Shuning uchun
-        // "hozir jonli proyeksiya bormi" (jarayon davomida saqlanadigan belgi)
-        // tekshiriladi — u har process qayta boshlanganda tabiiy ravishda
-        // false bo'lib, eslatma yana ko'rsatiladi.
-        fun remindChildAboutScreenCaptureConsent(context: Context) {
-            val prefs = context.getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
-            if (!prefs.getBoolean("is_child_device", false)) return
-            if (uz.oilanazorati.parentcontrol.screenshot.ScreenCaptureService.hasLiveProjection) return
-            if (android.os.Build.VERSION.SDK_INT >= 26) {
-                context.getSystemService(NotificationManager::class.java).createNotificationChannel(
-                    NotificationChannel("oila_nazorati_screen_setup", "Ekran nazorati sozlamasi", NotificationManager.IMPORTANCE_DEFAULT)
-                )
-            }
-            val intent = Intent(context, ScreenCaptureConsentActivity::class.java)
-            val pending = PendingIntent.getActivity(context, 902, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-            context.getSystemService(NotificationManager::class.java).notify(
-                902,
-                NotificationCompat.Builder(context, "oila_nazorati_screen_setup")
-                    .setSmallIcon(R.drawable.ic_blank)
-                    .setContentTitle("Oila Nazorati — ekran nazorati")
-                    .setContentText("Ekran nazoratini yoqish uchun bir martalik Android ruxsatini bering")
-                    .setContentIntent(pending)
-                    .setAutoCancel(true)
-                    .build()
             )
         }
     }

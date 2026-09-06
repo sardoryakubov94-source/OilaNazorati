@@ -16,11 +16,5 @@ class BootReceiver : BroadcastReceiver() {
 
         val svcIntent = Intent(context, MonitorForegroundService::class.java)
         ContextCompat.startForegroundService(context, svcIntent)
-
-        // Reboot MediaProjection ruxsatini har doim bekor qiladi — shuning
-        // uchun bola qurilmasiga ekran nazoratini qayta yoqish kerakligini
-        // eslatamiz (avtomatik qayta yoqib bo'lmaydi, tizim foydalanuvchidan
-        // yangi tasdiq talab qiladi).
-        uz.oilanazorati.parentcontrol.App.Companion.remindChildAboutScreenCaptureConsent(context)
     }
 }

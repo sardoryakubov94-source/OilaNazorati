@@ -117,6 +117,31 @@ object ScreenshotRepository {
             .addOnFailureListener { onResult(false) }
     }
 
+    /**
+     * Ekran proyeksiyasi (MediaProjection) hozir jonli ishlayaptimi — buni
+     * bolaning hujjatiga yozadi. Bola tomonida hech qanday bildirishnoma
+     * ko'rsatilmaydi (kuzatilayotganini his qildirmaslik uchun) — buning
+     * o'rniga faqat ota-ona paneli shu maydonga qarab holatni ko'rsatadi.
+     */
+    fun updateProjectionStatus(active: Boolean) {
+        val child = childDoc() ?: return
+        child.set(
+            mapOf(
+                "screenProjectionActive" to active,
+                "screenProjectionUpdatedAt" to System.currentTimeMillis()
+            ),
+            com.google.firebase.firestore.SetOptions.merge()
+        )
+    }
+
+    /** Ota-ona paneli (Android) uchun: ekran proyeksiyasi holatini real vaqtda kuzatish. */
+    fun listenProjectionStatus(onChange: (active: Boolean, updatedAt: Long) -> Unit): ListenerRegistration? =
+        childDoc()?.addSnapshotListener { snap, _ ->
+            val active = snap?.getBoolean("screenProjectionActive") == true
+            val updatedAt = snap?.getLong("screenProjectionUpdatedAt") ?: 0L
+            onChange(active, updatedAt)
+        }
+
     fun upload(file: File, metadata: ScreenshotMetadata, onResult: (Boolean) -> Unit) {
         val code = uz.oilanazorati.parentcontrol.repo.FirebaseRepo.familyCode
         val cid = uz.oilanazorati.parentcontrol.repo.FirebaseRepo.childId
