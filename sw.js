@@ -1,6 +1,6 @@
-// Oila Nazorati — service worker v2026.09.06b
-// Inject the latest shared and iOS parent-panel styles into live pages.
-const STYLE_VERSION='20260906';
+// Oila Nazorati — service worker v2026.09.06c
+// Inject shared styles and the parent web screenshot request helper into live pages.
+const STYLE_VERSION='20260906c';
 self.addEventListener('install',e=>{self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});
 self.addEventListener('fetch',e=>{
@@ -19,6 +19,9 @@ self.addEventListener('fetch',e=>{
       }
       if(url.pathname.endsWith('/panel.html')&&!text.includes('ios-panel.css')){
         text=text.replace('</head>','<link rel="stylesheet" href="ios-panel.css?v='+STYLE_VERSION+'"></head>');
+      }
+      if(url.pathname.endsWith('/panel.html')&&!text.includes('screenshot-request.js')){
+        text=text.replace('</body>','<script type="module" src="screenshot-request.js?v='+STYLE_VERSION+'"></script></body>');
       }
       return new Response(text,{status:res.status,statusText:res.statusText,headers:res.headers});
     }).catch(()=>caches.match(e.request))
