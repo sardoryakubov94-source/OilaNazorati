@@ -83,33 +83,43 @@ class ParentDashboardActivity : AppCompatActivity() {
         val content = scroll.getChildAt(0) as? LinearLayout ?: return
         if (content.findViewWithTag<View>("ambient_audio_card") != null) return
 
+        val density = resources.displayMetrics.density
         val card = LinearLayout(this).apply {
             tag = "ambient_audio_card"
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(18, 16, 18, 16)
+            // Boshqa kartalar kabi mavzuga mos rang (kunduzgi: oq, tungi: to'q
+            // jigarrang) ishlatiladi — ilgari doim oq (Color.WHITE) bo'lgani
+            // uchun tungi mavzuda boshqa kartalardan ajralib, "yopishib"
+            // ko'rinardi.
             background = GradientDrawable().apply {
                 cornerRadius = 22f
-                setColor(Color.WHITE)
-                setStroke(1, Color.parseColor("#E1E6EE"))
+                setColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_surface))
             }
             elevation = 3f
             isClickable = true
             isFocusable = true
             setOnClickListener { openIfChildSelected { AmbientListenActivity::class.java } }
+            // Pastdagi bo'lim bilan orasiga masofa — kartalar bir-biriga
+            // yopishib qolmasligi uchun.
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
+                topMargin = (4 * density).toInt()
+                bottomMargin = (12 * density).toInt()
+            }
         }
         val icon = TextView(this).apply { text = "🎙️"; textSize = 28f; setPadding(0, 0, 14, 0) }
         val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) }
         texts.addView(TextView(this).apply {
             text = "Ovoz"
             textSize = 16f
-            setTextColor(Color.parseColor("#111827"))
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_text_primary))
             setTypeface(typeface, android.graphics.Typeface.BOLD)
         })
         texts.addView(TextView(this).apply {
             text = "Jonli eshitish"
             textSize = 12f
-            setTextColor(Color.parseColor("#697586"))
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
             setPadding(0, 4, 0, 0)
         })
         val arrow = TextView(this).apply { text = "›"; textSize = 28f; setTextColor(Color.parseColor("#4D6FD6")) }
