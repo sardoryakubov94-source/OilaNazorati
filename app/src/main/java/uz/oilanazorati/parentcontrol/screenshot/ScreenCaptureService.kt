@@ -34,401 +34,99 @@ class ScreenCaptureService : Service() {
     private var pending: PendingCapture? = null
     private var captureInProgress = false
     private var waitingRemoteRequestId: String? = null
-
-    // Ekran statik bo'lsa (masalan, ekran qulflangan yoki hech narsa
-    // o'zgarmayapti), ImageReader yangi kadr chiqarmasligi mumkin va
-    // so'rov "processing" holatida abadiy osilib qolardi. Shu sababli
-    // kadr kutish uchun qat'iy vaqt chegarasi va faol so'rov (polling)
-    // qo'shildi.
-    private val pollRunnable = object : Runnable {
-        override fun run() {
-            if (pending == null || captureInProgress) return
-            val image = imageReader?.acquireLatestImage()
-            if (image != null) {
-                processImage(image)
-            } else {
-                handler.postDelayed(this, CAPTURE_POLL_INTERVAL_MS)
-            }
-        }
-    }
+    private val pollRunnable = object : Runnable { override fun run() { if (pending == null || captureInProgress) return; val image = imageReader?.acquireLatestImage(); if (image != null) processImage(image) else handler.postDelayed(this, CAPTURE_POLL_INTERVAL_MS) } }
     private val captureTimeoutRunnable = Runnable { onCaptureTimeout() }
 
-    data class PendingCapture(
-        val packageName: String,
-        val threshold: Int,
-        val usageSeconds: Long,
-        val key: String,
-        val remoteRequestId: String? = null
-    )
+    data class PendingCapture(val packageName: String, val threshold: Int, val usageSeconds: Long, val key: String, val remoteRequestId: String? = null)
 
     override fun onCreate() {
-        super.onCreate()
-        createNotificationChannel()
-        settingsListener = ScreenshotRepository.listenSettings { settings = it }
-        ensureRequestListener()
-        handler.post(evalRunnable)
-        // Jarayon yangi boshlanganda avvalgi proyeksiya albatta tugagan
-        // bo'ladi (MediaProjection process bilan birga yashaydi) — shu
-        // sababli holatni "nofaol" deb yangilab, ota-ona paneli eski
-        // ("faol") holatda qolib ketmasligini ta'minlaymiz.
-        ScreenshotRepository.updateProjectionStatus(false)
+        super.onCreate(); createNotificationChannel()
+        settingsListener = ScreenshotRepository.listenSettings { newSettings ->
+            settings = newSettings
+            if (!newSettings.enabled) {
+                waitingRemoteRequestId = null
+                cleanupProjection()
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+            }
+        }
+        ensureRequestListener(); handler.post(evalRunnable); ScreenshotRepository.updateProjectionStatus(false)
     }
 
     private fun ensureRequestListener() {
         if (requestListener != null) return
         requestListener = ScreenshotRepository.listenScreenshotRequests { requestId ->
-            if (projection == null) {
-                waitingRemoteRequestId = requestId
-            } else {
-                queueRemoteCapture(requestId)
-            }
+            if (!settings.enabled) return@listenScreenshotRequests
+            if (projection == null) waitingRemoteRequestId = requestId else queueRemoteCapture(requestId)
         }
     }
 
-    private val evalRunnable = object : Runnable {
-        override fun run() {
-            evaluateAndQueue()
-            handler.postDelayed(this, 30_000L)
-        }
-    }
+    private val evalRunnable = object : Runnable { override fun run() { evaluateAndQueue(); handler.postDelayed(this, 30_000L) } }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_STOP) {
-            stopSelf()
-            return START_NOT_STICKY
-        }
+        if (intent?.action == ACTION_STOP) { cleanupProjection(); stopSelf(); return START_NOT_STICKY }
+        if (!settings.enabled) return START_NOT_STICKY
         if (projection == null && intent != null) {
             val code = intent.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
-            val data = if (Build.VERSION.SDK_INT >= 33) {
-                intent.getParcelableExtra(EXTRA_RESULT_DATA, Intent::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                intent.getParcelableExtra(EXTRA_RESULT_DATA)
-            }
+            val data = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(EXTRA_RESULT_DATA, Intent::class.java) else @Suppress("DEPRECATION") intent.getParcelableExtra(EXTRA_RESULT_DATA)
             if (code == Activity.RESULT_OK && data != null) startProjection(code, data)
         }
         return START_STICKY
     }
 
     private fun startProjection(resultCode: Int, data: Intent) {
+        if (!settings.enabled) return
         val crashlytics = com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance()
-        crashlytics.setCustomKey("device_manufacturer", Build.MANUFACTURER ?: "unknown")
-        crashlytics.setCustomKey("device_model", Build.MODEL ?: "unknown")
-        crashlytics.setCustomKey("android_sdk_int", Build.VERSION.SDK_INT)
-        crashlytics.log("startProjection: begin")
         try {
-            if (Build.VERSION.SDK_INT >= 29) {
-                startForeground(
-                    NOTIFICATION_ID,
-                    notification(),
-                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
-                )
-            } else {
-                startForeground(NOTIFICATION_ID, notification())
-            }
-            crashlytics.log("startProjection: startForeground ok")
+            if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, notification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION) else startForeground(NOTIFICATION_ID, notification())
             val mgr = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-            projection = mgr.getMediaProjection(resultCode, data)
-            if (projection == null) {
-                crashlytics.log("startProjection: getMediaProjection returned null")
-                stopSelf()
-                return
-            }
-            crashlytics.log("startProjection: got projection")
-            projection?.registerCallback(object : MediaProjection.Callback() {
-                override fun onStop() {
-                    cleanupProjection()
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                    stopSelf()
-                }
-            }, handler)
+            projection = mgr.getMediaProjection(resultCode, data) ?: run { stopSelf(); return }
+            projection?.registerCallback(object : MediaProjection.Callback() { override fun onStop() { cleanupProjection(); stopForeground(STOP_FOREGROUND_REMOVE); stopSelf() } }, handler)
             val dm = Resources.getSystem().displayMetrics
-            crashlytics.setCustomKey("screen_w", dm.widthPixels)
-            crashlytics.setCustomKey("screen_h", dm.heightPixels)
             imageReader = ImageReader.newInstance(dm.widthPixels, dm.heightPixels, PixelFormat.RGBA_8888, 2)
             imageReader!!.setOnImageAvailableListener({ reader -> handleFrame(reader) }, handler)
-            crashlytics.log("startProjection: creating virtual display")
-            virtualDisplay = projection!!.createVirtualDisplay(
-                "OilaNazoratiScreenshot",
-                dm.widthPixels,
-                dm.heightPixels,
-                dm.densityDpi,
-                android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                imageReader!!.surface,
-                null,
-                handler
-            )
-            crashlytics.log("startProjection: virtual display created ok")
-            hasLiveProjection = true
-            ScreenshotRepository.updateProjectionStatus(true)
-            waitingRemoteRequestId?.let {
-                waitingRemoteRequestId = null
-                queueRemoteCapture(it)
-            }
-        } catch (e: Throwable) {
-            crashlytics.log("startProjection: FAILED")
-            crashlytics.recordException(e)
-            cleanupProjection()
-            stopSelf()
-        }
+            virtualDisplay = projection!!.createVirtualDisplay("OilaNazoratiScreenshot", dm.widthPixels, dm.heightPixels, dm.densityDpi, android.hardware.display.DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, imageReader!!.surface, null, handler)
+            hasLiveProjection = true; ScreenshotRepository.updateProjectionStatus(true)
+            waitingRemoteRequestId?.let { waitingRemoteRequestId = null; queueRemoteCapture(it) }
+        } catch (e: Throwable) { crashlytics.recordException(e); cleanupProjection(); stopSelf() }
     }
 
     private fun queueRemoteCapture(requestId: String) {
-        if (pending != null || captureInProgress || projection == null) return
-        val now = System.currentTimeMillis()
-        val usm = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager
+        if (!settings.enabled || pending != null || captureInProgress || projection == null) return
+        val now = System.currentTimeMillis(); val usm = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager
         val current = if (usm != null) currentForegroundPackage(usm, now) else null
-        val usageSec = if (usm != null && current != null) {
-            val start = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-            }.timeInMillis
-            (usm.queryAndAggregateUsageStats(start, now)[current]?.totalTimeInForeground ?: 0L) / 1000L
-        } else 0L
-        val pkg = current ?: "uz.oilanazorati.screen"
-        pending = PendingCapture(
-            packageName = pkg,
-            threshold = 0,
-            usageSeconds = usageSec,
-            key = "remote_$requestId",
-            remoteRequestId = requestId
-        )
-        ScreenshotRepository.markScreenshotRequest(requestId, "processing")
-        schedulePendingCaptureWatch()
+        val usageSec = if (usm != null && current != null) { val start = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY,0);set(Calendar.MINUTE,0);set(Calendar.SECOND,0);set(Calendar.MILLISECOND,0) }.timeInMillis; (usm.queryAndAggregateUsageStats(start, now)[current]?.totalTimeInForeground ?: 0L)/1000L } else 0L
+        pending = PendingCapture(current ?: "uz.oilanazorati.screen", 0, usageSec, "remote_$requestId", requestId)
+        ScreenshotRepository.markScreenshotRequest(requestId, "processing"); schedulePendingCaptureWatch()
     }
 
     private fun evaluateAndQueue() {
-        if (projection == null || !settings.enabled || pending != null || captureInProgress) return
-        val usm = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager ?: return
-        val cal = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val now = System.currentTimeMillis()
-        val stats = usm.queryAndAggregateUsageStats(cal.timeInMillis, now)
-        val userStats = stats.filter { (pkg, s) ->
-            pkg != packageName &&
-                s.totalTimeInForeground > 0 &&
-                (getApplicationInfoSafe(pkg)?.flags?.and(android.content.pm.ApplicationInfo.FLAG_SYSTEM) ?: 0) == 0
-        }
-        val auto = if (settings.autoTop3Enabled) {
-            userStats.entries
-                .sortedByDescending { it.value.totalTimeInForeground }
-                .take(3)
-                .map { it.key }
-                .toSet()
-        } else emptySet()
-        val targets = auto + settings.manualPackageNames.toSet()
-        val current = currentForegroundPackage(usm, now) ?: return
-        if (current !in targets) return
-
-        val usageSec: Long = (stats[current]?.totalTimeInForeground ?: 0L) / 1000L
-        val frequency: Long = settings.frequencyMinutes.coerceIn(15, 60).toLong()
-        val minute: Long = usageSec / 60L
-        val base: Long = (minute / frequency) * frequency
-        if (base < frequency) return
-
-        val child = uz.oilanazorati.parentcontrol.repo.FirebaseRepo.childId ?: return
-        val date = todayKey()
-        val candidates: List<Int> = listOf(base.toInt(), (base + 1L).toInt(), (base + 2L).toInt())
-            .filter { minute >= it.toLong() }
-        val threshold = candidates.firstOrNull {
-            !prefs.getBoolean(triggerKey(child, current, date, it), false)
-        } ?: return
-        val key = triggerKey(child, current, date, threshold)
-        ScreenshotRepository.reserveTrigger(key) { reserved ->
-            if (reserved) {
-                pending = PendingCapture(current, threshold, usageSec, key)
-                schedulePendingCaptureWatch()
-            }
-        }
+        if (!settings.enabled || projection == null || pending != null || captureInProgress) return
+        val usm = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager ?: return; val cal = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY,0);set(Calendar.MINUTE,0);set(Calendar.SECOND,0);set(Calendar.MILLISECOND,0) }; val now=System.currentTimeMillis(); val stats=usm.queryAndAggregateUsageStats(cal.timeInMillis,now)
+        val userStats=stats.filter { (pkg,s)->pkg!=packageName&&s.totalTimeInForeground>0&&(getApplicationInfoSafe(pkg)?.flags?.and(android.content.pm.ApplicationInfo.FLAG_SYSTEM)?:0)==0 }
+        val auto=if(settings.autoTop3Enabled) userStats.entries.sortedByDescending{it.value.totalTimeInForeground}.take(3).map{it.key}.toSet() else emptySet(); val targets=auto+settings.manualPackageNames.toSet(); val current=currentForegroundPackage(usm,now)?:return; if(current !in targets)return
+        val usageSec=(stats[current]?.totalTimeInForeground?:0L)/1000L; val frequency=settings.frequencyMinutes.coerceIn(15,60).toLong(); val minute=usageSec/60L; val base=(minute/frequency)*frequency; if(base<frequency)return
+        val child=uz.oilanazorati.parentcontrol.repo.FirebaseRepo.childId?:return; val date=todayKey(); val threshold=listOf(base.toInt(),(base+1).toInt(),(base+2).toInt()).filter{minute>=it}.firstOrNull{!prefs.getBoolean(triggerKey(child,current,date,it),false)}?:return; val key=triggerKey(child,current,date,threshold)
+        ScreenshotRepository.reserveTrigger(key){reserved->if(reserved){pending=PendingCapture(current,threshold,usageSec,key);schedulePendingCaptureWatch()}}
     }
 
-    private fun handleFrame(reader: ImageReader) {
-        if (pending == null || captureInProgress) return
-        val image = reader.acquireLatestImage() ?: return
-        processImage(image)
-    }
+    private fun handleFrame(reader: ImageReader){if(!settings.enabled){cleanupProjection();return};if(pending==null||captureInProgress)return;val image=reader.acquireLatestImage()?:return;processImage(image)}
+    private fun onCaptureTimeout(){val request=pending?:return;if(captureInProgress)return;cancelPendingCaptureWatch();if(request.remoteRequestId!=null)ScreenshotRepository.markScreenshotRequest(request.remoteRequestId,"failed","Ekran surati vaqtida olinmadi") else prefs.edit().putBoolean(request.key,false).apply();pending=null}
+    private fun schedulePendingCaptureWatch(){handler.removeCallbacks(pollRunnable);handler.removeCallbacks(captureTimeoutRunnable);handler.postDelayed(captureTimeoutRunnable,CAPTURE_TIMEOUT_MS);handler.postDelayed(pollRunnable,CAPTURE_POLL_INTERVAL_MS)}
+    private fun cancelPendingCaptureWatch(){handler.removeCallbacks(pollRunnable);handler.removeCallbacks(captureTimeoutRunnable)}
 
-    // Kutilgan payt ichida yangi kadr kelmasa (masalan, ekran qulflangan
-    // yoki hech narsa o'zgarmayapti), so'rovni abadiy "processing"da
-    // qoldirmaslik uchun muvaffaqiyatsiz deb belgilaymiz va bekor qilamiz.
-    private fun onCaptureTimeout() {
-        val request = pending ?: return
-        if (captureInProgress) return
-        cancelPendingCaptureWatch()
-        if (request.remoteRequestId != null) {
-            ScreenshotRepository.markScreenshotRequest(
-                request.remoteRequestId,
-                "failed",
-                "Ekran surati vaqtida olinmadi (ekran qulflangan yoki statik bo'lishi mumkin)"
-            )
-        } else {
-            prefs.edit().putBoolean(request.key, false).apply()
-        }
-        pending = null
-    }
-
-    private fun schedulePendingCaptureWatch() {
-        handler.removeCallbacks(pollRunnable)
-        handler.removeCallbacks(captureTimeoutRunnable)
-        handler.postDelayed(captureTimeoutRunnable, CAPTURE_TIMEOUT_MS)
-        handler.postDelayed(pollRunnable, CAPTURE_POLL_INTERVAL_MS)
-    }
-
-    private fun cancelPendingCaptureWatch() {
-        handler.removeCallbacks(pollRunnable)
-        handler.removeCallbacks(captureTimeoutRunnable)
-    }
-
-    private fun processImage(image: android.media.Image) {
-        val request = pending ?: run { image.close(); return }
-        captureInProgress = true
-        cancelPendingCaptureWatch()
-        var file: File? = null
-        try {
-            val dm = Resources.getSystem().displayMetrics
-            val plane = image.planes[0]
-            val pixel = plane.pixelStride
-            val row = plane.rowStride
-            val padding = row - pixel * dm.widthPixels
-            val bitmap = Bitmap.createBitmap(
-                dm.widthPixels + padding / pixel,
-                dm.heightPixels,
-                Bitmap.Config.ARGB_8888
-            )
-            bitmap.copyPixelsFromBuffer(plane.buffer)
-            val cropped = if (bitmap.width != dm.widthPixels) {
-                Bitmap.createBitmap(bitmap, 0, 0, dm.widthPixels, dm.heightPixels)
-            } else bitmap
-            file = File(cacheDir, "screenshot_${System.currentTimeMillis()}.jpg")
-            FileOutputStream(file).use { cropped.compress(Bitmap.CompressFormat.JPEG, 82, it) }
-            if (cropped !== bitmap) bitmap.recycle()
-            cropped.recycle()
-
-            val meta = ScreenshotMetadata(
-                id = "${System.currentTimeMillis()}_${request.threshold}_${request.packageName.hashCode()}",
-                childId = uz.oilanazorati.parentcontrol.repo.FirebaseRepo.childId.orEmpty(),
-                familyId = uz.oilanazorati.parentcontrol.repo.FirebaseRepo.familyCode.orEmpty(),
-                packageName = request.packageName,
-                appLabel = label(request.packageName),
-                capturedAt = System.currentTimeMillis(),
-                date = todayKey(),
-                dailyUsageSeconds = request.usageSeconds,
-                thresholdMinute = request.threshold
-            )
-            val upload = file
-            ScreenshotRepository.upload(upload, meta) { ok ->
-                upload.delete()
-                if (request.remoteRequestId != null) {
-                    ScreenshotRepository.markScreenshotRequest(
-                        request.remoteRequestId,
-                        if (ok) "completed" else "failed",
-                        if (ok) "Screenshot tayyor" else "Screenshot yuklanmadi"
-                    )
-                } else {
-                    prefs.edit().putBoolean(request.key, ok).apply()
-                }
-                pending = null
-                captureInProgress = false
-            }
-        } catch (e: Throwable) {
-            file?.delete()
-            if (request.remoteRequestId != null) {
-                ScreenshotRepository.markScreenshotRequest(request.remoteRequestId, "failed", e.message ?: "capture error")
-            } else {
-                prefs.edit().putBoolean(request.key, false).apply()
-            }
-            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
-            pending = null
-            captureInProgress = false
-        } finally {
-            image.close()
-        }
-    }
-
-    private fun label(pkg: String) = try {
-        packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
-    } catch (_: Exception) { pkg }
-
-    private fun currentForegroundPackage(usm: UsageStatsManager, now: Long): String? {
-        val ev = usm.queryEvents((now - 10 * 60_000L).coerceAtLeast(0L), now)
-        val e = android.app.usage.UsageEvents.Event()
-        var p: String? = null
-        var t = 0L
-        while (ev.hasNextEvent()) {
-            ev.getNextEvent(e)
-            if (e.eventType == android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND && e.timeStamp >= t) {
-                t = e.timeStamp
-                p = e.packageName
-            }
-        }
-        return p
-    }
-
-    private fun getApplicationInfoSafe(pkg: String) = try {
-        packageManager.getApplicationInfo(pkg, 0)
-    } catch (_: Exception) { null }
-
-    private fun todayKey() = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
-    private fun triggerKey(child: String, pkg: String, date: String, threshold: Int) =
-        "${date}_${child.hashCode()}_${pkg.hashCode()}_$threshold"
-
-    private fun cleanupProjection() {
-        cancelPendingCaptureWatch()
-        if (hasLiveProjection) ScreenshotRepository.updateProjectionStatus(false)
-        hasLiveProjection = false
-        virtualDisplay?.release()
-        virtualDisplay = null
-        imageReader?.close()
-        imageReader = null
-        projection = null
-        pending = null
-        captureInProgress = false
-    }
-
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= 26) {
-            getSystemService(NotificationManager::class.java).createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Ekran nazorati", NotificationManager.IMPORTANCE_LOW)
-            )
-        }
-    }
-
-    private fun notification() = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_blank)
-        .setContentTitle("Oila Nazorati — ekran nazorati faol")
-        .setContentText("Ekran tasvirlari ota-ona sozlamalariga ko'ra olinadi")
-        .setOngoing(true)
-        .setCategory(NotificationCompat.CATEGORY_SERVICE)
-        .build()
-
-    override fun onDestroy() {
-        handler.removeCallbacksAndMessages(null)
-        settingsListener?.remove()
-        requestListener?.remove()
-        cleanupProjection()
-        super.onDestroy()
-    }
-
-    override fun onBind(intent: Intent?): IBinder? = null
-
-    companion object {
-        const val CHANNEL_ID = "oila_nazorati_screen_capture"
-        const val NOTIFICATION_ID = 401
-        const val ACTION_STOP = "uz.oilanazorati.parentcontrol.screenshot.STOP"
-        const val EXTRA_RESULT_CODE = "result_code"
-        const val EXTRA_RESULT_DATA = "result_data"
-        const val CAPTURE_TIMEOUT_MS = 8_000L
-        const val CAPTURE_POLL_INTERVAL_MS = 500L
-
-        // MediaProjection ruxsati doimiy emas: qurilma qayta yuklanganda yoki
-        // ilova jarayoni tizim tomonidan o'chirilganda bu ruxsat yo'qoladi va
-        // foydalanuvchidan qayta so'ralishi shart. Shu sababli buni doimiy
-        // (SharedPreferences) emas, balki shu jarayon umri davomida saqlanadigan
-        // belgi sifatida ushlaymiz — jarayon qayta boshlanganda avtomatik
-        // "false" bo'lib qoladi, va App.kt qayta eslatma ko'rsatishi mumkin.
-        @Volatile var hasLiveProjection: Boolean = false
-    }
+    private fun processImage(image: android.media.Image){if(!settings.enabled){image.close();cleanupProjection();return};val request=pending?:run{image.close();return};captureInProgress=true;cancelPendingCaptureWatch();var file:File?=null;try{val dm=Resources.getSystem().displayMetrics;val plane=image.planes[0];val pixel=plane.pixelStride;val row=plane.rowStride;val padding=row-pixel*dm.widthPixels;val bitmap=Bitmap.createBitmap(dm.widthPixels+padding/pixel,dm.heightPixels,Bitmap.Config.ARGB_8888);bitmap.copyPixelsFromBuffer(plane.buffer);val cropped=if(bitmap.width!=dm.widthPixels)Bitmap.createBitmap(bitmap,0,0,dm.widthPixels,dm.heightPixels)else bitmap;file=File(cacheDir,"screenshot_${System.currentTimeMillis()}.jpg");FileOutputStream(file).use{cropped.compress(Bitmap.CompressFormat.JPEG,82,it)};if(cropped!==bitmap)bitmap.recycle();cropped.recycle();val meta=ScreenshotMetadata("${System.currentTimeMillis()}_${request.threshold}_${request.packageName.hashCode()}",uz.oilanazorati.parentcontrol.repo.FirebaseRepo.childId.orEmpty(),uz.oilanazorati.parentcontrol.repo.FirebaseRepo.familyCode.orEmpty(),request.packageName,label(request.packageName),System.currentTimeMillis(),todayKey(),request.usageSeconds,request.threshold);val upload=file;ScreenshotRepository.upload(upload,meta){ok->upload.delete();if(request.remoteRequestId!=null)ScreenshotRepository.markScreenshotRequest(request.remoteRequestId,if(ok)"completed" else "failed",if(ok)"Screenshot tayyor" else "Screenshot yuklanmadi")else prefs.edit().putBoolean(request.key,ok).apply();pending=null;captureInProgress=false}}
+        catch(e:Throwable){file?.delete();if(request.remoteRequestId!=null)ScreenshotRepository.markScreenshotRequest(request.remoteRequestId,"failed",e.message?:"capture error")else prefs.edit().putBoolean(request.key,false).apply();crashlyticsRecord(e);pending=null;captureInProgress=false}finally{image.close()}}
+    private fun crashlyticsRecord(e:Throwable)=com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
+    private fun label(pkg:String)=try{packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg,0)).toString()}catch(_:Exception){pkg}
+    private fun currentForegroundPackage(usm:UsageStatsManager,now:Long):String?{val ev=usm.queryEvents((now-10*60_000L).coerceAtLeast(0L),now);val e=android.app.usage.UsageEvents.Event();var p:String?=null;var t=0L;while(ev.hasNextEvent()){ev.getNextEvent(e);if(e.eventType==android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND&&e.timeStamp>=t){t=e.timeStamp;p=e.packageName}};return p}
+    private fun getApplicationInfoSafe(pkg:String)=try{packageManager.getApplicationInfo(pkg,0)}catch(_:Exception){null}
+    private fun todayKey()=SimpleDateFormat("yyyy-MM-dd",Locale.US).format(Date())
+    private fun triggerKey(child:String,pkg:String,date:String,threshold:Int)="${date}_${child.hashCode()}_${pkg.hashCode()}_$threshold"
+    private fun cleanupProjection(){cancelPendingCaptureWatch();if(hasLiveProjection)ScreenshotRepository.updateProjectionStatus(false);hasLiveProjection=false;virtualDisplay?.release();virtualDisplay=null;imageReader?.close();imageReader=null;projection?.stop();projection=null;pending=null;captureInProgress=false}
+    private fun createNotificationChannel(){if(Build.VERSION.SDK_INT>=26)getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL_ID,"Ekran nazorati",NotificationManager.IMPORTANCE_LOW))}
+    private fun notification()=NotificationCompat.Builder(this,CHANNEL_ID).setSmallIcon(R.drawable.ic_blank).setContentTitle("Oila Nazorati — ekran nazorati faol").setContentText("Ekran tasvirlari ota-ona sozlamalariga ko'ra olinadi").setOngoing(true).setCategory(NotificationCompat.CATEGORY_SERVICE).build()
+    override fun onDestroy(){handler.removeCallbacksAndMessages(null);settingsListener?.remove();requestListener?.remove();cleanupProjection();super.onDestroy()}
+    override fun onBind(intent:Intent?):IBinder?=null
+    companion object{const val CHANNEL_ID="oila_nazorati_screen_capture";const val NOTIFICATION_ID=401;const val ACTION_STOP="uz.oilanazorati.parentcontrol.screenshot.STOP";const val EXTRA_RESULT_CODE="result_code";const val EXTRA_RESULT_DATA="result_data";const val CAPTURE_TIMEOUT_MS=8_000L;const val CAPTURE_POLL_INTERVAL_MS=500L;@Volatile var hasLiveProjection=false}
 }
