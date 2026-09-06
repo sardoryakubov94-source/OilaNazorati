@@ -143,7 +143,7 @@ function buildUi() {
   if (!dashboard || !content || !homeTab || !homeTab.classList.contains('active')) return;
   if (card?.isConnected) return;
   card = document.createElement('div');
-  card.style.cssText = 'background:#fff;border:1px solid #e1e6ee;border-radius:18px;padding:16px;margin:0 0 12px;box-shadow:0 6px 18px #1018280a';
+  card.style.cssText = 'background:#f5f7fb;border:1px solid #e3e8ef;border-radius:18px;padding:16px;margin:0 0 22px;box-shadow:0 4px 14px rgba(17,24,39,.035)';
   card.innerHTML = '<div style="display:flex;align-items:center;gap:12px"><div style="font-size:27px">🎙️</div><div style="flex:1"><b style="display:block;font-size:16px">Ovoz</b><span style="color:#697586;font-size:12px">Jonli eshitish</span></div><span style="color:#4d6fd6;font-size:25px">›</span></div>';
   card.onclick = () => { modal.classList.add('active'); setStatus('Tayyor'); };
   content.parentNode.insertBefore(card, content);
