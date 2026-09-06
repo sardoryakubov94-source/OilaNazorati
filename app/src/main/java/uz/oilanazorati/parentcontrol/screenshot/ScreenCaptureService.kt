@@ -28,18 +28,38 @@ class ScreenCaptureService : Service() {
     private var virtualDisplay: android.hardware.display.VirtualDisplay? = null
     private var settings = ScreenshotSettings()
     private var settingsListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var requestListener: com.google.firebase.firestore.ListenerRegistration? = null
     private val handler = Handler(Looper.getMainLooper())
     private val prefs by lazy { getSharedPreferences("screenshot_trigger_state", MODE_PRIVATE) }
     private var pending: PendingCapture? = null
     private var captureInProgress = false
+    private var waitingRemoteRequestId: String? = null
 
-    data class PendingCapture(val packageName: String, val threshold: Int, val usageSeconds: Long, val key: String)
+    data class PendingCapture(
+        val packageName: String,
+        val threshold: Int,
+        val usageSeconds: Long,
+        val key: String,
+        val remoteRequestId: String? = null
+    )
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         settingsListener = ScreenshotRepository.listenSettings { settings = it }
+        ensureRequestListener()
         handler.post(evalRunnable)
+    }
+
+    private fun ensureRequestListener() {
+        if (requestListener != null) return
+        requestListener = ScreenshotRepository.listenScreenshotRequests { requestId ->
+            if (projection == null) {
+                waitingRemoteRequestId = requestId
+            } else {
+                queueRemoteCapture(requestId)
+            }
+        }
     }
 
     private val evalRunnable = object : Runnable {
@@ -116,12 +136,38 @@ class ScreenCaptureService : Service() {
                 handler
             )
             crashlytics.log("startProjection: virtual display created ok")
+            waitingRemoteRequestId?.let {
+                waitingRemoteRequestId = null
+                queueRemoteCapture(it)
+            }
         } catch (e: Throwable) {
             crashlytics.log("startProjection: FAILED")
             crashlytics.recordException(e)
             cleanupProjection()
             stopSelf()
         }
+    }
+
+    private fun queueRemoteCapture(requestId: String) {
+        if (pending != null || captureInProgress || projection == null) return
+        val now = System.currentTimeMillis()
+        val usm = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager
+        val current = if (usm != null) currentForegroundPackage(usm, now) else null
+        val usageSec = if (usm != null && current != null) {
+            val start = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            (usm.queryAndAggregateUsageStats(start, now)[current]?.totalTimeInForeground ?: 0L) / 1000L
+        } else 0L
+        val pkg = current ?: "uz.oilanazorati.screen"
+        pending = PendingCapture(
+            packageName = pkg,
+            threshold = 0,
+            usageSeconds = usageSec,
+            key = "remote_$requestId",
+            remoteRequestId = requestId
+        )
+        ScreenshotRepository.markScreenshotRequest(requestId, "processing")
     }
 
     private fun evaluateAndQueue() {
@@ -210,13 +256,26 @@ class ScreenCaptureService : Service() {
             val upload = file
             ScreenshotRepository.upload(upload, meta) { ok ->
                 upload.delete()
-                prefs.edit().putBoolean(request.key, ok).apply()
+                if (request.remoteRequestId != null) {
+                    ScreenshotRepository.markScreenshotRequest(
+                        request.remoteRequestId,
+                        if (ok) "completed" else "failed",
+                        if (ok) "Screenshot tayyor" else "Screenshot yuklanmadi"
+                    )
+                } else {
+                    prefs.edit().putBoolean(request.key, ok).apply()
+                }
                 pending = null
                 captureInProgress = false
             }
-        } catch (_: Exception) {
+        } catch (e: Throwable) {
             file?.delete()
-            prefs.edit().putBoolean(request.key, false).apply()
+            if (request.remoteRequestId != null) {
+                ScreenshotRepository.markScreenshotRequest(request.remoteRequestId, "failed", e.message ?: "capture error")
+            } else {
+                prefs.edit().putBoolean(request.key, false).apply()
+            }
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
             pending = null
             captureInProgress = false
         } finally {
@@ -280,6 +339,7 @@ class ScreenCaptureService : Service() {
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
         settingsListener?.remove()
+        requestListener?.remove()
         cleanupProjection()
         super.onDestroy()
     }
