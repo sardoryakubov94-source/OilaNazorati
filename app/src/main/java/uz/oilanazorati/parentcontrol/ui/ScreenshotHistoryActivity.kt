@@ -195,8 +195,8 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
 
         val image = ImageView(this).apply {
             layoutParams = ViewGroup.LayoutParams(-1, 500)
-            scaleType = ImageView.ScaleType.FIT_CENTER
-            contentDescription = "Screenshot — kattalashtirish uchun bosing"
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            contentDescription = "Screenshot — to'liq ko'rish uchun bosing"
             setOnClickListener {
                 val bmp = tag as? Bitmap
                 if (bmp != null) showFullScreenImage(bmp)
