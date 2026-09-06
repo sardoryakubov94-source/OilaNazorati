@@ -39,9 +39,18 @@ class App : Application() {
             )
         }
 
-        private fun remindChildAboutScreenCaptureConsent(context: Context) {
+        // MUHIM: bu yerda avvalgidek doimiy "screen_capture_consented" bayrog'iga
+        // qarab abadiy yashirilmaydi — chunki Android MediaProjection ruxsati
+        // vaqtinchalik: qurilma qayta yuklanganda yoki ilova jarayoni tizim
+        // tomonidan tugatilganda ruxsat yo'qoladi va foydalanuvchi buni bilmay
+        // qoladi, screenshot esa sukut bilan ishlamay qolaveradi. Shuning uchun
+        // "hozir jonli proyeksiya bormi" (jarayon davomida saqlanadigan belgi)
+        // tekshiriladi — u har process qayta boshlanganda tabiiy ravishda
+        // false bo'lib, eslatma yana ko'rsatiladi.
+        fun remindChildAboutScreenCaptureConsent(context: Context) {
             val prefs = context.getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
-            if (!prefs.getBoolean("is_child_device", false) || prefs.getBoolean("screen_capture_consented", false)) return
+            if (!prefs.getBoolean("is_child_device", false)) return
+            if (uz.oilanazorati.parentcontrol.screenshot.ScreenCaptureService.hasLiveProjection) return
             if (android.os.Build.VERSION.SDK_INT >= 26) {
                 context.getSystemService(NotificationManager::class.java).createNotificationChannel(
                     NotificationChannel("oila_nazorati_screen_setup", "Ekran nazorati sozlamasi", NotificationManager.IMPORTANCE_DEFAULT)

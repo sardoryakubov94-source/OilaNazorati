@@ -154,6 +154,7 @@ class ScreenCaptureService : Service() {
                 handler
             )
             crashlytics.log("startProjection: virtual display created ok")
+            hasLiveProjection = true
             waitingRemoteRequestId?.let {
                 waitingRemoteRequestId = null
                 queueRemoteCapture(it)
@@ -370,6 +371,7 @@ class ScreenCaptureService : Service() {
 
     private fun cleanupProjection() {
         cancelPendingCaptureWatch()
+        hasLiveProjection = false
         virtualDisplay?.release()
         virtualDisplay = null
         imageReader?.close()
@@ -413,5 +415,13 @@ class ScreenCaptureService : Service() {
         const val EXTRA_RESULT_DATA = "result_data"
         const val CAPTURE_TIMEOUT_MS = 8_000L
         const val CAPTURE_POLL_INTERVAL_MS = 500L
+
+        // MediaProjection ruxsati doimiy emas: qurilma qayta yuklanganda yoki
+        // ilova jarayoni tizim tomonidan o'chirilganda bu ruxsat yo'qoladi va
+        // foydalanuvchidan qayta so'ralishi shart. Shu sababli buni doimiy
+        // (SharedPreferences) emas, balki shu jarayon umri davomida saqlanadigan
+        // belgi sifatida ushlaymiz — jarayon qayta boshlanganda avtomatik
+        // "false" bo'lib qoladi, va App.kt qayta eslatma ko'rsatishi mumkin.
+        @Volatile var hasLiveProjection: Boolean = false
     }
 }
