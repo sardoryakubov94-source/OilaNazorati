@@ -39,6 +39,18 @@ class ChildSetupActivity : AppCompatActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { result ->
         if (result.values.all { it }) requestBackgroundLocationIfNeeded() else showExplanationDialog()
+        updatePermissionStatusUi()
+    }
+
+    private val microphonePermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        updatePermissionStatusUi()
+        binding.pairStatusText.text = if (granted) {
+            "✅ Mikrofon ruxsati berildi"
+        } else {
+            "Mikrofon ruxsati berilmadi"
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,6 +59,7 @@ class ChildSetupActivity : AppCompatActivity() {
         setContentView(binding.root)
         binding.btnPair.setOnClickListener { pairWithFamilyCode() }
         binding.btnGrantPermissions.setOnClickListener { permissionLauncher.launch(runtimePermissions) }
+        binding.btnMicrophonePermission.setOnClickListener { requestMicrophonePermission() }
         binding.btnUsageAccess.setOnClickListener { startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
         binding.btnScreenCapture.setOnClickListener { requestScreenCaptureConsent() }
         binding.btnDefaultPhone.setOnClickListener { requestDefaultPhoneRole() }
@@ -57,6 +70,22 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnDeviceAdmin.setOnClickListener { requestDeviceAdmin() }
         binding.btnFinish.setOnClickListener { finishSetupAndStartMonitoring() }
         restoreSavedPairingIntoUi()
+    }
+
+    private fun requestMicrophonePermission() {
+        val granted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            binding.pairStatusText.text = "✅ Mikrofon ruxsati berilgan"
+            updatePermissionStatusUi()
+            return
+        }
+        microphonePermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+    }
+
+    private fun updatePermissionStatusUi() {
+        val micGranted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        binding.btnMicrophonePermission.text = if (micGranted) "✅ Mikrofon ruxsati berilgan" else "🎙️ Mikrofon ruxsatini berish"
+        updateRoleStatusUi()
     }
 
     private fun requestDeviceAdmin() {
@@ -91,7 +120,7 @@ class ChildSetupActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        updateRoleStatusUi(); updateDeviceAdminStatusUi()
+        updateRoleStatusUi(); updatePermissionStatusUi(); updateDeviceAdminStatusUi()
         val pm = getSystemService(android.os.PowerManager::class.java)
         binding.btnBatteryOptimization.text = if (pm.isIgnoringBatteryOptimizations(packageName)) "✅ Batareya tejashdan chiqarilgan" else "🔋 Batareya tejashdan chiqarish (muhim!)"
     }
@@ -187,7 +216,7 @@ class ChildSetupActivity : AppCompatActivity() {
     private fun finishSetupAndStartMonitoring() {
         if (FirebaseRepo.familyCode == null) { binding.pairStatusText.text = "Avval oila kodini kiriting"; return }
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            binding.pairStatusText.text = "Avval Asosiy ruxsatlar ichidan mikrofon ruxsatini bering"; return
+            binding.pairStatusText.text = "Avval Mikrofon ruxsatini bering"; return
         }
         getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit().putBoolean("is_child_device", true).apply()
         ContextCompat.startForegroundService(this, Intent(this, MonitorForegroundService::class.java))
