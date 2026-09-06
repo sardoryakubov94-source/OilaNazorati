@@ -1,5 +1,5 @@
 // Oila Nazorati — service worker.
-// Panel family flow is loaded directly by panel.html; SW only adds the common notice.
+// Common notice + iOS/Safari parent-panel visual layer.
 self.addEventListener('install', (e) => { self.skipWaiting(); });
 self.addEventListener('activate', (e) => { e.waitUntil(self.clients.claim()); });
 self.addEventListener('fetch', (e) => {
@@ -15,6 +15,9 @@ self.addEventListener('fetch', (e) => {
       const text = await res.text();
       let injected = text;
       if (!injected.includes('notice.css')) injected = injected.replace('</head>', '<link rel="stylesheet" href="notice.css"></head>');
+      if (url.pathname.endsWith('/panel.html')) {
+        if (!injected.includes('ios-panel.css')) injected = injected.replace('</head>', '<link rel="stylesheet" href="ios-panel.css"></head>');
+      }
       return new Response(injected, {status: res.status, statusText: res.statusText, headers: res.headers});
     }).catch(() => caches.match(e.request))
   );
