@@ -79,6 +79,13 @@
         android:layout_marginBottom="8dp"/>
 
     <Button
+        android:id="@+id/btnScreenshotPermission"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="📸 Screenshot olishga ruxsat: yoqilgan"
+        android:layout_marginBottom="8dp"/>
+
+    <Button
         android:id="@+id/btnDefaultPhone"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
