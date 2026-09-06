@@ -33,23 +33,12 @@
             android:elevation="3dp">
 
             <!-- Logo -->
-            <FrameLayout
-                android:layout_width="52dp"
-                android:layout_height="52dp"
+            <ImageView
+                android:layout_width="60dp"
+                android:layout_height="60dp"
                 android:layout_marginEnd="12dp"
-                android:background="@drawable/bg_on_logo">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:text="ON"
-                    android:textColor="#FFFFFF"
-                    android:textStyle="bold"
-                    android:textSize="16sp"
-                    android:contentDescription="Oila nazorati logotipi"/>
-
-            </FrameLayout>
+                android:src="@drawable/ic_app_logo"
+                android:contentDescription="Oila nazorati logotipi"/>
 
             <LinearLayout
                 android:layout_width="0dp"
