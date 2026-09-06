@@ -14,6 +14,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.SetOptions
 import uz.oilanazorati.parentcontrol.databinding.ActivityChildSetupBinding
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.service.AppDeviceAdminReceiver
@@ -62,6 +63,7 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnMicrophonePermission.setOnClickListener { requestMicrophonePermission() }
         binding.btnUsageAccess.setOnClickListener { startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)) }
         binding.btnScreenCapture.setOnClickListener { requestScreenCaptureConsent() }
+        binding.btnScreenshotPermission.setOnClickListener { toggleScreenshotPermission() }
         binding.btnDefaultPhone.setOnClickListener { requestDefaultPhoneRole() }
         binding.btnDefaultSms.setOnClickListener { requestDefaultSmsRole() }
         binding.btnNotificationAccess.setOnClickListener { requestNotificationAccess() }
@@ -70,6 +72,7 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnDeviceAdmin.setOnClickListener { requestDeviceAdmin() }
         binding.btnFinish.setOnClickListener { finishSetupAndStartMonitoring() }
         restoreSavedPairingIntoUi()
+        updateScreenshotPermissionUi()
     }
 
     private fun requestMicrophonePermission() {
@@ -87,6 +90,44 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnMicrophonePermission.text = if (micGranted) "✅ Mikrofon ruxsati berilgan" else "🎙️ Mikrofon ruxsatini berish"
         updateRoleStatusUi()
     }
+
+    private fun screenshotPermissionPrefs() = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+
+    private fun isScreenshotAllowedLocally(): Boolean =
+        screenshotPermissionPrefs().getBoolean("screenshot_allowed", true)
+
+    private fun updateScreenshotPermissionUi() {
+        binding.btnScreenshotPermission.text = if (isScreenshotAllowedLocally()) {
+            "📸 Screenshot olishga ruxsat: yoqilgan"
+        } else {
+            "📸 Screenshot olishga ruxsat: o'chirilgan"
+        }
+    }
+
+    private fun toggleScreenshotPermission() {
+        val newValue = !isScreenshotAllowedLocally()
+        screenshotPermissionPrefs().edit().putBoolean("screenshot_allowed", newValue).apply()
+        updateScreenshotPermissionUi()
+
+        val code = FirebaseRepo.familyCode
+        val cid = FirebaseRepo.childId ?: FirebaseAuth.getInstance().currentUser?.uid
+        if (code != null && cid != null) {
+            db().collection("families").document(code)
+                .collection("children").document(cid)
+                .collection("screenshot_settings").document("current")
+                .set(
+                    mapOf("enabled" to newValue, "childPermission" to newValue, "updatedAt" to System.currentTimeMillis()),
+                    SetOptions.merge()
+                )
+        }
+        binding.pairStatusText.text = if (newValue) {
+            "✅ Screenshot olishga ruxsat yoqildi"
+        } else {
+            "⛔ Screenshot olish o'chirildi"
+        }
+    }
+
+    private fun db() = com.google.firebase.firestore.FirebaseFirestore.getInstance()
 
     private fun requestDeviceAdmin() {
         val compName = ComponentName(this, AppDeviceAdminReceiver::class.java)
@@ -120,7 +161,7 @@ class ChildSetupActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        updateRoleStatusUi(); updatePermissionStatusUi(); updateDeviceAdminStatusUi()
+        updateRoleStatusUi(); updatePermissionStatusUi(); updateDeviceAdminStatusUi(); updateScreenshotPermissionUi()
         val pm = getSystemService(android.os.PowerManager::class.java)
         binding.btnBatteryOptimization.text = if (pm.isIgnoringBatteryOptimizations(packageName)) "✅ Batareya tejashdan chiqarilgan" else "🔋 Batareya tejashdan chiqarish (muhim!)"
     }
