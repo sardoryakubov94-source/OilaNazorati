@@ -10,6 +10,7 @@ import uz.oilanazorati.parentcontrol.model.ScreenshotMetadata
 import uz.oilanazorati.parentcontrol.model.ScreenshotSettings
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.UUID
 
 object ScreenshotRepository {
     private val db by lazy { FirebaseFirestore.getInstance() }
@@ -36,6 +37,39 @@ object ScreenshotRepository {
             if (snap.getString("status") == "requested") {
                 onRequest(snap.getString("requestId") ?: snap.id)
             }
+        }
+
+    /** Ota-ona Android/Web panelidan bolaning qurilmasiga bir martalik screenshot so'rovi yuboradi. */
+    fun requestScreenshot(onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        val child = childDoc()
+        val uid = auth.currentUser?.uid
+        if (child == null || uid == null) {
+            onResult(false, "Farzand qurilmasi ulanmagan yoki ota-ona akkaunti aniqlanmadi")
+            return
+        }
+        val requestId = UUID.randomUUID().toString()
+        val now = System.currentTimeMillis()
+        child.collection("screenshot_requests").document("current")
+            .set(
+                mapOf(
+                    "requestId" to requestId,
+                    "status" to "requested",
+                    "requestedByUid" to uid,
+                    "createdAt" to now,
+                    "updatedAt" to now,
+                    "message" to ""
+                )
+            )
+            .addOnSuccessListener { onResult(true, requestId) }
+            .addOnFailureListener { e -> onResult(false, e.message ?: "So'rov yuborilmadi") }
+    }
+
+    /** Android parent panelida so'rov holatini real vaqtda kuzatish. */
+    fun listenScreenshotRequestStatus(onChange: (requestId: String, status: String) -> Unit): ListenerRegistration? =
+        childDoc()?.collection("screenshot_requests")?.document("current")?.addSnapshotListener { snap, error ->
+            if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
+            val id = snap.getString("requestId") ?: return@addSnapshotListener
+            onChange(id, snap.getString("status") ?: "")
         }
 
     fun markScreenshotRequest(requestId: String, status: String, message: String = "") {
@@ -114,8 +148,6 @@ object ScreenshotRepository {
             val dataRef = child.collection("screenshot_data").document(metadata.id)
             val metaRef = child.collection("screenshots").document(metadata.id)
 
-            // Store the JPEG as Firestore bytes instead of Firebase Storage.
-            // This keeps the feature usable on the Firebase Spark plan.
             dataRef.set(
                 mapOf(
                     "image" to Blob.fromBytes(imageBytes),
