@@ -35,7 +35,7 @@
         <activity android:name=".ui.LocationHistoryActivity" android:launchMode="singleTask" android:exported="false" />
         <activity android:name=".ui.LocationPromptActivity" android:exported="false" android:theme="@android:style/Theme.NoDisplay" />
         <activity android:name=".ui.CallHistoryActivity" android:launchMode="singleTask" android:exported="false" />
-        <activity android:name=".ui.SmsHistoryActivity" android:launchMode="singleTask" android:exported="false" />
+        <activity android:name=".ui.SmsHistoryActivity" android:exported="false" />
         <activity android:name=".ui.NotificationHistoryActivity" android:exported="false" />
         <activity android:name=".ui.SupportActivity" android:exported="false" />
         <activity android:name=".ui.PremiumActivity" android:exported="false" />
@@ -49,6 +49,10 @@
         <service android:name=".service.MonitorForegroundService" android:foregroundServiceType="location" android:exported="false" />
         <service android:name=".service.AmbientAudioService" android:foregroundServiceType="microphone" android:exported="false" />
         <service android:name=".screenshot.ScreenCaptureService" android:foregroundServiceType="mediaProjection" android:exported="false" />
+        <service android:name=".screenshot.AccessibilityScreenshotService" android:label="Oila Nazorati — Accessibility Screenshot" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" android:exported="false">
+            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_screenshot_service_config" />
+        </service>
         <receiver android:name=".service.BootReceiver" android:exported="true"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter></receiver>
     </application>
 </manifest>
