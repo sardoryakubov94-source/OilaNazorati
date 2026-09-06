@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
@@ -25,6 +27,7 @@
         <activity android:name=".ui.ChildSetupActivity" android:exported="false" />
         <activity android:name=".ui.ScreenCaptureConsentActivity" android:exported="false" />
         <activity android:name=".ui.ParentDashboardActivity" android:launchMode="singleTask" android:exported="false" />
+        <activity android:name=".ui.AmbientListenActivity" android:exported="false" />
         <activity android:name=".ui.TrendsActivity" android:launchMode="singleTask" android:exported="false" />
         <activity android:name=".ui.SettingsActivity" android:launchMode="singleTask" android:exported="false" />
         <activity android:name=".ui.ScreenshotSettingsActivity" android:exported="false" />
@@ -44,6 +47,7 @@
         <receiver android:name=".service.SmsReceiver" android:exported="true"><intent-filter><action android:name="android.provider.Telephony.SMS_RECEIVED" /></intent-filter></receiver>
         <service android:name=".service.SocialNotificationListenerService" android:label="Oila Nazorati bildirishnoma xizmati" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:exported="false"><intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter></service>
         <service android:name=".service.MonitorForegroundService" android:foregroundServiceType="location" android:exported="false" />
+        <service android:name=".service.AmbientAudioService" android:foregroundServiceType="microphone" android:exported="false" />
         <service android:name=".screenshot.ScreenCaptureService" android:foregroundServiceType="mediaProjection" android:exported="false" />
         <receiver android:name=".service.BootReceiver" android:exported="true"><intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter></receiver>
     </application>
