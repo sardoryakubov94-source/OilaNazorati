@@ -30,6 +30,28 @@ object ScreenshotRepository {
             onChange(snap?.toObject(ScreenshotSettings::class.java) ?: ScreenshotSettings())
         }
 
+    fun listenScreenshotRequests(onRequest: (String) -> Unit): ListenerRegistration? =
+        childDoc()?.collection("screenshot_requests")?.document("current")?.addSnapshotListener { snap, error ->
+            if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
+            if (snap.getString("status") == "requested") {
+                onRequest(snap.getString("requestId") ?: snap.id)
+            }
+        }
+
+    fun markScreenshotRequest(requestId: String, status: String, message: String = "") {
+        val child = childDoc() ?: return
+        child.collection("screenshot_requests").document("current")
+            .set(
+                mapOf(
+                    "requestId" to requestId,
+                    "status" to status,
+                    "message" to message,
+                    "updatedAt" to System.currentTimeMillis()
+                ),
+                com.google.firebase.firestore.SetOptions.merge()
+            )
+    }
+
     fun saveSettings(settings: ScreenshotSettings, onResult: (Boolean) -> Unit = {}) {
         val code = uz.oilanazorati.parentcontrol.repo.FirebaseRepo.familyCode
         val cid = uz.oilanazorati.parentcontrol.repo.FirebaseRepo.childId
@@ -147,24 +169,20 @@ object ScreenshotRepository {
             var quality = 78
 
             repeat(8) {
-                val out = ByteArrayOutputStream()
-                source.compress(Bitmap.CompressFormat.JPEG, quality, out)
-                val bytes = out.toByteArray()
-                if (bytes.size <= MAX_IMAGE_BYTES) return bytes
-
-                width = (width * 0.85f).toInt().coerceAtLeast(480)
-                height = (height * 0.85f).toInt().coerceAtLeast(480)
-                quality = (quality - 5).coerceAtLeast(45)
+                val scaled = Bitmap.createScaledBitmap(source, width, height, true)
+                try {
+                    val out = ByteArrayOutputStream()
+                    scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)
+                    val bytes = out.toByteArray()
+                    if (bytes.size <= MAX_IMAGE_BYTES) return bytes
+                } finally {
+                    scaled.recycle()
+                }
+                width = (width * 0.82f).toInt().coerceAtLeast(480)
+                height = (height * 0.82f).toInt().coerceAtLeast(480)
+                quality = (quality - 5).coerceAtLeast(40)
             }
-
-            val scaled = Bitmap.createScaledBitmap(source, width, height, true)
-            return try {
-                val out = ByteArrayOutputStream()
-                scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)
-                out.toByteArray().takeIf { it.size <= MAX_IMAGE_BYTES } ?: ByteArray(0)
-            } finally {
-                scaled.recycle()
-            }
+            return ByteArray(0)
         } finally {
             source.recycle()
         }
