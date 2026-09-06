@@ -52,6 +52,13 @@ service cloud.firestore {
           allow update: if false;
         }
 
+        // Voice recordings: paired child can upload recordings, owner can read/delete them.
+        match /voice_recordings/{docId} {
+          allow create: if isThisChildsOwnSession();
+          allow read, delete: if isRealOwner();
+          allow update: if false;
+        }
+
         match /{subcollection}/{docId} {
           allow read, write: if (isRealOwner() || isThisChildsOwnSession())
             && subcollection != 'screenshot_settings'
@@ -60,7 +67,8 @@ service cloud.firestore {
             && subcollection != 'screenshots'
             && subcollection != 'screenshot_data'
             && subcollection != 'mic_requests'
-            && subcollection != 'mic_audio';
+            && subcollection != 'mic_audio'
+            && subcollection != 'voice_recordings';
         }
       }
     }
