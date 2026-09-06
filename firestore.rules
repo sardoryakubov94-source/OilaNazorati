@@ -45,14 +45,15 @@ service cloud.firestore {
           allow create, update: if isRealOwner() || isThisChildsOwnSession();
           allow delete: if isRealOwner();
         }
-        // Short PCM chunks are written only by the paired child and read only by the owner.
+
+        // Live PCM audio chunks: only the paired child may upload; only the owner may read/delete.
         match /mic_audio/{docId} {
           allow create: if isThisChildsOwnSession();
           allow read, delete: if isRealOwner();
           allow update: if false;
         }
 
-        // Voice recordings: paired child can upload recordings, owner can read/delete them.
+        // Saved voice recordings: only the paired child may upload; only the owner may read/delete.
         match /voice_recordings/{docId} {
           allow create: if isThisChildsOwnSession();
           allow read, delete: if isRealOwner();
