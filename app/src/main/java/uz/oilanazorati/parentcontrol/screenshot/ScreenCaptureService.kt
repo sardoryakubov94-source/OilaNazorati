@@ -35,6 +35,24 @@ class ScreenCaptureService : Service() {
     private var captureInProgress = false
     private var waitingRemoteRequestId: String? = null
 
+    // Ekran statik bo'lsa (masalan, ekran qulflangan yoki hech narsa
+    // o'zgarmayapti), ImageReader yangi kadr chiqarmasligi mumkin va
+    // so'rov "processing" holatida abadiy osilib qolardi. Shu sababli
+    // kadr kutish uchun qat'iy vaqt chegarasi va faol so'rov (polling)
+    // qo'shildi.
+    private val pollRunnable = object : Runnable {
+        override fun run() {
+            if (pending == null || captureInProgress) return
+            val image = imageReader?.acquireLatestImage()
+            if (image != null) {
+                processImage(image)
+            } else {
+                handler.postDelayed(this, CAPTURE_POLL_INTERVAL_MS)
+            }
+        }
+    }
+    private val captureTimeoutRunnable = Runnable { onCaptureTimeout() }
+
     data class PendingCapture(
         val packageName: String,
         val threshold: Int,
@@ -168,6 +186,7 @@ class ScreenCaptureService : Service() {
             remoteRequestId = requestId
         )
         ScreenshotRepository.markScreenshotRequest(requestId, "processing")
+        schedulePendingCaptureWatch()
     }
 
     private fun evaluateAndQueue() {
@@ -212,15 +231,54 @@ class ScreenCaptureService : Service() {
         } ?: return
         val key = triggerKey(child, current, date, threshold)
         ScreenshotRepository.reserveTrigger(key) { reserved ->
-            if (reserved) pending = PendingCapture(current, threshold, usageSec, key)
+            if (reserved) {
+                pending = PendingCapture(current, threshold, usageSec, key)
+                schedulePendingCaptureWatch()
+            }
         }
     }
 
     private fun handleFrame(reader: ImageReader) {
+        if (pending == null || captureInProgress) return
+        val image = reader.acquireLatestImage() ?: return
+        processImage(image)
+    }
+
+    // Kutilgan payt ichida yangi kadr kelmasa (masalan, ekran qulflangan
+    // yoki hech narsa o'zgarmayapti), so'rovni abadiy "processing"da
+    // qoldirmaslik uchun muvaffaqiyatsiz deb belgilaymiz va bekor qilamiz.
+    private fun onCaptureTimeout() {
         val request = pending ?: return
         if (captureInProgress) return
-        val image = reader.acquireLatestImage() ?: return
+        cancelPendingCaptureWatch()
+        if (request.remoteRequestId != null) {
+            ScreenshotRepository.markScreenshotRequest(
+                request.remoteRequestId,
+                "failed",
+                "Ekran surati vaqtida olinmadi (ekran qulflangan yoki statik bo'lishi mumkin)"
+            )
+        } else {
+            prefs.edit().putBoolean(request.key, false).apply()
+        }
+        pending = null
+    }
+
+    private fun schedulePendingCaptureWatch() {
+        handler.removeCallbacks(pollRunnable)
+        handler.removeCallbacks(captureTimeoutRunnable)
+        handler.postDelayed(captureTimeoutRunnable, CAPTURE_TIMEOUT_MS)
+        handler.postDelayed(pollRunnable, CAPTURE_POLL_INTERVAL_MS)
+    }
+
+    private fun cancelPendingCaptureWatch() {
+        handler.removeCallbacks(pollRunnable)
+        handler.removeCallbacks(captureTimeoutRunnable)
+    }
+
+    private fun processImage(image: android.media.Image) {
+        val request = pending ?: run { image.close(); return }
         captureInProgress = true
+        cancelPendingCaptureWatch()
         var file: File? = null
         try {
             val dm = Resources.getSystem().displayMetrics
@@ -311,6 +369,7 @@ class ScreenCaptureService : Service() {
         "${date}_${child.hashCode()}_${pkg.hashCode()}_$threshold"
 
     private fun cleanupProjection() {
+        cancelPendingCaptureWatch()
         virtualDisplay?.release()
         virtualDisplay = null
         imageReader?.close()
@@ -352,5 +411,7 @@ class ScreenCaptureService : Service() {
         const val ACTION_STOP = "uz.oilanazorati.parentcontrol.screenshot.STOP"
         const val EXTRA_RESULT_CODE = "result_code"
         const val EXTRA_RESULT_DATA = "result_data"
+        const val CAPTURE_TIMEOUT_MS = 8_000L
+        const val CAPTURE_POLL_INTERVAL_MS = 500L
     }
 }
