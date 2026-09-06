@@ -16,8 +16,8 @@ object ScreenshotRepository {
     private val db by lazy { FirebaseFirestore.getInstance() }
     private val auth by lazy { FirebaseAuth.getInstance() }
 
-    // Firestore document limit is 1 MiB. Keep image bytes comfortably below it.
     private const val MAX_IMAGE_BYTES = 700 * 1024
+    private const val STALE_REQUEST_MS = 15_000L
 
     private fun childDoc(): com.google.firebase.firestore.DocumentReference? {
         val code = uz.oilanazorati.parentcontrol.repo.FirebaseRepo.familyCode ?: return null
@@ -39,7 +39,6 @@ object ScreenshotRepository {
             }
         }
 
-    /** Ota-ona Android/Web panelidan bolaning qurilmasiga bir martalik screenshot so'rovi yuboradi. */
     fun requestScreenshot(onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
         val child = childDoc()
         val uid = auth.currentUser?.uid
@@ -64,13 +63,33 @@ object ScreenshotRepository {
             .addOnFailureListener { e -> onResult(false, e.message ?: "So'rov yuborilmadi") }
     }
 
-    /** Android parent panelida so'rov holatini real vaqtda kuzatish. */
     fun listenScreenshotRequestStatus(onChange: (requestId: String, status: String) -> Unit): ListenerRegistration? =
         childDoc()?.collection("screenshot_requests")?.document("current")?.addSnapshotListener { snap, error ->
             if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
             val id = snap.getString("requestId") ?: return@addSnapshotListener
             onChange(id, snap.getString("status") ?: "")
         }
+
+    /** Eski requested/processing so'rovlar panelni abadiy band qilib qo'ymasligi uchun. */
+    fun failStaleScreenshotRequest() {
+        val child = childDoc() ?: return
+        val ref = child.collection("screenshot_requests").document("current")
+        ref.get().addOnSuccessListener { snap ->
+            if (!snap.exists()) return@addOnSuccessListener
+            val status = snap.getString("status") ?: return@addOnSuccessListener
+            if (status != "requested" && status != "processing") return@addOnSuccessListener
+            val updatedAt = snap.getLong("updatedAt") ?: snap.getLong("createdAt") ?: return@addOnSuccessListener
+            if (System.currentTimeMillis() - updatedAt < STALE_REQUEST_MS) return@addOnSuccessListener
+            ref.set(
+                mapOf(
+                    "status" to "failed",
+                    "message" to "Screenshot so'rovi vaqtida yakunlanmadi",
+                    "updatedAt" to System.currentTimeMillis()
+                ),
+                com.google.firebase.firestore.SetOptions.merge()
+            )
+        }
+    }
 
     fun markScreenshotRequest(requestId: String, status: String, message: String = "") {
         val child = childDoc() ?: return
@@ -106,23 +125,14 @@ object ScreenshotRepository {
         val ref = child.collection("screenshot_trigger_state").document(key)
         db.runTransaction { tx ->
             val snap = tx.get(ref)
-            if (snap.exists()) {
-                false
-            } else {
+            if (snap.exists()) false else {
                 tx.set(ref, mapOf("status" to "reserved", "updatedAt" to System.currentTimeMillis()))
                 true
             }
-        }
-            .addOnSuccessListener { reserved -> onResult(reserved) }
+        }.addOnSuccessListener { reserved -> onResult(reserved) }
             .addOnFailureListener { onResult(false) }
     }
 
-    /**
-     * Ekran proyeksiyasi (MediaProjection) hozir jonli ishlayaptimi — buni
-     * bolaning hujjatiga yozadi. Bola tomonida hech qanday bildirishnoma
-     * ko'rsatilmaydi (kuzatilayotganini his qildirmaslik uchun) — buning
-     * o'rniga faqat ota-ona paneli shu maydonga qarab holatni ko'rsatadi.
-     */
     fun updateProjectionStatus(active: Boolean) {
         val child = childDoc() ?: return
         child.set(
@@ -134,7 +144,6 @@ object ScreenshotRepository {
         )
     }
 
-    /** Ota-ona paneli (Android) uchun: ekran proyeksiyasi holatini real vaqtda kuzatish. */
     fun listenProjectionStatus(onChange: (active: Boolean, updatedAt: Long) -> Unit): ListenerRegistration? =
         childDoc()?.addSnapshotListener { snap, _ ->
             val active = snap?.getBoolean("screenProjectionActive") == true
@@ -149,14 +158,12 @@ object ScreenshotRepository {
             onResult(false)
             return
         }
-
         try {
             val imageBytes = prepareImage(file)
             if (imageBytes.isEmpty() || imageBytes.size > MAX_IMAGE_BYTES) {
                 onResult(false)
                 return
             }
-
             val finalMeta = metadata.copy(
                 storagePath = "firestore://screenshot_data/${metadata.id}",
                 status = "completed",
@@ -164,15 +171,9 @@ object ScreenshotRepository {
                 byteSize = imageBytes.size.toLong(),
                 createdAt = System.currentTimeMillis()
             )
-
-            val child = childDoc() ?: run {
-                onResult(false)
-                return
-            }
-
+            val child = childDoc() ?: run { onResult(false); return }
             val dataRef = child.collection("screenshot_data").document(metadata.id)
             val metaRef = child.collection("screenshots").document(metadata.id)
-
             dataRef.set(
                 mapOf(
                     "image" to Blob.fromBytes(imageBytes),
@@ -180,51 +181,35 @@ object ScreenshotRepository {
                     "byteSize" to imageBytes.size.toLong(),
                     "createdAt" to System.currentTimeMillis()
                 )
-            ).continueWithTask {
-                metaRef.set(finalMeta)
-            }.addOnSuccessListener {
-                onResult(true)
-            }.addOnFailureListener {
-                dataRef.delete()
-                onResult(false)
-            }
-        } catch (_: Exception) {
-            onResult(false)
-        }
+            ).continueWithTask { metaRef.set(finalMeta) }
+                .addOnSuccessListener { onResult(true) }
+                .addOnFailureListener { dataRef.delete(); onResult(false) }
+        } catch (_: Exception) { onResult(false) }
     }
 
     fun fetchHistory(onResult: (List<ScreenshotMetadata>) -> Unit) {
         val col = childDoc()?.collection("screenshots") ?: return onResult(emptyList())
         col.orderBy("capturedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
-            .limit(100)
-            .get()
-            .addOnSuccessListener { snap ->
-                onResult(snap.documents.mapNotNull { it.toObject(ScreenshotMetadata::class.java) })
-            }
+            .limit(100).get()
+            .addOnSuccessListener { snap -> onResult(snap.documents.mapNotNull { it.toObject(ScreenshotMetadata::class.java) }) }
             .addOnFailureListener { onResult(emptyList()) }
     }
 
     fun loadImageBytes(id: String, onResult: (ByteArray?) -> Unit) {
         val child = childDoc() ?: return onResult(null)
         child.collection("screenshot_data").document(id).get()
-            .addOnSuccessListener { snap ->
-                onResult(snap.getBlob("image")?.toBytes())
-            }
+            .addOnSuccessListener { snap -> onResult(snap.getBlob("image")?.toBytes()) }
             .addOnFailureListener { onResult(null) }
     }
 
     private fun prepareImage(file: File): ByteArray {
         val original = file.readBytes()
         if (original.size <= MAX_IMAGE_BYTES) return original
-
-        val source = BitmapFactory.decodeByteArray(original, 0, original.size)
-            ?: return ByteArray(0)
-
+        val source = BitmapFactory.decodeByteArray(original, 0, original.size) ?: return ByteArray(0)
         try {
             var width = source.width
             var height = source.height
             var quality = 78
-
             repeat(8) {
                 val scaled = Bitmap.createScaledBitmap(source, width, height, true)
                 try {
@@ -232,16 +217,12 @@ object ScreenshotRepository {
                     scaled.compress(Bitmap.CompressFormat.JPEG, quality, out)
                     val bytes = out.toByteArray()
                     if (bytes.size <= MAX_IMAGE_BYTES) return bytes
-                } finally {
-                    scaled.recycle()
-                }
+                } finally { scaled.recycle() }
                 width = (width * 0.82f).toInt().coerceAtLeast(480)
                 height = (height * 0.82f).toInt().coerceAtLeast(480)
                 quality = (quality - 5).coerceAtLeast(40)
             }
             return ByteArray(0)
-        } finally {
-            source.recycle()
-        }
+        } finally { source.recycle() }
     }
 }
