@@ -1,4 +1,4 @@
-// Oila Nazorati — service worker v2026.09.06
+// Oila Nazorati — service worker v2026.09.06b
 // Inject the latest shared and iOS parent-panel styles into live pages.
 const STYLE_VERSION='20260906';
 self.addEventListener('install',e=>{self.skipWaiting()});
