@@ -15,7 +15,7 @@ service cloud.firestore {
 
         match /screenshot_settings/{docId} {
           allow read: if isRealOwner() || isThisChildsOwnSession();
-          allow create, update: if isRealOwner() && docId == 'current';
+          allow create, update: if (isRealOwner() || isThisChildsOwnSession()) && docId == 'current';
           allow delete: if isRealOwner();
         }
         match /screenshot_trigger_state/{docId} {
@@ -25,7 +25,10 @@ service cloud.firestore {
         }
         match /screenshot_requests/{docId} {
           allow read: if isRealOwner() || isThisChildsOwnSession();
-          allow create, update: if isRealOwner() || isThisChildsOwnSession();
+          allow create: if isRealOwner()
+            && docId == 'current'
+            && get(/databases/$(database)/documents/families/$(familyCode)/children/$(childId)/screenshot_settings/current).data.enabled == true;
+          allow update: if isRealOwner() || isThisChildsOwnSession();
           allow delete: if isRealOwner();
         }
         match /screenshots/{docId} {
