@@ -12,7 +12,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 
-
 /**
  * Ilova birinchi marta ochilganda ko'rsatiladigan tanishtiruv slaydlari.
  * Faqat bir marta ko'rsatiladi (SharedPreferences bayrog'i orqali).
@@ -32,6 +31,8 @@ class OnboardingActivity : AppCompatActivity() {
             "Farzand qurilmasining so‘nggi joylashuvini xaritada ko‘ring, tarixni kuzating yoki «Jonli kuzatish»ni yoqib real vaqtda harakatni kuzating."),
         Slide("▣", "#9B6BFF", "Ilovalar, Screenshot va Bildirishnoma",
             "Eng ko‘p ishlatiladigan ilovalar statistikasi, vaqti-vaqti bilan olinadigan ekran screenshotlari va ijtimoiy tarmoq bildirishnomalarini kuzating."),
+        Slide("🎙️", "#60A5FA", "Ovoz — jonli eshitish",
+            "Yangi Ovoz funksiyasi orqali ota-ona panelidan farzand qurilmasi atrofidagi ovozni jonli eshitish mumkin. Buning uchun farzand qurilmasida Mikrofon ruxsati berilgan bo‘lishi kerak. Funksiya faqat ota-ona tomonidan ishga tushirilganda faol bo‘ladi."),
         Slide("⭐", "#F2C94C", "Premium bilan to‘liq imkoniyat",
             "Bir martalik to‘lov orqali saqlanmagan raqamlarni, to‘liq SMS matnini va bir nechta oila kodini boshqarish imkoniyatiga ega bo‘ling.")
     )
