@@ -1,2 +1,30 @@
 /* Shared website styling for the Android device requirement notice. */
 .brand span{background:url('icons/icon-192.png') center/cover no-repeat!important;color:transparent!important;font-size:0!important;border-radius:11px!important;}
+
+/* New voice feature highlight on the public website. */
+#imkoniyatlar .wrap::before{
+  content:"🎙️  OVOZ — yangi funksiya\\A\\A Ota-ona panelidan farzand qurilmasining mikrofonini ruxsat asosida jonli eshitish mumkin. Ishlatish uchun farzand qurilmasida Mikrofon ruxsati berilgan bo‘lishi kerak. Ovoz funksiyasi faqat ota-ona tomonidan ishga tushirilganda faol bo‘ladi.";
+  display:block;
+  white-space:pre-line;
+  box-sizing:border-box;
+  min-height:150px;
+  margin:0 0 30px;
+  padding:26px 270px 24px 26px;
+  border:1px solid #29405e;
+  border-radius:24px;
+  background:#101c2e url('icons/voice-guide.svg') right 18px center/235px auto no-repeat;
+  color:#dbeafe;
+  font:500 15px/1.6 Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  box-shadow:0 14px 35px rgba(8,17,31,.12);
+}
+@media(max-width:700px){
+  #imkoniyatlar .wrap::before{
+    min-height:270px;
+    margin-bottom:24px;
+    padding:190px 18px 18px;
+    background-position:center 16px;
+    background-size:205px auto;
+    font-size:13px;
+    line-height:1.5;
+  }
+}
