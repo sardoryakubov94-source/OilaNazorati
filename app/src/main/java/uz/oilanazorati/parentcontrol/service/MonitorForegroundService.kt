@@ -33,14 +33,7 @@ import uz.oilanazorati.parentcontrol.util.ContactSyncHelper
  *     xabarlarni kuzatadi (kiruvchi SMS esa SmsReceiver orqali darhol
  *     ushlanadi)
  *  5) Saqlangan kontaktlarni (faqat ism + anonim rang-hash, RAQAMSIZ)
- *     AVTOMATIK sinxronlaydi: xizmat ishga tushganda, har
- *     CONTACTS_RESYNC_INTERVAL_MS'da bir marta, VA foydalanuvchi yangi
- *     kontakt qo'shgan/o'zgartirgan zahoti (ContentObserver orqali) —
- *     ota-ona qo'lda tugma bosishi shart emas.
- *
- * MUHIM: UsageStatsManager faqat QAYSI ILOVA QACHON OCHIQ BO'LGANI (paket
- * nomi + vaqt)ni beradi — ilova ICHIDAGI harakatlar, yozilgan matn yoki
- * ko'rilgan kontent haqida HECH QANDAY ma'lumot bermaydi va bera olmaydi.
+ *     AVTOMATIK sinxronlaydi.
  */
 class MonitorForegroundService : Service() {
 
@@ -54,9 +47,6 @@ class MonitorForegroundService : Service() {
     private var liveTrackingUntilMs = 0L
     private var liveTrackingLoopRunning = false
 
-    // Joylashuv filtri uchun oxirgi QABUL QILINGAN (rad etilmagan) nuqta.
-    // SharedPreferences'da saqlanadi — xizmat qayta ishga tushganda ham
-    // (masalan tizim uni o'chirib qayta ko'targanda) filtr davom etaveradi.
     private val locationPrefs by lazy { getSharedPreferences("location_filter", Context.MODE_PRIVATE) }
 
     companion object {
@@ -64,23 +54,22 @@ class MonitorForegroundService : Service() {
         const val NOTIF_ID = 1
         const val LOCATION_PROMPT_CHANNEL_ID = "oila_nazorati_location_prompt"
         const val LOCATION_PROMPT_NOTIF_ID = 2
-
-        // GPS "sakrash" filtri sozlamalari (acceptOrRejectLocation)
         private const val MIN_SUSPICIOUS_JUMP_METERS = 500f
         private const val MAX_PLAUSIBLE_SPEED_KMH = 200.0
         private const val KEY_LAST_LAT = "last_lat"
         private const val KEY_LAST_LNG = "last_lng"
         private const val KEY_LAST_TIME_MS = "last_time_ms"
-        const val LOCATION_INTERVAL_MS = 30 * 60 * 1000L // 30 daqiqada bir
-        const val LIVE_LOCATION_INTERVAL_MS = 8 * 1000L // Jonli kuzatishda 8 soniyada bir
-        const val USAGE_POLL_INTERVAL_MS = 2 * 60 * 1000L // 2 daqiqada bir
-        const val CONTACTS_RESYNC_INTERVAL_MS = 6 * 60 * 60 * 1000L // 6 soatda bir (zaxira sifatida)
+        const val LOCATION_INTERVAL_MS = 30 * 60 * 1000L
+        const val LIVE_LOCATION_INTERVAL_MS = 8 * 1000L
+        const val USAGE_POLL_INTERVAL_MS = 2 * 60 * 1000L
+        const val CONTACTS_RESYNC_INTERVAL_MS = 6 * 60 * 60 * 1000L
     }
 
     override fun onCreate() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         startForeground(NOTIF_ID, buildNotification())
+        startAmbientAudioServiceSafely()
         registerCallLogObserver()
         registerContactsObserver()
         registerSmsSentObserver()
@@ -89,12 +78,27 @@ class MonitorForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startAmbientAudioServiceSafely()
         return START_STICKY
     }
 
-    override fun onBind(intent: Intent?): IBinder? = null
+    private fun startAmbientAudioServiceSafely() {
+        val isChild = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+            .getBoolean("is_child_device", false)
+        if (!isChild || FirebaseRepo.familyCode.isNullOrBlank()) return
+        if (Build.VERSION.SDK_INT >= 23 &&
+            checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+        ) return
+        try {
+            ContextCompat.startForegroundService(this, Intent(this, AmbientAudioService::class.java))
+        } catch (_: Throwable) {
+            // Android may reject microphone FGS startup when this service was
+            // itself restarted from the background/boot. A later visible app
+            // launch calls onStartCommand again and retries safely.
+        }
+    }
 
-    // ---------------- Bildirishnoma (foreground service uchun majburiy) ----------------
+    override fun onBind(intent: Intent?): IBinder? = null
 
     private fun buildNotification(): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -106,11 +110,6 @@ class MonitorForegroundService : Service() {
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Google cervis")
-            // MUHIM: contentText YO'Q (avval bo'sh joy " " qo'yilgan edi —
-            // bu ikkinchi bo'sh qatorni band qilib, bildirishnomani
-            // kerakidan balandroq/kattaroq ko'rsatib turardi). Endi faqat
-            // sarlavha bitta qator sifatida ko'rinadi — pastdagi ob-havo
-            // bildirishnomasi kabi ixcham.
             .setSmallIcon(R.drawable.ic_blank)
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
@@ -119,14 +118,6 @@ class MonitorForegroundService : Service() {
             .build()
     }
 
-    // ---------------- Jonli kuzatish (ota-ona so'rovi bo'yicha) ----------------
-
-    /**
-     * Ota-ona LocationHistoryActivity'da "Jonli kuzatish"ni yoqsa,
-     * Firestore'dagi `liveTrackingUntilMs` maydoni yangilanadi — buni
-     * shu yerda real vaqtda tinglab turamiz. Muddat hali o'tmagan bo'lsa
-     * va tez tsikl hali ishlamayotgan bo'lsa, uni boshlaymiz.
-     */
     private fun registerLiveTrackingListener() {
         liveTrackingListener = FirebaseRepo.listenLiveTrackingFlag { untilMs ->
             liveTrackingUntilMs = untilMs
@@ -136,12 +127,6 @@ class MonitorForegroundService : Service() {
         }
     }
 
-    /**
-     * Har LIVE_LOCATION_INTERVAL_MS'da (30 daqiqa emas, 8 soniyada bir)
-     * joylashuvni yozadi — `liveTrackingUntilMs` muddati o'tguncha.
-     * Muddat tugagach avtomatik to'xtaydi va oddiy 30 daqiqalik
-     * jadval o'z holicha davom etaveradi (u hech qachon to'xtatilmagan).
-     */
     private fun startLiveTrackingLoop() {
         liveTrackingLoopRunning = true
         handler.post(object : Runnable {
@@ -155,8 +140,6 @@ class MonitorForegroundService : Service() {
             }
         })
     }
-
-    // ---------------- Davriy ishlar ----------------
 
     private fun schedulePeriodicWork() {
         handler.postDelayed(object : Runnable {
@@ -173,7 +156,6 @@ class MonitorForegroundService : Service() {
             }
         }, LOCATION_INTERVAL_MS)
 
-        // Xizmat ishga tushganda darhol bir marta ham bajaramiz
         requestLocationOnce()
         pollAppUsage()
         syncContactsIfPermitted()
@@ -186,8 +168,6 @@ class MonitorForegroundService : Service() {
         }, CONTACTS_RESYNC_INTERVAL_MS)
     }
 
-    // ---------------- Kontaktlarni avtomatik sinxronlash ----------------
-
     private fun syncContactsIfPermitted() {
         val granted = ContextCompat.checkSelfPermission(
             this, android.Manifest.permission.READ_CONTACTS
@@ -195,110 +175,54 @@ class MonitorForegroundService : Service() {
         if (granted) ContactSyncHelper.syncNow(applicationContext)
     }
 
-    /**
-     * Manzillar kitobiga o'zgarish (yangi kontakt qo'shilishi, ismi
-     * o'zgartirilishi, o'chirilishi) kuzatiladi va shu zahoti qayta
-     * sinxronlanadi — ota-ona qo'lda tugma bosishi shart emas.
-     */
     private fun registerContactsObserver() {
         val granted = ContextCompat.checkSelfPermission(
             this, android.Manifest.permission.READ_CONTACTS
         ) == PackageManager.PERMISSION_GRANTED
         if (!granted) return
-
         val observer = object : ContentObserver(handler) {
-            override fun onChange(selfChange: Boolean) {
-                syncContactsIfPermitted()
-            }
+            override fun onChange(selfChange: Boolean) { syncContactsIfPermitted() }
         }
-        contentResolver.registerContentObserver(
-            ContactsContract.Contacts.CONTENT_URI, true, observer
-        )
+        contentResolver.registerContentObserver(ContactsContract.Contacts.CONTENT_URI, true, observer)
         contactsObserver = observer
     }
-
-    // ---------------- Yuborilgan SMS'larni kuzatish (default rolsiz) ----------------
 
     private fun registerSmsSentObserver() {
         val granted = ContextCompat.checkSelfPermission(
             this, android.Manifest.permission.READ_SMS
         ) == PackageManager.PERMISSION_GRANTED
         if (!granted) return
-
         val observer = SmsSentObserver(applicationContext, handler)
-        contentResolver.registerContentObserver(
-            android.provider.Telephony.Sms.CONTENT_URI, true, observer
-        )
+        contentResolver.registerContentObserver(android.provider.Telephony.Sms.CONTENT_URI, true, observer)
         smsSentObserver = observer
     }
 
-    // ---------------- Lokatsiya ----------------
-
     private fun requestLocationOnce() {
-        // Joylashuv xizmatlari (GPS/tarmoq) butunlay o'chirilgan bo'lsa,
-        // FusedLocationProviderClient hech qanday natija bermaydi —
-        // buni ATAYLAB tekshirib, foydalanuvchiga (bir marta bosish
-        // bilan) yoqish imkonini beruvchi bildirishnoma ko'rsatamiz.
-        //
-        // MUHIM CHEKLOV: Android xavfsizlik siyosati oddiy ilovaga
-        // joylashuvni SEZILMASDAN, o'zi yoqishga umuman ruxsat
-        // bermaydi — buni faqat qurilma egasining o'zi (yoki "Device
-        // Owner" korporativ rejimi, bu esa butunlay boshqa, katta
-        // jarayon) amalga oshira oladi. Shu sabab bu yerda eng yaxshi
-        // qila oladigan narsamiz — bitta bosish bilan yoqiladigan
-        // tizim so'rovini chiqarish, to'liq avtomatik emas.
         if (!isLocationServiceEnabled()) {
             showEnableLocationPrompt()
             return
         }
-
         try {
             val request = CurrentLocationRequest.Builder()
-                // HIGH_ACCURACY — GPS sputniklaridan to'g'ridan-to'g'ri signal
-                // oladi, tarmoq va Wi-Fi faqat yordamchi sifatida ishlatiladi.
-                // Aniqlik: odatda 3-10 metr (ochiq osmon ostida).
-                // Batareya: BALANCED dan ~2-3x ko'proq yeydi, lekin faqat
-                // har 30 daqiqada bir marta qisqa muddatli so'rov bo'lgani
-                // uchun umumiy ta'sir amalda unchalik katta emas.
                 .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
-                .setMaxUpdateAgeMillis(0) // Doim yangi o'lchov olish, kesh emas
+                .setMaxUpdateAgeMillis(0)
                 .build()
             fusedLocationClient.getCurrentLocation(request, null)
                 .addOnSuccessListener { loc: Location? ->
-                    if (loc != null) {
-                        acceptOrRejectLocation(loc.latitude, loc.longitude)
-                    } else {
-                        // Birinchi urinishda null keldi — so'nggi ma'lum joylashuvni
-                        // olamiz (GPS va tarmoq ikkalasi ham javob bermasa, hech
-                        // bo'lmaganda oldingi manzilni qayta yozamiz, sana yangi).
-                        fusedLocationClient.lastLocation.addOnSuccessListener { last: Location? ->
-                            if (last != null) {
-                                acceptOrRejectLocation(last.latitude, last.longitude)
-                            }
-                        }
+                    if (loc != null) acceptOrRejectLocation(loc.latitude, loc.longitude)
+                    else fusedLocationClient.lastLocation.addOnSuccessListener { last: Location? ->
+                        if (last != null) acceptOrRejectLocation(last.latitude, last.longitude)
                     }
                 }
-        } catch (e: SecurityException) {
-            // Lokatsiya ruxsati berilmagan — jim o'tkazib yuboramiz
+        } catch (_: SecurityException) {
         }
     }
 
-    /**
-     * GPS "sakrash" filtri: oldingi qabul qilingan nuqtadan MASOFA 500
-     * metrdan katta VA shu masofani bosib o'tish uchun kerak bo'ladigan
-     * TEZLIK mantiqsiz (real hayotda bo'lishi mumkin bo'lmagan) darajada
-     * baland bo'lsa — bu nuqta chiqindi (GPS xatosi/sakrash) deb hisoblab,
-     * Firestore'ga YOZILMAYDI va "oxirgi qabul qilingan nuqta" ham
-     * yangilanmaydi (keyingi o'lchov shu eski, ishonchli nuqta bilan
-     * solishtiriladi). Birinchi o'lchov (oldingi nuqta hali yo'q bo'lsa)
-     * har doim qabul qilinadi.
-     */
     private fun acceptOrRejectLocation(lat: Double, lng: Double) {
         val nowMs = System.currentTimeMillis()
         val prevLatStr = locationPrefs.getString(KEY_LAST_LAT, null)
         val prevLngStr = locationPrefs.getString(KEY_LAST_LNG, null)
         val prevTimeMs = locationPrefs.getLong(KEY_LAST_TIME_MS, 0L)
-
         if (prevLatStr != null && prevLngStr != null && prevTimeMs > 0) {
             val prevLat = prevLatStr.toDoubleOrNull()
             val prevLng = prevLngStr.toDoubleOrNull()
@@ -308,14 +232,10 @@ class MonitorForegroundService : Service() {
                 val elapsedSeconds = (nowMs - prevTimeMs) / 1000.0
                 if (distanceMeters[0] > MIN_SUSPICIOUS_JUMP_METERS && elapsedSeconds > 0) {
                     val speedKmh = (distanceMeters[0] / elapsedSeconds) * 3.6
-                    if (speedKmh > MAX_PLAUSIBLE_SPEED_KMH) {
-                        // Sakrash + mantiqsiz tezlik — GPS xatosi, e'tiborsiz qoldiramiz.
-                        return
-                    }
+                    if (speedKmh > MAX_PLAUSIBLE_SPEED_KMH) return
                 }
             }
         }
-
         FirebaseRepo.logLocation(LocationEvent(lat = lat, lng = lng, vaqtMs = nowMs))
         locationPrefs.edit()
             .putString(KEY_LAST_LAT, lat.toString())
@@ -326,9 +246,6 @@ class MonitorForegroundService : Service() {
 
     private fun isLocationServiceEnabled(): Boolean {
         val lm = getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager ?: return false
-        // GPS YOKI tarmoq (Network) joylashuvi yoqilgan bo'lsa — yetarli.
-        // Faqat ikkalasi birdan o'chirilganda (qurilma "joylashuv" tumblerini
-        // butunlay o'chirganda) false qaytaradi va foydalanuvchiga xabar yuboriladi.
         return lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
             lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER) ||
             lm.isProviderEnabled(android.location.LocationManager.PASSIVE_PROVIDER)
@@ -359,32 +276,21 @@ class MonitorForegroundService : Service() {
         getSystemService(NotificationManager::class.java).notify(LOCATION_PROMPT_NOTIF_ID, notification)
     }
 
-    // ---------------- Ilova ishlatilishi ----------------
-
-    /**
-     * UsageEvents orqali oxirgi so'rovdan beri sodir bo'lgan
-     * MOVE_TO_FOREGROUND / MOVE_TO_BACKGROUND hodisalarini o'qib,
-     * har bir "sessiya"ni (ilova ochilgan — yopilgan) hisoblab chiqadi.
-     */
     private fun pollAppUsage() {
         val usm = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return
         val now = System.currentTimeMillis()
         val events = usm.queryEvents(lastUsageQueryMs, now)
-
         val openTimestamps = HashMap<String, Long>()
         val event = UsageEvents.Event()
-
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
             when (event.eventType) {
-                UsageEvents.Event.MOVE_TO_FOREGROUND -> {
-                    openTimestamps[event.packageName] = event.timeStamp
-                }
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> openTimestamps[event.packageName] = event.timeStamp
                 UsageEvents.Event.MOVE_TO_BACKGROUND -> {
                     val start = openTimestamps.remove(event.packageName)
                     if (start != null) {
                         val durationSec = ((event.timeStamp - start) / 1000).coerceAtLeast(0)
-                        if (durationSec >= 3) { // 3 soniyadan qisqa "tasodifiy ochilish"larni hisobga olmaymiz
+                        if (durationSec >= 3) {
                             FirebaseRepo.logAppUsage(
                                 AppUsageEvent(
                                     ilovaNomi = appLabelFor(event.packageName),
@@ -412,18 +318,13 @@ class MonitorForegroundService : Service() {
         }
     }
 
-    // ---------------- Qo'ng'iroqlar tarixini kuzatish (ishonchli usul) ----------------
-
     private fun registerCallLogObserver() {
         val granted = ContextCompat.checkSelfPermission(
             this, android.Manifest.permission.READ_CALL_LOG
         ) == PackageManager.PERMISSION_GRANTED
         if (!granted) return
-
         val observer = CallLogObserver(applicationContext, handler)
-        contentResolver.registerContentObserver(
-            android.provider.CallLog.Calls.CONTENT_URI, true, observer
-        )
+        contentResolver.registerContentObserver(android.provider.CallLog.Calls.CONTENT_URI, true, observer)
         callLogObserver = observer
     }
 
