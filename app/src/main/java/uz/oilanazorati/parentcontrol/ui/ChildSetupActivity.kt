@@ -15,7 +15,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.SetOptions
-import uz.oilanazorati.databinding.ActivityChildSetupBinding
+import uz.oilanazorati.parentcontrol.databinding.ActivityChildSetupBinding
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.service.AppDeviceAdminReceiver
 import uz.oilanazorati.parentcontrol.service.MonitorForegroundService
