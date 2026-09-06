@@ -70,6 +70,7 @@ object AmbientAudioRepository {
     fun listenAudioChunks(sessionId: String, onChunk: (Int, ByteArray) -> Unit): ListenerRegistration {
         return audioCollection()
             .whereEqualTo("sessionId", sessionId)
+            .orderBy("sequence", Query.Direction.ASCENDING)
             .addSnapshotListener { snap, error ->
                 if (error != null || snap == null) return@addSnapshotListener
                 snap.documentChanges.forEach { change ->
