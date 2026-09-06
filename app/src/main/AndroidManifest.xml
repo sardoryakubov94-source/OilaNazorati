@@ -20,6 +20,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application android:name=".App" android:allowBackup="false" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:theme="@style/Theme.OilaNazorati" android:usesCleartextTraffic="false">
+        <activity android:name=".ui.OnboardingActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" />
         <activity android:name=".ui.MainActivity" android:exported="true" android:launchMode="singleTop"><intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter></activity>
         <activity android:name=".ui.ChildSetupActivity" android:exported="false" />
         <activity android:name=".ui.ScreenCaptureConsentActivity" android:exported="false" />
