@@ -62,15 +62,28 @@ class AmbientListenActivity : AppCompatActivity() {
             setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
         }
         startButton = Button(this).apply {
-            text = "▶️ Eshitishni boshlash"
+            text = "Eshitishni boshlash"
             setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary))
             setBackgroundResource(uz.oilanazorati.parentcontrol.R.drawable.bg_card_theme)
+            val icon = androidx.core.content.ContextCompat.getDrawable(this@AmbientListenActivity, uz.oilanazorati.parentcontrol.R.drawable.ic_play)?.mutate()
+            icon?.setColorFilter(currentTextColor, android.graphics.PorterDuff.Mode.SRC_IN)
+            setCompoundDrawablesWithIntrinsicBounds(icon, null, null, null)
+            compoundDrawablePadding = 16
         }
         stopButton = Button(this).apply {
-            text = "⏹️ To'xtatish"
+            text = "To'xtatish"
             isEnabled = false
             setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary))
             setBackgroundResource(uz.oilanazorati.parentcontrol.R.drawable.bg_card_theme)
+            val icon = androidx.core.content.ContextCompat.getDrawable(this@AmbientListenActivity, uz.oilanazorati.parentcontrol.R.drawable.ic_stop)?.mutate()
+            icon?.setColorFilter(currentTextColor, android.graphics.PorterDuff.Mode.SRC_IN)
+            setCompoundDrawablesWithIntrinsicBounds(icon, null, null, null)
+            compoundDrawablePadding = 16
+            // Yuqoridagi "Eshitishni boshlash" tugmasi bilan yopishib
+            // qolmasligi uchun orasiga masofa qo'yiladi.
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
+                topMargin = (16 * resources.displayMetrics.density).toInt()
+            }
         }
         root.addView(title)
         root.addView(status)
