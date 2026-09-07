@@ -27,9 +27,23 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
     private lateinit var requestButton: Button
     private lateinit var statusText: TextView
     private lateinit var connectionStatusText: TextView
+    private lateinit var tabAuto: Button
+    private lateinit var tabManual: Button
+    private lateinit var listContainer: LinearLayout
     private var statusListener: ListenerRegistration? = null
     private var projectionStatusListener: ListenerRegistration? = null
     private var activeRequestId: String? = null
+
+    // "Avtomatik" (chastota chegarasidan o'tganda 3 tadan olinadigan burst
+    // screenshotlar) va "Qo'lda olingan" ("Hozir screenshot olish" tugmasi
+    // orqali) bir-biriga aralashib ketmasligi uchun alohida saqlanadi.
+    // Avtomatik screenshotlarda thresholdMinute >= 15 (chastota), qo'lda
+    // olinganlarda esa har doim 0 — bu farq ma'lumotlar bazasida allaqachon
+    // mavjud edi, shunchaki UI'da ishlatilmagan edi.
+    private var autoItems: List<ScreenshotMetadata> = emptyList()
+    private var manualItems: List<ScreenshotMetadata> = emptyList()
+    private var activeTab = "auto"
+    private val expandedBursts = HashSet<String>()
 
     private val staleRequestWatchdog = object : Runnable {
         override fun run() {
@@ -110,6 +124,48 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
             text = "🔄 Tarixni yangilash"
             setOnClickListener { loadHistory() }
         })
+
+        // Avtomatik va qo'lda olingan screenshotlar aralashib ketmasligi
+        // uchun ikkita alohida bo'lim (tab) qilinadi.
+        val tabRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, 20, 0, 8)
+        }
+        tabAuto = Button(this).apply {
+            text = "🤖 Avtomatik"
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f).apply { marginEnd = 8 }
+            setOnClickListener { selectTab("auto") }
+        }
+        tabManual = Button(this).apply {
+            text = "👆 Qo'lda olingan"
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+            setOnClickListener { selectTab("manual") }
+        }
+        tabRow.addView(tabAuto)
+        tabRow.addView(tabManual)
+        box.addView(tabRow)
+
+        listContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            tag = "history_items"
+        }
+        box.addView(listContainer)
+        updateTabStyles()
+    }
+
+    private fun selectTab(tab: String) {
+        if (activeTab == tab) return
+        activeTab = tab
+        expandedBursts.clear()
+        updateTabStyles()
+        renderActiveTab()
+    }
+
+    private fun updateTabStyles() {
+        val activeColor = androidx.core.content.ContextCompat.getColor(this, uz.oilanazorati.parentcontrol.R.color.color_surface_alt)
+        val inactiveColor = androidx.core.content.ContextCompat.getColor(this, uz.oilanazorati.parentcontrol.R.color.color_surface)
+        tabAuto.setBackgroundColor(if (activeTab == "auto") activeColor else inactiveColor)
+        tabManual.setBackgroundColor(if (activeTab == "manual") activeColor else inactiveColor)
     }
 
     private fun requestScreenshot() {
@@ -167,38 +223,138 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
     }
 
     private fun loadHistory() {
-        val oldItems = box.findViewWithTag<LinearLayout>("history_items")
-        if (oldItems != null) box.removeView(oldItems)
-        val items = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            tag = "history_items"
-        }
-        box.addView(items)
-
         ScreenshotRepository.fetchHistory { list ->
             runOnUiThread {
-                items.removeAllViews()
-                if (list.isEmpty()) {
-                    items.addView(TextView(this).apply {
-                        text = "Hali screenshot mavjud emas."
-                        textSize = 15f
-                        setPadding(0, 24, 0, 24)
-                    })
-                } else {
-                    list.forEach { addItem(items, it) }
-                }
+                // thresholdMinute == 0 — "Hozir screenshot olish" orqali qo'lda
+                // so'ralgan; thresholdMinute >= 15 — belgilangan chastota
+                // chegarasidan o'tganda avtomatik olingan burst screenshot.
+                autoItems = list.filter { it.thresholdMinute > 0 }
+                manualItems = list.filter { it.thresholdMinute == 0 }
+                tabAuto.text = "🤖 Avtomatik (${autoItems.size})"
+                tabManual.text = "👆 Qo'lda olingan (${manualItems.size})"
+                renderActiveTab()
             }
         }
     }
 
-    private fun addItem(parent: LinearLayout, meta: ScreenshotMetadata) {
+    private fun renderActiveTab() {
+        listContainer.removeAllViews()
+        if (activeTab == "manual") renderManualList() else renderAutoList()
+    }
+
+    private fun renderManualList() {
+        if (manualItems.isEmpty()) {
+            listContainer.addView(emptyText("Qo'lda olingan screenshot hali yo'q."))
+            return
+        }
+        manualItems.forEach { addItem(listContainer, it, null) }
+    }
+
+    /**
+     * Avtomatik screenshotlar "Joylashuv ro'yxati" bo'limiga o'xshab vaqt
+     * bo'yicha ro'yxat qilib ko'rsatiladi: har bir qator — bitta "burst"
+     * (bitta ilova belgilangan chastotadan o'tganda ketma-ket olingan,
+     * odatda 3 tadan iborat screenshotlar to'plami). Qator bosilganda o'sha
+     * burst ichidagi barcha kadrlar (har biri o'z vaqti bilan) ochiladi.
+     */
+    private fun renderAutoList() {
+        if (autoItems.isEmpty()) {
+            listContainer.addView(emptyText("Avtomatik screenshot hali yo'q."))
+            return
+        }
+        val groups = autoItems.groupBy { Triple(it.date, it.packageName, it.thresholdMinute) }
+        val ordered = groups.entries.sortedByDescending { entry -> entry.value.maxOf { it.capturedAt } }
+        ordered.forEach { (key, shotsUnsorted) ->
+            val shots = shotsUnsorted.sortedBy { it.capturedAt }
+            val groupKey = "${key.first}_${key.second}_${key.third}"
+            addBurstGroupRow(groupKey, shots)
+        }
+    }
+
+    private fun emptyText(msg: String) = TextView(this).apply {
+        text = msg
+        textSize = 15f
+        setPadding(0, 24, 0, 24)
+    }
+
+    private fun addBurstGroupRow(groupKey: String, shots: List<ScreenshotMetadata>) {
+        val first = shots.first()
+        val timeFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
+        val dateFmt = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+
+        val expandContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(24, 4, 0, 8)
+            visibility = if (expandedBursts.contains(groupKey)) android.view.View.VISIBLE else android.view.View.GONE
+        }
+
+        lateinit var viewLink: TextView
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 16, 0, 16)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                val nowExpanded = expandContainer.visibility == android.view.View.VISIBLE
+                if (nowExpanded) {
+                    expandContainer.visibility = android.view.View.GONE
+                    expandedBursts.remove(groupKey)
+                    viewLink.text = "🖼 Ko'rish"
+                } else {
+                    expandContainer.visibility = android.view.View.VISIBLE
+                    expandedBursts.add(groupKey)
+                    viewLink.text = "🔼 Yopish"
+                }
+            }
+        }
+        row.addView(TextView(this).apply {
+            text = timeFmt.format(Date(first.capturedAt))
+            textSize = 20f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@ScreenshotHistoryActivity, uz.oilanazorati.parentcontrol.R.color.color_text_primary))
+            setPadding(0, 0, 20, 0)
+        })
+        row.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+            addView(TextView(this@ScreenshotHistoryActivity).apply {
+                text = "${first.appLabel} • ${dateFmt.format(Date(first.capturedAt))}"
+                textSize = 15f
+                setTextColor(androidx.core.content.ContextCompat.getColor(this@ScreenshotHistoryActivity, uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
+            })
+            addView(TextView(this@ScreenshotHistoryActivity).apply {
+                text = "${first.thresholdMinute} daqiqadan oshdi • ${shots.size} ta kadr"
+                textSize = 13f
+                setTextColor(androidx.core.content.ContextCompat.getColor(this@ScreenshotHistoryActivity, uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
+            })
+        })
+        viewLink = TextView(this).apply {
+            text = if (expandedBursts.contains(groupKey)) "🔼 Yopish" else "🖼 Ko'rish"
+            textSize = 15f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(Color.parseColor("#2ECC71"))
+        }
+        row.addView(viewLink)
+
+        listContainer.addView(row)
+        listContainer.addView(expandContainer)
+
+        shots.forEachIndexed { index, meta ->
+            addItem(expandContainer, meta, "${index + 1}-kadr • ${timeFmt.format(Date(meta.capturedAt))}")
+        }
+    }
+
+    private fun addItem(parent: LinearLayout, meta: ScreenshotMetadata, burstLabel: String?) {
         val card = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(8, 18, 8, 18)
         }
         card.addView(TextView(this).apply {
-            text = "${meta.appLabel} • ${meta.thresholdMinute} daqiqa\n" +
-                SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(meta.capturedAt))
+            text = burstLabel ?: (
+                "${meta.appLabel} • ${meta.thresholdMinute} daqiqa\n" +
+                    SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(meta.capturedAt))
+                )
             textSize = 16f
         })
 
