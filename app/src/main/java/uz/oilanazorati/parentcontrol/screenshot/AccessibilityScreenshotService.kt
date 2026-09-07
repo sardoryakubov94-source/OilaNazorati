@@ -1,6 +1,8 @@
 package uz.oilanazorati.parentcontrol.screenshot
 
 import android.accessibilityservice.AccessibilityService
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.usage.UsageStatsManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -11,6 +13,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityManager
 import android.widget.Toast
 import com.google.firebase.firestore.ListenerRegistration
 import uz.oilanazorati.parentcontrol.model.ScreenshotMetadata
@@ -31,7 +34,6 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private var settings = ScreenshotSettings()
     private var settingsListener: ListenerRegistration? = null
     private var requestListener: ListenerRegistration? = null
-    private var evaluationRunning = false
     private var captureRunning = false
 
     private val testReceiver = object : BroadcastReceiver() {
@@ -45,22 +47,16 @@ class AccessibilityScreenshotService : AccessibilityService() {
         }
     }
 
-    private val evaluationRunnable = object : Runnable {
-        override fun run() {
-            if (settings.enabled) evaluateAndQueue()
-            mainHandler.postDelayed(this, 30_000L)
-        }
-    }
-
     override fun onServiceConnected() {
         super.onServiceConnected()
         val filter = IntentFilter(ACTION_TEST_SCREENSHOT)
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(testReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
         else @Suppress("DEPRECATION") registerReceiver(testReceiver, filter)
-        ScreenshotRepository.updateProjectionStatus(true)
-        settingsListener = ScreenshotRepository.listenSettings { settings = it }
-        requestListener = ScreenshotRepository.listenScreenshotRequests { requestId -> if (settings.enabled) queueRemoteCapture(requestId) }
-        mainHandler.post(evaluationRunnable)
+        ScreenshotRepository.updateAccessibilityStatus(true)
+        settingsListener = ScreenshotRepository.listenSettings { newSettings -> settings = newSettings }
+        requestListener = ScreenshotRepository.listenScreenshotRequests { requestId ->
+            if (settings.enabled) queueRemoteCapture(requestId)
+        }
     }
 
     private fun queueRemoteCapture(requestId: String) {
@@ -70,30 +66,38 @@ class AccessibilityScreenshotService : AccessibilityService() {
     }
 
     private fun evaluateAndQueue() {
-        if (evaluationRunning || captureRunning) return
-        evaluationRunning = true
-        try {
-            val usm = getSystemService(USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager ?: return
-            val now = System.currentTimeMillis()
-            val start = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis
-            val stats = usm.queryAndAggregateUsageStats(start, now)
-            val userStats = stats.filter { (pkg, stat) -> pkg != packageName && stat.totalTimeInForeground > 0 && (getApplicationInfoSafe(pkg)?.flags?.and(android.content.pm.ApplicationInfo.FLAG_SYSTEM) ?: 0) == 0 }
-            val auto = if (settings.autoTop3Enabled) userStats.entries.sortedByDescending { it.value.totalTimeInForeground }.take(3).map { it.key }.toSet() else emptySet()
-            val targets = auto + settings.manualPackageNames.toSet()
-            val current = currentForegroundPackage() ?: return
-            if (current !in targets) return
-            val usageSec = (stats[current]?.totalTimeInForeground ?: 0L) / 1000L
-            val frequency = settings.frequencyMinutes.coerceIn(15, 60).toLong()
-            val minute = usageSec / 60L; val base = (minute / frequency) * frequency
-            if (base < frequency) return
-            val child = FirebaseRepo.childId ?: return
-            val key = triggerKey(child, current, todayKey(), base.toInt())
-            ScreenshotRepository.reserveTrigger(key) { reserved -> if (reserved && settings.enabled && !captureRunning) captureAndUpload(current, base.toInt(), usageSec, key, null) }
-        } finally { evaluationRunning = false }
+        if (!settings.enabled || !settings.autoTop3Enabled || captureRunning) return
+        val usm = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager ?: return
+        val now = System.currentTimeMillis()
+        val start = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val stats = usm.queryAndAggregateUsageStats(start, now)
+        val userStats = stats.filter { (pkg, stat) ->
+            pkg != packageName && stat.totalTimeInForeground > 0 &&
+                (getApplicationInfoSafe(pkg)?.flags?.and(android.content.pm.ApplicationInfo.FLAG_SYSTEM) ?: 0) == 0
+        }
+        val auto = userStats.entries.sortedByDescending { it.value.totalTimeInForeground }.take(3).map { it.key }.toSet()
+        val targets = auto + settings.manualPackageNames.toSet()
+        val current = currentForegroundPackage() ?: return
+        if (current !in targets) return
+        val usageSec = (stats[current]?.totalTimeInForeground ?: 0L) / 1000L
+        val frequency = settings.frequencyMinutes.coerceIn(15, 60).toLong()
+        val minute = usageSec / 60L
+        val base = (minute / frequency) * frequency
+        if (base < frequency) return
+        val child = FirebaseRepo.childId ?: return
+        val key = triggerKey(child, current, todayKey(), base.toInt())
+        ScreenshotRepository.reserveTrigger(key) { reserved ->
+            if (reserved && settings.enabled && !captureRunning) captureAndUpload(current, base.toInt(), usageSec, key, null)
+        }
     }
 
     private fun captureAndUpload(packageName: String, threshold: Int, usageSeconds: Long, key: String, remoteRequestId: String?) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) { finishCapture(false, key, remoteRequestId, "Bu Android versiyasida Accessibility screenshot mavjud emas"); return }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            finishCapture(false, key, remoteRequestId, "Bu Android versiyasida Accessibility screenshot mavjud emas")
+            return
+        }
         if (captureRunning) return
         captureRunning = true
         takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
@@ -113,8 +117,13 @@ class AccessibilityScreenshotService : AccessibilityService() {
                         id = "${now}_${threshold}_${packageName.hashCode()}", childId = FirebaseRepo.childId.orEmpty(), familyId = FirebaseRepo.familyCode.orEmpty(),
                         packageName = packageName, appLabel = label(packageName), capturedAt = now, date = todayKey(), dailyUsageSeconds = usageSeconds, thresholdMinute = threshold
                     )
-                    ScreenshotRepository.upload(file, meta) { ok -> file.delete(); finishCapture(ok, key, remoteRequestId, if (ok) "Screenshot tayyor" else "Screenshot yuklanmadi") }
-                } catch (t: Throwable) { finishCapture(false, key, remoteRequestId, t.message ?: "Accessibility screenshot xatosi") }
+                    ScreenshotRepository.upload(file, meta) { ok ->
+                        file.delete()
+                        finishCapture(ok, key, remoteRequestId, if (ok) "Screenshot tayyor" else "Screenshot yuklanmadi")
+                    }
+                } catch (t: Throwable) {
+                    finishCapture(false, key, remoteRequestId, t.message ?: "Accessibility screenshot xatosi")
+                }
             }
             override fun onFailure(errorCode: Int) = finishCapture(false, key, remoteRequestId, "Accessibility screenshot xatosi: $errorCode")
         })
@@ -138,17 +147,24 @@ class AccessibilityScreenshotService : AccessibilityService() {
     }
 
     private fun currentForegroundPackage(): String? {
-        val usm = getSystemService(USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager ?: return null
+        val usm = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager ?: return null
         val now = System.currentTimeMillis(); val events = usm.queryEvents((now - 10 * 60_000L).coerceAtLeast(0L), now)
         val event = android.app.usage.UsageEvents.Event(); var pkg: String? = null; var timestamp = 0L
-        while (events.hasNextEvent()) { events.getNextEvent(event); if (event.eventType == android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND && event.timeStamp >= timestamp) { timestamp = event.timeStamp; pkg = event.packageName } }
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            if (event.eventType == android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND && event.timeStamp >= timestamp) {
+                timestamp = event.timeStamp; pkg = event.packageName
+            }
+        }
         return pkg
     }
 
     private fun currentUsageSeconds(): Long {
         val pkg = currentForegroundPackage() ?: return 0L
-        val usm = getSystemService(USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager ?: return 0L
-        val start = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }.timeInMillis
+        val usm = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager ?: return 0L
+        val start = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
         return (usm.queryAndAggregateUsageStats(start, System.currentTimeMillis())[pkg]?.totalTimeInForeground ?: 0L) / 1000L
     }
 
@@ -160,9 +176,21 @@ class AccessibilityScreenshotService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) = Unit
     override fun onInterrupt() = Unit
     override fun onDestroy() {
-        mainHandler.removeCallbacksAndMessages(null); settingsListener?.remove(); requestListener?.remove(); ScreenshotRepository.updateProjectionStatus(false)
-        runCatching { unregisterReceiver(testReceiver) }; super.onDestroy()
+        mainHandler.removeCallbacksAndMessages(null)
+        settingsListener?.remove(); requestListener?.remove()
+        ScreenshotRepository.updateAccessibilityStatus(false)
+        runCatching { unregisterReceiver(testReceiver) }
+        super.onDestroy()
     }
 
-    companion object { const val ACTION_TEST_SCREENSHOT = "uz.oilanazorati.action.ACCESSIBILITY_SCREENSHOT_TEST" }
+    companion object {
+        const val ACTION_TEST_SCREENSHOT = "uz.oilanazorati.action.ACCESSIBILITY_SCREENSHOT_TEST"
+        fun isServiceEnabled(context: Context): Boolean {
+            val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager ?: return false
+            return manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK).any { info ->
+                val serviceInfo = info.resolveInfo?.serviceInfo
+                serviceInfo?.packageName == context.packageName && serviceInfo.name == AccessibilityScreenshotService::class.java.name
+            }
+        }
+    }
 }
