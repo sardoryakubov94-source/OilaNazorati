@@ -12,7 +12,6 @@ import android.media.MediaRecorder
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.Blob
 import com.google.firebase.firestore.FirebaseFirestore
@@ -21,13 +20,7 @@ import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Legacy Firestore microphone transport. Web parent requests carrying
- * transport=webrtc are delegated to WebRtcAmbientAudioService so the existing
- * Firestore PCM path remains available for the Android parent panel.
- * Remote audio is opt-in: the child grants RECORD_AUDIO during setup and the
- * microphone foreground notification/privacy indicator remains visible.
- */
+/** Legacy Firestore microphone transport. Audio is stored as PCM16 chunks in Firestore. */
 class AmbientAudioService : Service() {
     private val db = FirebaseFirestore.getInstance()
     private var requestListener: com.google.firebase.firestore.ListenerRegistration? = null
@@ -52,9 +45,7 @@ class AmbientAudioService : Service() {
         listenForRequests()
     }
 
-    private fun foregroundTypes(): Int = if (Build.VERSION.SDK_INT >= 29) {
-        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-    } else 0
+    private fun foregroundTypes(): Int = if (Build.VERSION.SDK_INT >= 29) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE else 0
 
     private fun listenForRequests() {
         val family = FirebaseRepo.familyCode ?: return
@@ -66,21 +57,6 @@ class AmbientAudioService : Service() {
                 if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
                 val data = snap.data.orEmpty()
                 val requestId = data["requestId"] as? String ?: return@addSnapshotListener
-                if (data["transport"] == "webrtc") {
-                    // The web client uses webrtc_requested while it publishes
-                    // the SDP offer. Start the WebRTC foreground service for
-                    // both states so the child does not miss the request.
-                    val state = data["status"] as? String
-                    if (state == "requested" || state == "webrtc_requested") {
-                        try {
-                            ContextCompat.startForegroundService(
-                                this,
-                                Intent(this, WebRtcAmbientAudioService::class.java)
-                            )
-                        } catch (_: Throwable) {}
-                    }
-                    return@addSnapshotListener
-                }
                 when (data["status"] as? String) {
                     "requested" -> if (!recording.get()) startSession(requestId)
                     "stop_requested" -> if (activeRequestId == requestId) stopSession("stopped")
@@ -189,13 +165,11 @@ class AmbientAudioService : Service() {
         .setCategory(NotificationCompat.CATEGORY_SERVICE).setOngoing(true).setShowWhen(false).build()
 
     private fun updateActiveNotification() {
-        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, activeNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
-        else startForeground(NOTIFICATION_ID, activeNotification())
+        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, activeNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE) else startForeground(NOTIFICATION_ID, activeNotification())
     }
 
     private fun restoreIdleNotification() {
-        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, idleNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
-        else startForeground(NOTIFICATION_ID, idleNotification())
+        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, idleNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE) else startForeground(NOTIFICATION_ID, idleNotification())
     }
 
     override fun onDestroy() {
