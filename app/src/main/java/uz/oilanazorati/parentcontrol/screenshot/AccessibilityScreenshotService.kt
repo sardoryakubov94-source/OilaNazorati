@@ -39,36 +39,13 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private var burstPackage: String? = null
     private var burstThreshold: Int = 0
     private var burstCount: Int = 0
+    private var burstScheduledRunnable: Runnable? = null
 
     private val autoWatchRunnable: Runnable = object : Runnable {
         override fun run() {
             autoWatchScheduled = false
             evaluateAndQueue()
             if (settings.enabled && settings.autoTop3Enabled) scheduleAutoWatch()
-        }
-    }
-
-    private val burstRunnable: Runnable = object : Runnable {
-        override fun run() {
-            val target: String = burstPackage ?: return
-            if (!settings.enabled || !settings.autoTop3Enabled || captureRunning || burstCount >= AUTO_BURST_COUNT) {
-                if (burstCount >= AUTO_BURST_COUNT) clearBurst()
-                return
-            }
-            val current: String = currentForegroundPackage() ?: run { clearBurst(); return }
-            if (current != target) {
-                clearBurst()
-                return
-            }
-            val usage: Long = currentUsageSeconds()
-            burstCount++
-            captureAndUpload(target, burstThreshold, usage, "auto_burst_${todayKey()}_${target.hashCode()}_${burstThreshold}_$burstCount", null) {
-                if (burstCount < AUTO_BURST_COUNT && burstPackage == target) {
-                    mainHandler.postDelayed(burstRunnable, AUTO_BURST_INTERVAL_MS)
-                } else {
-                    clearBurst()
-                }
-            }
         }
     }
 
@@ -138,8 +115,39 @@ class AccessibilityScreenshotService : AccessibilityService() {
             burstPackage = current
             burstThreshold = threshold.toInt()
             burstCount = 0
-            mainHandler.removeCallbacks(burstRunnable)
-            mainHandler.post(burstRunnable)
+            scheduleBurstCapture(0L)
+        }
+    }
+
+    private fun scheduleBurstCapture(delayMs: Long): Unit {
+        burstScheduledRunnable?.let { mainHandler.removeCallbacks(it) }
+        val runnable = Runnable {
+            burstScheduledRunnable = null
+            runBurstCapture()
+        }
+        burstScheduledRunnable = runnable
+        if (delayMs <= 0L) mainHandler.post(runnable) else mainHandler.postDelayed(runnable, delayMs)
+    }
+
+    private fun runBurstCapture(): Unit {
+        val target: String = burstPackage ?: return
+        if (!settings.enabled || !settings.autoTop3Enabled || captureRunning || burstCount >= AUTO_BURST_COUNT) {
+            if (burstCount >= AUTO_BURST_COUNT) clearBurst()
+            return
+        }
+        val current: String = currentForegroundPackage() ?: run { clearBurst(); return }
+        if (current != target) {
+            clearBurst()
+            return
+        }
+        val usage: Long = currentUsageSeconds()
+        burstCount++
+        captureAndUpload(target, burstThreshold, usage, "auto_burst_${todayKey()}_${target.hashCode()}_${burstThreshold}_$burstCount", null) {
+            if (burstCount < AUTO_BURST_COUNT && burstPackage == target) {
+                scheduleBurstCapture(AUTO_BURST_INTERVAL_MS)
+            } else {
+                clearBurst()
+            }
         }
     }
 
@@ -183,7 +191,8 @@ class AccessibilityScreenshotService : AccessibilityService() {
     }
 
     private fun clearBurst(): Unit {
-        mainHandler.removeCallbacks(burstRunnable)
+        burstScheduledRunnable?.let { mainHandler.removeCallbacks(it) }
+        burstScheduledRunnable = null
         burstPackage = null
         burstThreshold = 0
         burstCount = 0
