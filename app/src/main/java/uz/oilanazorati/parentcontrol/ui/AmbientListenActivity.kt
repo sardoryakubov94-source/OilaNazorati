@@ -1,39 +1,26 @@
 package uz.oilanazorati.parentcontrol.ui
 
 import android.graphics.Typeface
+import android.media.AudioAttributes
+import android.media.AudioFormat
+import android.media.AudioTrack
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.firestore.ListenerRegistration
-import org.webrtc.IceCandidate
-import org.webrtc.MediaConstraints
-import org.webrtc.MediaStreamTrack
-import org.webrtc.PeerConnection
-import org.webrtc.PeerConnectionFactory
-import org.webrtc.RtpTransceiver
-import org.webrtc.SdpObserver
-import org.webrtc.SessionDescription
 import uz.oilanazorati.parentcontrol.repo.AmbientAudioRepository
 
-/**
- * Ota-ona tomonidagi jonli ovoz eshitish ekrani — WebRTC orqali.
- * Bu tomon faqat audio qabul qiladi, shuning uchun mikrofon qurilmasini
- * ochmaydi. Shu bilan parent qurilmada RECORD_AUDIO bilan bog'liq crashlar
- * oldi olinadi.
- */
+/** Ota-ona tomonidagi jonli ovoz — Firestore PCM16 transport. */
 class AmbientListenActivity : AppCompatActivity() {
     private var requestListener: ListenerRegistration? = null
-    private var sessionListener: ListenerRegistration? = null
-    private var peerConnection: PeerConnection? = null
-    private var factory: PeerConnectionFactory? = null
+    private var audioListener: ListenerRegistration? = null
+    private var audioTrack: AudioTrack? = null
     private var currentRequestId: String? = null
-    private var remoteDescriptionSet = false
-    private val appliedChildCandidates = HashSet<String>()
-    private var offerDocReady = false
-    private val pendingLocalCandidates = mutableListOf<IceCandidate>()
-    private var userStopping = false
+    private var currentSessionId: String? = null
+    private var stopping = false
+    private val seenSequences = HashSet<Int>()
 
     private lateinit var status: TextView
     private lateinit var startButton: Button
@@ -41,97 +28,155 @@ class AmbientListenActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(28, 28, 28, 28); setBackgroundColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_bg)) }
-        val title = TextView(this).apply { text = "🎙️ Ovoz"; textSize = 24f; setTypeface(typeface, Typeface.BOLD); setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary)) }
-        status = TextView(this).apply { text = "Tayyor"; textSize = 14f; setPadding(0, 18, 0, 18); setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_secondary)) }
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(28, 28, 28, 28)
+            setBackgroundColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_bg))
+        }
+        val title = TextView(this).apply {
+            text = "🎙️ Ovoz"
+            textSize = 24f
+            setTypeface(typeface, Typeface.BOLD)
+            setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary))
+        }
+        status = TextView(this).apply {
+            text = "Tayyor"
+            textSize = 14f
+            setPadding(0, 18, 0, 18)
+            setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
+        }
         startButton = Button(this).apply {
-            text = "Eshitishni boshlash"; setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary)); setBackgroundResource(uz.oilanazorati.parentcontrol.R.drawable.bg_card_theme)
-            val icon = androidx.core.content.ContextCompat.getDrawable(this@AmbientListenActivity, uz.oilanazorati.parentcontrol.R.drawable.ic_play)?.mutate(); icon?.setColorFilter(currentTextColor, android.graphics.PorterDuff.Mode.SRC_IN); setCompoundDrawablesWithIntrinsicBounds(icon, null, null, null); compoundDrawablePadding = 16
+            text = "Eshitishni boshlash"
+            setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary))
+            setBackgroundResource(uz.oilanazorati.parentcontrol.R.drawable.bg_card_theme)
+            val icon = androidx.core.content.ContextCompat.getDrawable(this@AmbientListenActivity, uz.oilanazorati.parentcontrol.R.drawable.ic_play)?.mutate()
+            icon?.setColorFilter(currentTextColor, android.graphics.PorterDuff.Mode.SRC_IN)
+            setCompoundDrawablesWithIntrinsicBounds(icon, null, null, null)
+            compoundDrawablePadding = 16
         }
         stopButton = Button(this).apply {
-            text = "To'xtatish"; isEnabled = false; setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary)); setBackgroundResource(uz.oilanazorati.parentcontrol.R.drawable.bg_card_theme)
-            val icon = androidx.core.content.ContextCompat.getDrawable(this@AmbientListenActivity, uz.oilanazorati.parentcontrol.R.drawable.ic_stop)?.mutate(); icon?.setColorFilter(currentTextColor, android.graphics.PorterDuff.Mode.SRC_IN); setCompoundDrawablesWithIntrinsicBounds(icon, null, null, null); compoundDrawablePadding = 16
+            text = "To'xtatish"
+            isEnabled = false
+            setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary))
+            setBackgroundResource(uz.oilanazorati.parentcontrol.R.drawable.bg_card_theme)
+            val icon = androidx.core.content.ContextCompat.getDrawable(this@AmbientListenActivity, uz.oilanazorati.parentcontrol.R.drawable.ic_stop)?.mutate()
+            icon?.setColorFilter(currentTextColor, android.graphics.PorterDuff.Mode.SRC_IN)
+            setCompoundDrawablesWithIntrinsicBounds(icon, null, null, null)
+            compoundDrawablePadding = 16
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = (16 * resources.displayMetrics.density).toInt() }
         }
-        root.addView(title); root.addView(status); root.addView(startButton); root.addView(stopButton); setContentView(root)
-        startButton.setOnClickListener { startListening() }; stopButton.setOnClickListener { stopListening() }
-        requestListener = AmbientAudioRepository.listenRequestStatus { _, state, _ -> if (currentRequestId == null) runOnUiThread { status.text = statusLabel(state) } }
+        root.addView(title)
+        root.addView(status)
+        root.addView(startButton)
+        root.addView(stopButton)
+        setContentView(root)
+
+        startButton.setOnClickListener { startListening() }
+        stopButton.setOnClickListener { stopListening() }
+        requestListener = AmbientAudioRepository.listenRequestStatus { _, state, sessionId ->
+            runOnUiThread {
+                if (currentRequestId == null) status.text = statusLabel(state)
+                if (currentRequestId != null && state == "active" && !sessionId.isNullOrBlank() && currentSessionId == null) {
+                    currentSessionId = sessionId
+                    startPlayback(sessionId)
+                }
+                if (currentRequestId != null && state == "failed") {
+                    status.text = "❌ Mikrofonni ulab bo'lmadi"
+                    resetUi()
+                }
+                if (currentRequestId != null && state == "stopped") resetUi("To'xtatildi")
+            }
+        }
     }
 
-    private fun statusLabel(state: String?): String = when (state) { "requested" -> "⏳ Bola qurilmasidan kutilmoqda..."; "active" -> "🔴 Jonli ovoz"; "stopped" -> "To'xtatildi"; "failed" -> "❌ Mikrofonni ulab bo'lmadi"; else -> "Tayyor" }
+    private fun statusLabel(state: String?): String = when (state) {
+        "requested" -> "⏳ Bola qurilmasidan kutilmoqda..."
+        "active" -> "🔴 Jonli ovoz"
+        "stopped" -> "To'xtatildi"
+        "failed" -> "❌ Mikrofonni ulab bo'lmadi"
+        else -> "Tayyor"
+    }
 
     private fun startListening() {
-        cleanupPeer(); userStopping = false; status.text = "⏳ Ulanmoqda..."; startButton.isEnabled = false; stopButton.isEnabled = true; remoteDescriptionSet = false; appliedChildCandidates.clear(); offerDocReady = false; pendingLocalCandidates.clear()
+        if (currentRequestId != null) return
+        stopping = false
+        seenSequences.clear()
+        status.text = "⏳ So'rov yuborilmoqda..."
+        startButton.isEnabled = false
+        stopButton.isEnabled = true
+        AmbientAudioRepository.requestStart { ok, error ->
+            runOnUiThread {
+                if (!ok) {
+                    status.text = "❌ ${error ?: "So'rov yuborilmadi"}"
+                    resetUi()
+                } else {
+                    // requestId is read back by the status listener; the first
+                    // matching status will activate playback when sessionId arrives.
+                    status.text = "⏳ Bola qurilmasidan kutilmoqda..."
+                }
+            }
+        }
+        // The repository status listener provides the requestId only to its callback;
+        // requestStart itself doesn't return it, so playback is activated by sessionId.
+        currentRequestId = "pending"
+    }
+
+    private fun startPlayback(sessionId: String) {
         try {
-            PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(applicationContext).createInitializationOptions())
-            // Parent is receive-only: no JavaAudioDeviceModule / microphone capture.
-            factory = PeerConnectionFactory.builder().createPeerConnectionFactory()
-            val iceServers = listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(), PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer())
-            peerConnection = factory?.createPeerConnection(PeerConnection.RTCConfiguration(iceServers), object : PeerConnection.Observer {
-                override fun onSignalingChange(newState: PeerConnection.SignalingState?) {}
-                override fun onIceConnectionChange(newState: PeerConnection.IceConnectionState?) {}
-                override fun onIceConnectionReceivingChange(receiving: Boolean) {}
-                override fun onIceGatheringChange(newState: PeerConnection.IceGatheringState?) {}
-                override fun onIceCandidate(candidate: IceCandidate) { synchronized(pendingLocalCandidates) { if (offerDocReady) AmbientAudioRepository.sendParentIceCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex) else pendingLocalCandidates.add(candidate) } }
-                override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
-                override fun onAddStream(stream: org.webrtc.MediaStream?) {}
-                override fun onRemoveStream(stream: org.webrtc.MediaStream?) {}
-                override fun onDataChannel(dataChannel: org.webrtc.DataChannel?) {}
-                override fun onRenegotiationNeeded() {}
-                override fun onAddTrack(receiver: org.webrtc.RtpReceiver?, mediaStreams: Array<out org.webrtc.MediaStream>?) {}
-                override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) { runOnUiThread { when (newState) {
-                    PeerConnection.PeerConnectionState.CONNECTED -> { status.text = "🔴 Jonli ovoz"; startButton.isEnabled = false; stopButton.isEnabled = true }
-                    PeerConnection.PeerConnectionState.CONNECTING -> { status.text = "⏳ WebRTC ulanmoqda..." }
-                    PeerConnection.PeerConnectionState.DISCONNECTED -> { if (!userStopping) { status.text = "⚠️ Aloqa vaqtincha uzildi. Ovoz bo'limi ochiq — qayta urinishingiz mumkin."; startButton.isEnabled = true; stopButton.isEnabled = false; currentRequestId = null; cleanupPeer() } }
-                    PeerConnection.PeerConnectionState.FAILED -> { if (!userStopping) failListening("WebRTC ulanishi amalga oshmadi. Ovoz bo'limi yopilmadi.") }
-                    PeerConnection.PeerConnectionState.CLOSED -> { if (!userStopping && currentRequestId != null) { status.text = "⚠️ Ulanish yopildi. Ovoz bo'limi ochiq."; startButton.isEnabled = true; stopButton.isEnabled = false; currentRequestId = null } }
-                    else -> {}
-                } } }
-                override fun onStandardizedIceConnectionChange(newState: PeerConnection.IceConnectionState?) {}
-                override fun onTrack(transceiver: RtpTransceiver?) { (transceiver?.receiver?.track() as? org.webrtc.AudioTrack)?.setEnabled(true) }
-            })
-            val pc = peerConnection ?: throw IllegalStateException("PeerConnection yaratilmadi")
-            pc.addTransceiver(MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO, RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY))
-            pc.createOffer(object : SdpObserver {
-                override fun onCreateSuccess(desc: SessionDescription?) { if (desc == null) return runOnUiThread { failListening("SDP taklif bo'sh") }; pc.setLocalDescription(object : SdpObserver { override fun onCreateSuccess(d: SessionDescription?) {}; override fun onSetSuccess() { sendOffer(desc.description) }; override fun onCreateFailure(error: String?) { runOnUiThread { failListening(error) } }; override fun onSetFailure(error: String?) { runOnUiThread { failListening(error) } } }, desc) }
-                override fun onSetSuccess() {}
-                override fun onCreateFailure(error: String?) { runOnUiThread { failListening(error) } }
-                override fun onSetFailure(error: String?) { runOnUiThread { failListening(error) } }
-            }, MediaConstraints())
-        } catch (t: Throwable) { failListening(t.message ?: "WebRTC ishga tushmadi") }
+            audioListener?.remove()
+            audioTrack?.release()
+            val minBuffer = AudioTrack.getMinBufferSize(AmbientAudioRepositorySampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            val bufferSize = maxOf(minBuffer, AmbientAudioRepositorySampleRate * 2)
+            audioTrack = if (android.os.Build.VERSION.SDK_INT >= 21) {
+                AudioTrack.Builder()
+                    .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                    .setAudioFormat(AudioFormat.Builder().setSampleRate(AmbientAudioRepositorySampleRate).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+                    .setBufferSizeInBytes(bufferSize)
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .build()
+            } else null
+            audioTrack?.play()
+            status.text = "🔴 Jonli ovoz"
+            audioListener = AmbientAudioRepository.listenAudioChunks(sessionId) { sequence, bytes ->
+                if (!seenSequences.add(sequence)) return@listenAudioChunks
+                try { audioTrack?.write(bytes, 0, bytes.size) } catch (_: Throwable) {}
+            }
+        } catch (t: Throwable) {
+            status.text = "❌ Ovoz chiqarishda xato"
+            resetUi()
+        }
     }
-
-    private fun sendOffer(offerSdp: String) {
-        AmbientAudioRepository.requestStartWebRtc(offerSdp) { ok, error, requestId -> runOnUiThread {
-            if (!ok || requestId == null) { failListening(error); return@runOnUiThread }
-            currentRequestId = requestId; status.text = "⏳ Bola qurilmasidan kutilmoqda..."
-            synchronized(pendingLocalCandidates) { offerDocReady = true; pendingLocalCandidates.forEach { AmbientAudioRepository.sendParentIceCandidate(it.sdp, it.sdpMid, it.sdpMLineIndex) }; pendingLocalCandidates.clear() }
-            sessionListener = AmbientAudioRepository.listenWebRtcSession(requestId, onAnswer = { answerSdp -> if (!remoteDescriptionSet) { remoteDescriptionSet = true; peerConnection?.setRemoteDescription(object : SdpObserver { override fun onCreateSuccess(d: SessionDescription?) {}; override fun onSetSuccess() {}; override fun onCreateFailure(error: String?) { runOnUiThread { failListening(error) } }; override fun onSetFailure(error: String?) { runOnUiThread { failListening(error) } } }, SessionDescription(SessionDescription.Type.ANSWER, answerSdp)) } }, onChildCandidate = { candidate, mid, index -> if (appliedChildCandidates.add(candidate)) peerConnection?.addIceCandidate(IceCandidate(mid, index, candidate)) }, onStatus = { newStatus, statusError -> runOnUiThread { when (newStatus) { "failed" -> failListening(statusError ?: "Mikrofonni ulab bo'lmadi"); "stopped" -> resetToIdle("To'xtatildi") } } })
-        } }
-    }
-
-    private fun failListening(error: String?) {
-        if (userStopping) return
-        val requestActive = currentRequestId != null
-        if (requestActive) AmbientAudioRepository.requestStop()
-        status.text = "❌ ${error ?: "Xato"}"
-        startButton.isEnabled = true
-        stopButton.isEnabled = false
-        currentRequestId = null
-        cleanupPeer()
-    }
-
-    private fun resetToIdle(message: String?) { status.text = message ?: "Tayyor"; startButton.isEnabled = true; stopButton.isEnabled = false; currentRequestId = null; cleanupPeer() }
 
     private fun stopListening() {
-        userStopping = true
+        stopping = true
         status.text = "⏳ To'xtatilmoqda..."
         stopButton.isEnabled = false
         AmbientAudioRepository.requestStop()
-        resetToIdle("To'xtatildi")
-        userStopping = false
+        resetUi("To'xtatildi")
+        stopping = false
     }
 
-    private fun cleanupPeer() { sessionListener?.remove(); sessionListener = null; try { peerConnection?.close() } catch (_: Throwable) {}; try { peerConnection?.dispose() } catch (_: Throwable) {}; try { factory?.dispose() } catch (_: Throwable) {}; peerConnection = null; factory = null }
-    override fun onDestroy() { if (currentRequestId != null) AmbientAudioRepository.requestStop(); requestListener?.remove(); requestListener = null; cleanupPeer(); super.onDestroy() }
+    private fun resetUi(message: String = "Tayyor") {
+        audioListener?.remove()
+        audioListener = null
+        try { audioTrack?.stop() } catch (_: Throwable) {}
+        try { audioTrack?.release() } catch (_: Throwable) {}
+        audioTrack = null
+        currentRequestId = null
+        currentSessionId = null
+        startButton.isEnabled = true
+        stopButton.isEnabled = false
+        status.text = message
+    }
+
+    override fun onDestroy() {
+        if (currentRequestId != null && !stopping) AmbientAudioRepository.requestStop()
+        requestListener?.remove()
+        audioListener?.remove()
+        try { audioTrack?.release() } catch (_: Throwable) {}
+        audioTrack = null
+        super.onDestroy()
+    }
+
+    companion object { private const val AmbientAudioRepositorySampleRate = 16000 }
 }
