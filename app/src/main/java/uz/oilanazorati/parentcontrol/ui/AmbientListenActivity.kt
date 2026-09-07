@@ -15,19 +15,19 @@ import org.webrtc.PeerConnectionFactory
 import org.webrtc.RtpTransceiver
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
-import org.webrtc.audio.JavaAudioDeviceModule
 import uz.oilanazorati.parentcontrol.repo.AmbientAudioRepository
 
 /**
  * Ota-ona tomonidagi jonli ovoz eshitish ekrani — WebRTC orqali.
- * Ulanish uzilsa ham Activity yopilmaydi; foydalanuvchi Ovoz bo'limida qoladi.
+ * Bu tomon faqat audio qabul qiladi, shuning uchun mikrofon qurilmasini
+ * ochmaydi. Shu bilan parent qurilmada RECORD_AUDIO bilan bog'liq crashlar
+ * oldi olinadi.
  */
 class AmbientListenActivity : AppCompatActivity() {
     private var requestListener: ListenerRegistration? = null
     private var sessionListener: ListenerRegistration? = null
     private var peerConnection: PeerConnection? = null
     private var factory: PeerConnectionFactory? = null
-    private var audioDeviceModule: JavaAudioDeviceModule? = null
     private var currentRequestId: String? = null
     private var remoteDescriptionSet = false
     private val appliedChildCandidates = HashSet<String>()
@@ -64,8 +64,8 @@ class AmbientListenActivity : AppCompatActivity() {
         cleanupPeer(); userStopping = false; status.text = "⏳ Ulanmoqda..."; startButton.isEnabled = false; stopButton.isEnabled = true; remoteDescriptionSet = false; appliedChildCandidates.clear(); offerDocReady = false; pendingLocalCandidates.clear()
         try {
             PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(applicationContext).createInitializationOptions())
-            audioDeviceModule = JavaAudioDeviceModule.builder(applicationContext).createAudioDeviceModule()
-            factory = PeerConnectionFactory.builder().setAudioDeviceModule(audioDeviceModule).createPeerConnectionFactory()
+            // Parent is receive-only: no JavaAudioDeviceModule / microphone capture.
+            factory = PeerConnectionFactory.builder().createPeerConnectionFactory()
             val iceServers = listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(), PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer())
             peerConnection = factory?.createPeerConnection(PeerConnection.RTCConfiguration(iceServers), object : PeerConnection.Observer {
                 override fun onSignalingChange(newState: PeerConnection.SignalingState?) {}
@@ -132,6 +132,6 @@ class AmbientListenActivity : AppCompatActivity() {
         userStopping = false
     }
 
-    private fun cleanupPeer() { sessionListener?.remove(); sessionListener = null; try { peerConnection?.close() } catch (_: Throwable) {}; try { peerConnection?.dispose() } catch (_: Throwable) {}; try { factory?.dispose() } catch (_: Throwable) {}; try { audioDeviceModule?.release() } catch (_: Throwable) {}; peerConnection = null; factory = null; audioDeviceModule = null }
+    private fun cleanupPeer() { sessionListener?.remove(); sessionListener = null; try { peerConnection?.close() } catch (_: Throwable) {}; try { peerConnection?.dispose() } catch (_: Throwable) {}; try { factory?.dispose() } catch (_: Throwable) {}; peerConnection = null; factory = null }
     override fun onDestroy() { if (currentRequestId != null) AmbientAudioRepository.requestStop(); requestListener?.remove(); requestListener = null; cleanupPeer(); super.onDestroy() }
 }
