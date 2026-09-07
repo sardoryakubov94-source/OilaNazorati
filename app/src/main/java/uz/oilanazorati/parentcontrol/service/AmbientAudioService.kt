@@ -12,6 +12,7 @@ import android.media.MediaRecorder
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.Blob
 import com.google.firebase.firestore.FirebaseFirestore
@@ -21,9 +22,11 @@ import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Remote audio is opt-in: the child grants RECORD_AUDIO once during setup.
- * When a parent requests listening, Android's microphone privacy indicator and
- * this foreground notification remain visible while audio is active.
+ * Legacy Firestore microphone transport. Web parent requests carrying
+ * transport=webrtc are delegated to WebRtcAmbientAudioService so the existing
+ * Firestore PCM path remains available for the Android parent panel.
+ * Remote audio is opt-in: the child grants RECORD_AUDIO during setup and the
+ * microphone foreground notification/privacy indicator remains visible.
  */
 class AmbientAudioService : Service() {
     private val db = FirebaseFirestore.getInstance()
@@ -45,17 +48,13 @@ class AmbientAudioService : Service() {
     override fun onCreate() {
         super.onCreate()
         createChannel()
-        // This service is started while the child setup UI is visible, so the
-        // microphone foreground-service while-in-use requirement is satisfied.
         startForeground(NOTIFICATION_ID, idleNotification(), foregroundTypes())
         listenForRequests()
     }
 
-    private fun foregroundTypes(): Int {
-        return if (Build.VERSION.SDK_INT >= 29) {
-            android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-        } else 0
-    }
+    private fun foregroundTypes(): Int = if (Build.VERSION.SDK_INT >= 29) {
+        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+    } else 0
 
     private fun listenForRequests() {
         val family = FirebaseRepo.familyCode ?: return
@@ -67,6 +66,17 @@ class AmbientAudioService : Service() {
                 if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
                 val data = snap.data.orEmpty()
                 val requestId = data["requestId"] as? String ?: return@addSnapshotListener
+                if (data["transport"] == "webrtc") {
+                    if (data["status"] == "requested") {
+                        try {
+                            ContextCompat.startForegroundService(
+                                this,
+                                Intent(this, WebRtcAmbientAudioService::class.java)
+                            )
+                        } catch (_: Throwable) {}
+                    }
+                    return@addSnapshotListener
+                }
                 when (data["status"] as? String) {
                     "requested" -> if (!recording.get()) startSession(requestId)
                     "stop_requested" -> if (activeRequestId == requestId) stopSession("stopped")
@@ -75,13 +85,10 @@ class AmbientAudioService : Service() {
     }
 
     private fun startSession(requestId: String) {
-        if (Build.VERSION.SDK_INT >= 23 &&
-            checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
-        ) {
+        if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             updateRequest(requestId, "failed", error = "Mikrofon ruxsati berilmagan")
             return
         }
-
         val family = FirebaseRepo.familyCode ?: return
         val child = FirebaseRepo.childId ?: FirebaseAuth.getInstance().currentUser?.uid ?: return
         val sessionId = "mic_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(8)}"
@@ -91,25 +98,14 @@ class AmbientAudioService : Service() {
         updateActiveNotification()
         updateRequest(requestId, "active", sessionId = sessionId)
 
-        val minBuffer = AudioRecord.getMinBufferSize(
-            SAMPLE_RATE,
-            AudioFormat.CHANNEL_IN_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
+        val minBuffer = AudioRecord.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         if (minBuffer <= 0) {
             stopSession("failed", "AudioRecord buffer xatosi")
             return
         }
-
         val bufferSize = maxOf(minBuffer, SAMPLE_RATE * 2)
         try {
-            recorder = AudioRecord(
-                MediaRecorder.AudioSource.MIC,
-                SAMPLE_RATE,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                bufferSize
-            )
+            recorder = AudioRecord(MediaRecorder.AudioSource.MIC, SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize)
             if (recorder?.state != AudioRecord.STATE_INITIALIZED) {
                 stopSession("failed", "Mikrofon ishga tushmadi")
                 return
@@ -137,19 +133,8 @@ class AmbientAudioService : Service() {
                         val bytes = buffer.copyOf(offset)
                         db.collection("families").document(family)
                             .collection("children").document(child)
-                            .collection("mic_audio")
-                            .document("${sessionId}_$sequence")
-                            .set(
-                                mapOf(
-                                    "sessionId" to sessionId,
-                                    "sequence" to sequence,
-                                    "createdAt" to System.currentTimeMillis(),
-                                    "sampleRate" to SAMPLE_RATE,
-                                    "channels" to 1,
-                                    "encoding" to "pcm16",
-                                    "audio" to Blob.fromBytes(bytes)
-                                )
-                            )
+                            .collection("mic_audio").document("${sessionId}_$sequence")
+                            .set(mapOf("sessionId" to sessionId, "sequence" to sequence, "createdAt" to System.currentTimeMillis(), "sampleRate" to SAMPLE_RATE, "channels" to 1, "encoding" to "pcm16", "audio" to Blob.fromBytes(bytes)))
                         sequence++
                     }
                 }
@@ -177,17 +162,10 @@ class AmbientAudioService : Service() {
     private fun updateRequest(requestId: String, status: String, sessionId: String? = null, error: String? = null) {
         val family = FirebaseRepo.familyCode ?: return
         val child = FirebaseRepo.childId ?: FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val data = mutableMapOf<String, Any>(
-            "requestId" to requestId,
-            "status" to status,
-            "updatedAt" to System.currentTimeMillis()
-        )
+        val data = mutableMapOf<String, Any>("requestId" to requestId, "status" to status, "updatedAt" to System.currentTimeMillis())
         if (sessionId != null) data["sessionId"] = sessionId
         if (error != null) data["error"] = error.take(200)
-        db.collection("families").document(family)
-            .collection("children").document(child)
-            .collection("mic_requests").document("current")
-            .update(data)
+        db.collection("families").document(family).collection("children").document(child).collection("mic_requests").document("current").update(data)
     }
 
     private fun createChannel() {
@@ -199,45 +177,21 @@ class AmbientAudioService : Service() {
     }
 
     private fun idleNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_blank)
-        .setContentTitle("Oila Nazorati")
-        .setPriority(NotificationCompat.PRIORITY_LOW)
-        .setCategory(NotificationCompat.CATEGORY_SERVICE)
-        .setOngoing(true)
-        .setShowWhen(false)
-        .build()
+        .setSmallIcon(R.drawable.ic_blank).setContentTitle("Oila Nazorati").setPriority(NotificationCompat.PRIORITY_LOW)
+        .setCategory(NotificationCompat.CATEGORY_SERVICE).setOngoing(true).setShowWhen(false).build()
 
     private fun activeNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_blank)
-        .setContentTitle("Mikrofon faol")
-        .setPriority(NotificationCompat.PRIORITY_LOW)
-        .setCategory(NotificationCompat.CATEGORY_SERVICE)
-        .setOngoing(true)
-        .setShowWhen(false)
-        .build()
+        .setSmallIcon(R.drawable.ic_blank).setContentTitle("Mikrofon faol").setPriority(NotificationCompat.PRIORITY_LOW)
+        .setCategory(NotificationCompat.CATEGORY_SERVICE).setOngoing(true).setShowWhen(false).build()
 
     private fun updateActiveNotification() {
-        if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(
-                NOTIFICATION_ID,
-                activeNotification(),
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, activeNotification())
-        }
+        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, activeNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+        else startForeground(NOTIFICATION_ID, activeNotification())
     }
 
     private fun restoreIdleNotification() {
-        if (Build.VERSION.SDK_INT >= 29) {
-            startForeground(
-                NOTIFICATION_ID,
-                idleNotification(),
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, idleNotification())
-        }
+        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, idleNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+        else startForeground(NOTIFICATION_ID, idleNotification())
     }
 
     override fun onDestroy() {
