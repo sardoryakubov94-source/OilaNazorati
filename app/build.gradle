@@ -37,14 +37,12 @@ android {
 
     buildTypes {
         release {
-            // Keep minification off for this release to avoid changing monitoring behavior.
             minifyEnabled false
             if (keystorePath && keystorePassword && keyAliasValue && keyPasswordValue) {
                 signingConfig signingConfigs.release
             }
         }
         debug {
-            // Debug builds use the normal Android debug signing key.
         }
     }
 
@@ -77,6 +75,9 @@ dependencies {
     implementation 'com.google.firebase:firebase-firestore-ktx'
     implementation 'com.google.firebase:firebase-crashlytics-ktx'
     implementation 'com.google.firebase:firebase-analytics-ktx'
+
+    // WebRTC real-time audio transport. Firestore remains the signaling channel.
+    implementation 'org.webrtc:google-webrtc:1.0.32006'
 
     // Grafik (statistikani chizish uchun)
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
