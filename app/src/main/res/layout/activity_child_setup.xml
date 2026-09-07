@@ -19,13 +19,9 @@
     <Button android:id="@+id/btnMicrophonePermission" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="🎙️ Mikrofon ruxsatini berish" android:layout_marginBottom="8dp"/>
     <Button android:id="@+id/btnUsageAccess" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Ilova ishlatilishi ruxsatini yoqish" android:layout_marginBottom="8dp"/>
 
-    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📸 Yangi screenshot usuli (sinov)" android:textStyle="bold" android:layout_marginTop="8dp" android:layout_marginBottom="6dp"/>
-    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Bu usul MediaProjection'dan alohida. Accessibility ruxsatini telefonda qo'lda yoqish kerak." android:layout_marginBottom="8dp"/>
     <Button android:id="@+id/btnAccessibilityScreenshot" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="♿ Accessibility screenshot ruxsatini yoqish" android:layout_marginBottom="8dp"/>
-    <Button android:id="@+id/btnAccessibilityScreenshotTest" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="🧪 Accessibility screenshotni sinash" android:layout_marginBottom="8dp"/>
 
     <Button android:id="@+id/btnScreenCapture" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="📸 Ekran tasviriga ruxsat berish" android:layout_marginBottom="8dp"/>
-    <Button android:id="@+id/btnScreenshotPermission" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="📸 Screenshot olishga ruxsat: yoqilgan" android:layout_marginBottom="8dp"/>
     <Button android:id="@+id/btnDefaultPhone" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Qo'ng'iroq kuzatuvini yoqish" android:layout_marginBottom="8dp"/>
     <Button android:id="@+id/btnDefaultSms" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="SMS kuzatuvini yoqish" android:layout_marginBottom="8dp"/>
     <Button android:id="@+id/btnBatteryOptimization" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="🔋 Batareya tejashdan chiqarish (muhim!)" android:layout_marginBottom="8dp"/>
