@@ -41,11 +41,18 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private var burstCount: Int = 0
     private var burstScheduledRunnable: Runnable? = null
 
+    // "Avtomatik TOP 3" va "qo'lda tanlangan ilovalar" — ikkita mustaqil
+    // manba. TOP-3 o'chirilgan bo'lsa ham, agar ota-ona kamida bitta ilovani
+    // qo'lda tanlagan bo'lsa, o'sha ilova(lar) uchun avtomatik kuzatish
+    // davom etishi kerak.
+    private val autoCaptureActive: Boolean
+        get() = settings.autoTop3Enabled || settings.manualPackageNames.isNotEmpty()
+
     private val autoWatchRunnable: Runnable = object : Runnable {
         override fun run() {
             autoWatchScheduled = false
             evaluateAndQueue()
-            if (settings.enabled && settings.autoTop3Enabled) scheduleAutoWatch()
+            if (settings.enabled && autoCaptureActive) scheduleAutoWatch()
         }
     }
 
@@ -66,8 +73,8 @@ class AccessibilityScreenshotService : AccessibilityService() {
         ScreenshotRepository.updateAccessibilityStatus(true)
         settingsListener = ScreenshotRepository.listenSettings { newSettings: ScreenshotSettings ->
             settings = newSettings
-            if (!settings.enabled || !settings.autoTop3Enabled) clearBurst()
-            if (settings.enabled && settings.autoTop3Enabled) scheduleAutoWatch()
+            if (!settings.enabled || !autoCaptureActive) clearBurst()
+            if (settings.enabled && autoCaptureActive) scheduleAutoWatch()
         }
         requestListener = ScreenshotRepository.listenScreenshotRequests { requestId: String ->
             if (settings.enabled) queueRemoteCapture(requestId)
@@ -88,7 +95,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
 
     /** After the configured continuous foreground threshold, capture the same app 3 times, one minute apart. */
     private fun evaluateAndQueue(): Unit {
-        if (!settings.enabled || !settings.autoTop3Enabled || captureRunning || burstPackage != null) return
+        if (!settings.enabled || !autoCaptureActive || captureRunning || burstPackage != null) return
         val usm: UsageStatsManager = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager ?: return
         val now: Long = System.currentTimeMillis()
         val start: Long = Calendar.getInstance().apply {
@@ -99,7 +106,12 @@ class AccessibilityScreenshotService : AccessibilityService() {
             pkg != packageName && stat.totalTimeInForeground > 0 &&
                 (getApplicationInfoSafe(pkg)?.flags?.and(android.content.pm.ApplicationInfo.FLAG_SYSTEM) ?: 0) == 0
         }
-        val auto = userStats.entries.sortedByDescending { it.value.totalTimeInForeground }.take(3).map { it.key }.toSet()
+        // TOP-3 to'plami faqat "Avtomatik TOP 3" tugmasi yoqiq bo'lsagina
+        // hisoblanadi — bu tugma o'chirilgan bo'lsa, faqat qo'lda tanlangan
+        // ilovalar (pastda qo'shiladi) kuzatiladi.
+        val auto = if (settings.autoTop3Enabled) {
+            userStats.entries.sortedByDescending { it.value.totalTimeInForeground }.take(3).map { it.key }.toSet()
+        } else emptySet()
         val targets = auto + settings.manualPackageNames.toSet()
         val foreground: Pair<String, Long> = currentForegroundInfo() ?: return
         val current: String = foreground.first
@@ -111,7 +123,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         val child: String = FirebaseRepo.childId ?: return
         val key: String = triggerKey(child, current, todayKey(), threshold.toInt())
         ScreenshotRepository.reserveTrigger(key) { reserved: Boolean ->
-            if (!reserved || !settings.enabled || !settings.autoTop3Enabled || currentForegroundPackage() != current) return@reserveTrigger
+            if (!reserved || !settings.enabled || !autoCaptureActive || currentForegroundPackage() != current) return@reserveTrigger
             burstPackage = current
             burstThreshold = threshold.toInt()
             burstCount = 0
@@ -131,7 +143,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
 
     private fun runBurstCapture(): Unit {
         val target: String = burstPackage ?: return
-        if (!settings.enabled || !settings.autoTop3Enabled || captureRunning || burstCount >= AUTO_BURST_COUNT) {
+        if (!settings.enabled || !autoCaptureActive || captureRunning || burstCount >= AUTO_BURST_COUNT) {
             if (burstCount >= AUTO_BURST_COUNT) clearBurst()
             return
         }
@@ -243,7 +255,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private fun triggerKey(child: String, pkg: String, date: String, threshold: Int): String = "${date}_${child.hashCode()}_${pkg.hashCode()}_$threshold"
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (settings.enabled && settings.autoTop3Enabled) scheduleAutoWatch()
+        if (settings.enabled && autoCaptureActive) scheduleAutoWatch()
     }
 
     override fun onInterrupt(): Unit = Unit
