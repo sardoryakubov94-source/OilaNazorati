@@ -20,6 +20,7 @@ import uz.oilanazorati.parentcontrol.repo.AmbientAudioRepository
 
 /**
  * Ota-ona tomonidagi jonli ovoz eshitish ekrani — WebRTC orqali.
+ * Ulanish uzilsa ham Activity yopilmaydi; foydalanuvchi Ovoz bo'limida qoladi.
  */
 class AmbientListenActivity : AppCompatActivity() {
     private var requestListener: ListenerRegistration? = null
@@ -32,6 +33,7 @@ class AmbientListenActivity : AppCompatActivity() {
     private val appliedChildCandidates = HashSet<String>()
     private var offerDocReady = false
     private val pendingLocalCandidates = mutableListOf<IceCandidate>()
+    private var userStopping = false
 
     private lateinit var status: TextView
     private lateinit var startButton: Button
@@ -59,7 +61,7 @@ class AmbientListenActivity : AppCompatActivity() {
     private fun statusLabel(state: String?): String = when (state) { "requested" -> "⏳ Bola qurilmasidan kutilmoqda..."; "active" -> "🔴 Jonli ovoz"; "stopped" -> "To'xtatildi"; "failed" -> "❌ Mikrofonni ulab bo'lmadi"; else -> "Tayyor" }
 
     private fun startListening() {
-        cleanupPeer(); status.text = "⏳ Ulanmoqda..."; startButton.isEnabled = false; remoteDescriptionSet = false; appliedChildCandidates.clear(); offerDocReady = false; pendingLocalCandidates.clear()
+        cleanupPeer(); userStopping = false; status.text = "⏳ Ulanmoqda..."; startButton.isEnabled = false; stopButton.isEnabled = true; remoteDescriptionSet = false; appliedChildCandidates.clear(); offerDocReady = false; pendingLocalCandidates.clear()
         try {
             PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(applicationContext).createInitializationOptions())
             audioDeviceModule = JavaAudioDeviceModule.builder(applicationContext).createAudioDeviceModule()
@@ -77,7 +79,14 @@ class AmbientListenActivity : AppCompatActivity() {
                 override fun onDataChannel(dataChannel: org.webrtc.DataChannel?) {}
                 override fun onRenegotiationNeeded() {}
                 override fun onAddTrack(receiver: org.webrtc.RtpReceiver?, mediaStreams: Array<out org.webrtc.MediaStream>?) {}
-                override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) { runOnUiThread { when (newState) { PeerConnection.PeerConnectionState.CONNECTED -> { status.text = "🔴 Jonli ovoz"; stopButton.isEnabled = true }; PeerConnection.PeerConnectionState.FAILED, PeerConnection.PeerConnectionState.DISCONNECTED, PeerConnection.PeerConnectionState.CLOSED -> if (currentRequestId != null) failListening("Ulanish uzildi"); else -> {} } } }
+                override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) { runOnUiThread { when (newState) {
+                    PeerConnection.PeerConnectionState.CONNECTED -> { status.text = "🔴 Jonli ovoz"; startButton.isEnabled = false; stopButton.isEnabled = true }
+                    PeerConnection.PeerConnectionState.CONNECTING -> { status.text = "⏳ WebRTC ulanmoqda..." }
+                    PeerConnection.PeerConnectionState.DISCONNECTED -> { if (!userStopping) { status.text = "⚠️ Aloqa vaqtincha uzildi. Ovoz bo'limi ochiq — qayta urinishingiz mumkin."; startButton.isEnabled = true; stopButton.isEnabled = false; currentRequestId = null; cleanupPeer() } }
+                    PeerConnection.PeerConnectionState.FAILED -> { if (!userStopping) failListening("WebRTC ulanishi amalga oshmadi. Ovoz bo'limi yopilmadi.") }
+                    PeerConnection.PeerConnectionState.CLOSED -> { if (!userStopping && currentRequestId != null) { status.text = "⚠️ Ulanish yopildi. Ovoz bo'limi ochiq."; startButton.isEnabled = true; stopButton.isEnabled = false; currentRequestId = null } }
+                    else -> {}
+                } } }
                 override fun onStandardizedIceConnectionChange(newState: PeerConnection.IceConnectionState?) {}
                 override fun onTrack(transceiver: RtpTransceiver?) { (transceiver?.receiver?.track() as? org.webrtc.AudioTrack)?.setEnabled(true) }
             })
@@ -101,9 +110,28 @@ class AmbientListenActivity : AppCompatActivity() {
         } }
     }
 
-    private fun failListening(error: String?) { status.text = "❌ ${error ?: "Xato"}"; resetToIdle(null, keepMessage = true) }
-    private fun resetToIdle(message: String?, keepMessage: Boolean = false) { if (!keepMessage) status.text = message ?: "Tayyor"; startButton.isEnabled = true; stopButton.isEnabled = false; currentRequestId = null; cleanupPeer() }
-    private fun stopListening() { status.text = "⏳ To'xtatilmoqda..."; stopButton.isEnabled = false; AmbientAudioRepository.requestStop(); resetToIdle("To'xtatildi") }
+    private fun failListening(error: String?) {
+        if (userStopping) return
+        val requestActive = currentRequestId != null
+        if (requestActive) AmbientAudioRepository.requestStop()
+        status.text = "❌ ${error ?: "Xato"}"
+        startButton.isEnabled = true
+        stopButton.isEnabled = false
+        currentRequestId = null
+        cleanupPeer()
+    }
+
+    private fun resetToIdle(message: String?) { status.text = message ?: "Tayyor"; startButton.isEnabled = true; stopButton.isEnabled = false; currentRequestId = null; cleanupPeer() }
+
+    private fun stopListening() {
+        userStopping = true
+        status.text = "⏳ To'xtatilmoqda..."
+        stopButton.isEnabled = false
+        AmbientAudioRepository.requestStop()
+        resetToIdle("To'xtatildi")
+        userStopping = false
+    }
+
     private fun cleanupPeer() { sessionListener?.remove(); sessionListener = null; try { peerConnection?.close() } catch (_: Throwable) {}; try { peerConnection?.dispose() } catch (_: Throwable) {}; try { factory?.dispose() } catch (_: Throwable) {}; try { audioDeviceModule?.release() } catch (_: Throwable) {}; peerConnection = null; factory = null; audioDeviceModule = null }
     override fun onDestroy() { if (currentRequestId != null) AmbientAudioRepository.requestStop(); requestListener?.remove(); requestListener = null; cleanupPeer(); super.onDestroy() }
 }
