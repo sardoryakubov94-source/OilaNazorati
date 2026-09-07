@@ -76,7 +76,7 @@ fun Activity.bindBottomNav(active: NavTab) {
     }
     navScreenshot.setOnClickListener {
         if (active != NavTab.SCREENSHOT) {
-            goIfChildSelected { ScreenshotSettingsActivity::class.java }
+            goIfChildSelected { ScreenshotHistoryActivity::class.java }
         }
     }
 }

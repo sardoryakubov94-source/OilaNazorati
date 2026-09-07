@@ -1,6 +1,7 @@
 package uz.oilanazorati.parentcontrol.ui
 
 import android.app.Dialog
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -71,11 +72,19 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
         val scroll = ScrollView(this).apply { addView(box) }
         setContentView(scroll)
 
-        box.addView(TextView(this).apply {
-            text = "🖼 Screenshotlar tarixi"
-            textSize = 24f
-            setPadding(0, 0, 0, 18)
-        })
+        box.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(TextView(this@ScreenshotHistoryActivity).apply {
+                text = "🖼 Screenshotlar tarixi"
+                textSize = 24f
+                layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+            })
+            addView(Button(this@ScreenshotHistoryActivity).apply {
+                text = "⚙ Sozlamalar"
+                setOnClickListener { startActivity(Intent(this@ScreenshotHistoryActivity, ScreenshotSettingsActivity::class.java)) }
+            })
+        }, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 18 })
 
         connectionStatusText = TextView(this).apply {
             text = "Ulanish holati tekshirilmoqda..."
