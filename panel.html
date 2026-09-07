@@ -236,7 +236,7 @@ async function shots(){const cd=await getDoc(doc(db,'families',family,'children'
 // manzillari — bir necha kilobayt) yoziladi, ovozning o'zi esa to'g'ridan-to'g'ri
 // (peer-to-peer) uzatiladi. Bu eski usuldan farqli o'laroq Firestore
 // yozish/o'qish limitini deyarli sarflamaydi.
-let micPc=null,micUnsub=null,micActive=false,micRequestId=null,micAppliedCandidates=new Set();
+let micPc=null,micUnsub=null,micActive=false,micRequestId=null,micAppliedCandidates=new Set(),micDocReady=false,micPendingCandidates=[];
 
 async function voice(){
   $('content').innerHTML='<div class="liveRow"><div class="liveTxt" id="micTxt"><b>Ovoz eshitish o‘chirilgan</b>Yoqsangiz, farzand qurilmasidan real vaqtda ovoz eshitiladi (internet orqali, to‘g‘ridan-to‘g‘ri).</div><button id="micBtn" class="liveBtn off">🎙️ Eshitishni boshlash</button></div><audio id="micAudio" autoplay playsinline style="display:none"></audio>';
@@ -249,6 +249,8 @@ async function startVoice(){
   if(micActive)return;
   micActive=true;
   micAppliedCandidates=new Set();
+  micDocReady=false;
+  micPendingCandidates=[];
   if($('micTxt'))$('micTxt').innerHTML='<b>Ulanmoqda…</b>Farzand qurilmasi bilan bog‘lanmoqda.';
   if($('micBtn')){$('micBtn').textContent='⏳ Ulanmoqda…';$('micBtn').className='liveBtn on'}
   const requestId='web_'+Date.now();
@@ -258,7 +260,10 @@ async function startVoice(){
     micPc.addTransceiver('audio',{direction:'recvonly'});
     micPc.ontrack=(e)=>{ const a=$('micAudio'); if(a)a.srcObject=e.streams[0] };
     micPc.onicecandidate=(e)=>{
-      if(e.candidate)updateDoc(micRef(),{parentCandidates:arrayUnion({candidate:e.candidate.candidate,sdpMid:e.candidate.sdpMid,sdpMLineIndex:e.candidate.sdpMLineIndex})}).catch(()=>{});
+      if(!e.candidate)return;
+      const c={candidate:e.candidate.candidate,sdpMid:e.candidate.sdpMid,sdpMLineIndex:e.candidate.sdpMLineIndex};
+      if(micDocReady)updateDoc(micRef(),{parentCandidates:arrayUnion(c)}).catch(()=>{});
+      else micPendingCandidates.push(c);
     };
     micPc.onconnectionstatechange=()=>{
       if(!micPc)return;
@@ -268,6 +273,9 @@ async function startVoice(){
     const offer=await micPc.createOffer();
     await micPc.setLocalDescription(offer);
     await setDoc(micRef(),{requestId,status:'requested',transport:'webrtc',webrtcOffer:offer.sdp,parentCandidates:[],childCandidates:[],updatedAt:Date.now()});
+    micDocReady=true;
+    micPendingCandidates.forEach(c=>updateDoc(micRef(),{parentCandidates:arrayUnion(c)}).catch(()=>{}));
+    micPendingCandidates=[];
     micUnsub=onSnapshot(micRef(),(snap)=>{
       const d=snap.data(); if(!d||d.requestId!==requestId||!micPc)return;
       if(d.status==='failed'){ stopVoice('🔴 '+(d.error||'Ulanmadi'),true); return }

@@ -36,6 +36,16 @@ class AmbientListenActivity : AppCompatActivity() {
     private var remoteDescriptionSet = false
     private val appliedChildCandidates = HashSet<String>()
 
+    // Firestore hujjati (mic_requests/current) hali yaratilmasdan turib ham
+    // WebRTC ICE manzillari kela boshlashi mumkin (setLocalDescription
+    // chaqirilgach, ICE yig'ish deyarli darhol boshlanadi). Agar bu
+    // manzillarni hujjat yaratilishidan oldin yuborsak, "update()" chaqiruvi
+    // hujjat topilmadi xatosi bilan muvaffaqiyatsiz tugab, manzil yo'qolib
+    // qoladi. Shu sababli hujjat tayyor bo'lgunicha ularni shu yerda
+    // vaqtincha saqlab turamiz.
+    private var offerDocReady = false
+    private val pendingLocalCandidates = mutableListOf<IceCandidate>()
+
     private lateinit var status: TextView
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
@@ -109,6 +119,8 @@ class AmbientListenActivity : AppCompatActivity() {
         startButton.isEnabled = false
         remoteDescriptionSet = false
         appliedChildCandidates.clear()
+        offerDocReady = false
+        pendingLocalCandidates.clear()
 
         try {
             PeerConnectionFactory.initialize(
@@ -126,7 +138,13 @@ class AmbientListenActivity : AppCompatActivity() {
                 override fun onIceConnectionReceivingChange(receiving: Boolean) {}
                 override fun onIceGatheringChange(newState: PeerConnection.IceGatheringState?) {}
                 override fun onIceCandidate(candidate: IceCandidate) {
-                    AmbientAudioRepository.sendParentIceCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
+                    synchronized(pendingLocalCandidates) {
+                        if (offerDocReady) {
+                            AmbientAudioRepository.sendParentIceCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
+                        } else {
+                            pendingLocalCandidates.add(candidate)
+                        }
+                    }
                 }
                 override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
                 override fun onAddStream(stream: org.webrtc.MediaStream?) {}
@@ -187,6 +205,13 @@ class AmbientListenActivity : AppCompatActivity() {
                 }
                 currentRequestId = requestId
                 status.text = "⏳ Bola qurilmasidan kutilmoqda..."
+                synchronized(pendingLocalCandidates) {
+                    offerDocReady = true
+                    pendingLocalCandidates.forEach {
+                        AmbientAudioRepository.sendParentIceCandidate(it.sdp, it.sdpMid, it.sdpMLineIndex)
+                    }
+                    pendingLocalCandidates.clear()
+                }
                 sessionListener = AmbientAudioRepository.listenWebRtcSession(
                     requestId,
                     onAnswer = { answerSdp ->
