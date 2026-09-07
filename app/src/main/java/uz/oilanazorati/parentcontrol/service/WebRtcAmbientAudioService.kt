@@ -125,7 +125,7 @@ class WebRtcAmbientAudioService : Service() {
             audioSource = factory!!.createAudioSource(MediaConstraints())
             audioTrack = factory!!.createAudioTrack("oila-mic", audioSource)
             audioTrack!!.setEnabled(true)
-            peerConnection!!.addTrack(audioTrack)
+            peerConnection!!.addTrack(audioTrack!!)
             peerConnection!!.setRemoteDescription(object : SdpObserver {
                 override fun onCreateSuccess(desc: SessionDescription?) {}
                 override fun onSetSuccess() { createAnswer(requestRef, id) }
