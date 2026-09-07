@@ -36,6 +36,7 @@ class ScreenCaptureService : Service() {
     private var waitingRemoteRequestId: String? = null
     private val pollRunnable = object : Runnable { override fun run() { if (pending == null || captureInProgress) return; val image = imageReader?.acquireLatestImage(); if (image != null) processImage(image) else handler.postDelayed(this, CAPTURE_POLL_INTERVAL_MS) } }
     private val captureTimeoutRunnable = Runnable { onCaptureTimeout() }
+    private val evalRunnable = object : Runnable { override fun run() { if (!AccessibilityScreenshotService.isServiceEnabled(this@ScreenCaptureService)) evaluateAndQueue(); handler.postDelayed(this, 30_000L) } }
 
     data class PendingCapture(val packageName: String, val threshold: Int, val usageSeconds: Long, val key: String, val remoteRequestId: String? = null)
 
@@ -50,21 +51,22 @@ class ScreenCaptureService : Service() {
                 stopSelf()
             }
         }
-        ensureRequestListener(); handler.post(evalRunnable); ScreenshotRepository.updateProjectionStatus(false)
+        ensureRequestListener()
+        handler.post(evalRunnable)
+        ScreenshotRepository.updateProjectionStatus(false)
     }
 
     private fun ensureRequestListener() {
         if (requestListener != null) return
         requestListener = ScreenshotRepository.listenScreenshotRequests { requestId ->
-            if (!settings.enabled) return@listenScreenshotRequests
+            if (!settings.enabled || AccessibilityScreenshotService.isServiceEnabled(this)) return@listenScreenshotRequests
             if (projection == null) waitingRemoteRequestId = requestId else queueRemoteCapture(requestId)
         }
     }
 
-    private val evalRunnable = object : Runnable { override fun run() { evaluateAndQueue(); handler.postDelayed(this, 30_000L) } }
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) { cleanupProjection(); stopSelf(); return START_NOT_STICKY }
+        if (AccessibilityScreenshotService.isServiceEnabled(this)) { cleanupProjection(); stopSelf(); return START_NOT_STICKY }
         if (!settings.enabled) return START_NOT_STICKY
         if (projection == null && intent != null) {
             val code = intent.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
@@ -75,7 +77,7 @@ class ScreenCaptureService : Service() {
     }
 
     private fun startProjection(resultCode: Int, data: Intent) {
-        if (!settings.enabled) return
+        if (!settings.enabled || AccessibilityScreenshotService.isServiceEnabled(this)) return
         val crashlytics = com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance()
         try {
             if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, notification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION) else startForeground(NOTIFICATION_ID, notification())
@@ -92,7 +94,7 @@ class ScreenCaptureService : Service() {
     }
 
     private fun queueRemoteCapture(requestId: String) {
-        if (!settings.enabled || pending != null || captureInProgress || projection == null) return
+        if (!settings.enabled || AccessibilityScreenshotService.isServiceEnabled(this) || pending != null || captureInProgress || projection == null) return
         val now = System.currentTimeMillis(); val usm = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager
         val current = if (usm != null) currentForegroundPackage(usm, now) else null
         val usageSec = if (usm != null && current != null) { val start = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY,0);set(Calendar.MINUTE,0);set(Calendar.SECOND,0);set(Calendar.MILLISECOND,0) }.timeInMillis; (usm.queryAndAggregateUsageStats(start, now)[current]?.totalTimeInForeground ?: 0L)/1000L } else 0L
@@ -101,7 +103,7 @@ class ScreenCaptureService : Service() {
     }
 
     private fun evaluateAndQueue() {
-        if (!settings.enabled || projection == null || pending != null || captureInProgress) return
+        if (!settings.enabled || AccessibilityScreenshotService.isServiceEnabled(this) || projection == null || pending != null || captureInProgress) return
         val usm = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager ?: return; val cal = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY,0);set(Calendar.MINUTE,0);set(Calendar.SECOND,0);set(Calendar.MILLISECOND,0) }; val now=System.currentTimeMillis(); val stats=usm.queryAndAggregateUsageStats(cal.timeInMillis,now)
         val userStats=stats.filter { (pkg,s)->pkg!=packageName&&s.totalTimeInForeground>0&&(getApplicationInfoSafe(pkg)?.flags?.and(android.content.pm.ApplicationInfo.FLAG_SYSTEM)?:0)==0 }
         val auto=if(settings.autoTop3Enabled) userStats.entries.sortedByDescending{it.value.totalTimeInForeground}.take(3).map{it.key}.toSet() else emptySet(); val targets=auto+settings.manualPackageNames.toSet(); val current=currentForegroundPackage(usm,now)?:return; if(current !in targets)return
@@ -110,12 +112,12 @@ class ScreenCaptureService : Service() {
         ScreenshotRepository.reserveTrigger(key){reserved->if(reserved){pending=PendingCapture(current,threshold,usageSec,key);schedulePendingCaptureWatch()}}
     }
 
-    private fun handleFrame(reader: ImageReader){if(!settings.enabled){cleanupProjection();return};if(pending==null||captureInProgress)return;val image=reader.acquireLatestImage()?:return;processImage(image)}
+    private fun handleFrame(reader: ImageReader){if(!settings.enabled||AccessibilityScreenshotService.isServiceEnabled(this)){cleanupProjection();return};if(pending==null||captureInProgress)return;val image=reader.acquireLatestImage()?:return;processImage(image)}
     private fun onCaptureTimeout(){val request=pending?:return;if(captureInProgress)return;cancelPendingCaptureWatch();if(request.remoteRequestId!=null)ScreenshotRepository.markScreenshotRequest(request.remoteRequestId,"failed","Ekran surati vaqtida olinmadi") else prefs.edit().putBoolean(request.key,false).apply();pending=null}
     private fun schedulePendingCaptureWatch(){handler.removeCallbacks(pollRunnable);handler.removeCallbacks(captureTimeoutRunnable);handler.postDelayed(captureTimeoutRunnable,CAPTURE_TIMEOUT_MS);handler.postDelayed(pollRunnable,CAPTURE_POLL_INTERVAL_MS)}
     private fun cancelPendingCaptureWatch(){handler.removeCallbacks(pollRunnable);handler.removeCallbacks(captureTimeoutRunnable)}
 
-    private fun processImage(image: android.media.Image){if(!settings.enabled){image.close();cleanupProjection();return};val request=pending?:run{image.close();return};captureInProgress=true;cancelPendingCaptureWatch();var file:File?=null;try{val dm=Resources.getSystem().displayMetrics;val plane=image.planes[0];val pixel=plane.pixelStride;val row=plane.rowStride;val padding=row-pixel*dm.widthPixels;val bitmap=Bitmap.createBitmap(dm.widthPixels+padding/pixel,dm.heightPixels,Bitmap.Config.ARGB_8888);bitmap.copyPixelsFromBuffer(plane.buffer);val cropped=if(bitmap.width!=dm.widthPixels)Bitmap.createBitmap(bitmap,0,0,dm.widthPixels,dm.heightPixels)else bitmap;file=File(cacheDir,"screenshot_${System.currentTimeMillis()}.jpg");FileOutputStream(file).use{cropped.compress(Bitmap.CompressFormat.JPEG,82,it)};if(cropped!==bitmap)bitmap.recycle();cropped.recycle();val meta=ScreenshotMetadata("${System.currentTimeMillis()}_${request.threshold}_${request.packageName.hashCode()}",uz.oilanazorati.parentcontrol.repo.FirebaseRepo.childId.orEmpty(),uz.oilanazorati.parentcontrol.repo.FirebaseRepo.familyCode.orEmpty(),request.packageName,label(request.packageName),System.currentTimeMillis(),todayKey(),request.usageSeconds,request.threshold);val upload=file;ScreenshotRepository.upload(upload,meta){ok->upload.delete();if(request.remoteRequestId!=null)ScreenshotRepository.markScreenshotRequest(request.remoteRequestId,if(ok)"completed" else "failed",if(ok)"Screenshot tayyor" else "Screenshot yuklanmadi")else prefs.edit().putBoolean(request.key,ok).apply();pending=null;captureInProgress=false}}
+    private fun processImage(image: android.media.Image){if(!settings.enabled||AccessibilityScreenshotService.isServiceEnabled(this)){image.close();cleanupProjection();return};val request=pending?:run{image.close();return};captureInProgress=true;cancelPendingCaptureWatch();var file:File?=null;try{val dm=Resources.getSystem().displayMetrics;val plane=image.planes[0];val pixel=plane.pixelStride;val row=plane.rowStride;val padding=row-pixel*dm.widthPixels;val bitmap=Bitmap.createBitmap(dm.widthPixels+padding/pixel,dm.heightPixels,Bitmap.Config.ARGB_8888);bitmap.copyPixelsFromBuffer(plane.buffer);val cropped=if(bitmap.width!=dm.widthPixels)Bitmap.createBitmap(bitmap,0,0,dm.widthPixels,dm.heightPixels)else bitmap;file=File(cacheDir,"screenshot_${System.currentTimeMillis()}.jpg");FileOutputStream(file).use{cropped.compress(Bitmap.CompressFormat.JPEG,82,it)};if(cropped!==bitmap)bitmap.recycle();cropped.recycle();val meta=ScreenshotMetadata("${System.currentTimeMillis()}_${request.threshold}_${request.packageName.hashCode()}",uz.oilanazorati.parentcontrol.repo.FirebaseRepo.childId.orEmpty(),uz.oilanazorati.parentcontrol.repo.FirebaseRepo.familyCode.orEmpty(),request.packageName,label(request.packageName),System.currentTimeMillis(),todayKey(),request.usageSeconds,request.threshold);val upload=file;ScreenshotRepository.upload(upload,meta){ok->upload.delete();if(request.remoteRequestId!=null)ScreenshotRepository.markScreenshotRequest(request.remoteRequestId,if(ok)"completed" else "failed",if(ok)"Screenshot tayyor" else "Screenshot yuklanmadi")else prefs.edit().putBoolean(request.key,ok).apply();pending=null;captureInProgress=false}}
         catch(e:Throwable){file?.delete();if(request.remoteRequestId!=null)ScreenshotRepository.markScreenshotRequest(request.remoteRequestId,"failed",e.message?:"capture error")else prefs.edit().putBoolean(request.key,false).apply();crashlyticsRecord(e);pending=null;captureInProgress=false}finally{image.close()}}
     private fun crashlyticsRecord(e:Throwable)=com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
     private fun label(pkg:String)=try{packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg,0)).toString()}catch(_:Exception){pkg}
