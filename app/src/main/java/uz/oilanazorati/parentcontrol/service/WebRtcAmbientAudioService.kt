@@ -25,12 +25,7 @@ import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import java.util.concurrent.atomic.AtomicBoolean
 
-/**
- * Real-time microphone transport for the parent web panel.
- * Firestore is used only for WebRTC signaling; audio itself is peer-to-peer.
- * The child must have RECORD_AUDIO permission and the foreground microphone
- * notification/privacy indicator remains visible while this service is active.
- */
+/** Real-time microphone transport for the transparent parent web panel. */
 class WebRtcAmbientAudioService : Service() {
     private val db = FirebaseFirestore.getInstance()
     private var requestListener: com.google.firebase.firestore.ListenerRegistration? = null
@@ -58,29 +53,24 @@ class WebRtcAmbientAudioService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
 
-    private fun foregroundTypes(): Int = if (Build.VERSION.SDK_INT >= 29) {
-        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-    } else 0
+    private fun foregroundTypes(): Int = if (Build.VERSION.SDK_INT >= 29) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE else 0
 
     private fun listenForRequests() {
         val family = FirebaseRepo.familyCode ?: return
         val child = FirebaseRepo.childId ?: FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val ref = db.collection("families").document(family)
-            .collection("children").document(child)
-            .collection("mic_requests").document("current")
+        val ref = db.collection("families").document(family).collection("children").document(child).collection("mic_requests").document("current")
         requestListener = ref.addSnapshotListener { snap, error ->
             if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
             val data = snap.data.orEmpty()
             val id = data["requestId"] as? String ?: return@addSnapshotListener
-            val transport = data["transport"] as? String
-            if (transport != "webrtc") return@addSnapshotListener
+            if (data["transport"] != "webrtc") return@addSnapshotListener
             requestId = id
             when (data["status"] as? String) {
-                "requested" -> {
+                "webrtc_requested", "requested" -> {
                     val offer = data["webrtcOffer"] as? String
                     if (!offer.isNullOrBlank() && offer != lastOffer) startSession(id, offer, ref)
                 }
-                "stop_requested", "stopped", "failed" -> if (running.get()) stopSession(data["status"] as String, ref)
+                "stop_requested", "webrtc_stop_requested", "stopped", "failed" -> if (running.get()) stopSession(data["status"] as String, ref)
             }
             val candidates = data["parentCandidates"] as? List<*> ?: emptyList<Any>()
             candidates.forEach { raw ->
@@ -88,16 +78,14 @@ class WebRtcAmbientAudioService : Service() {
                 val candidate = m["candidate"] as? String ?: return@forEach
                 val mid = m["sdpMid"] as? String
                 val index = (m["sdpMLineIndex"] as? Number)?.toInt() ?: 0
-                if (appliedParentCandidates.add(candidate)) {
-                    peerConnection?.addIceCandidate(IceCandidate(mid, index, candidate))
-                }
+                if (appliedParentCandidates.add(candidate)) peerConnection?.addIceCandidate(IceCandidate(mid, index, candidate))
             }
         }
     }
 
     private fun startSession(id: String, offer: String, requestRef: com.google.firebase.firestore.DocumentReference) {
         if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            updateRequest(requestRef, id, "failed", error = "Mikrofon ruxsati berilmagan")
+            updateRequest(requestRef, id, "failed", "Mikrofon ruxsati berilmagan")
             return
         }
         stopPeerOnly()
@@ -106,40 +94,21 @@ class WebRtcAmbientAudioService : Service() {
         appliedParentCandidates.clear()
         updateActiveNotification()
         updateRequest(requestRef, id, "active")
-
         try {
-            PeerConnectionFactory.initialize(
-                PeerConnectionFactory.InitializationOptions.builder(applicationContext).createInitializationOptions()
-            )
-            audioDeviceModule = JavaAudioDeviceModule.builder(applicationContext)
-                .setUseHardwareAcousticEchoCanceler(false)
-                .setUseHardwareNoiseSuppressor(false)
-                .createAudioDeviceModule()
-            factory = PeerConnectionFactory.builder()
-                .setAudioDeviceModule(audioDeviceModule)
-                .createPeerConnectionFactory()
-
+            PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(applicationContext).createInitializationOptions())
+            audioDeviceModule = JavaAudioDeviceModule.builder(applicationContext).setUseHardwareAcousticEchoCanceler(false).setUseHardwareNoiseSuppressor(false).createAudioDeviceModule()
+            factory = PeerConnectionFactory.builder().setAudioDeviceModule(audioDeviceModule).createPeerConnectionFactory()
             val iceServers = listOf(
                 PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
                 PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer()
             )
-            val config = PeerConnection.RTCConfiguration(iceServers)
-            peerConnection = factory?.createPeerConnection(config, object : PeerConnection.Observer {
+            peerConnection = factory?.createPeerConnection(PeerConnection.RTCConfiguration(iceServers), object : PeerConnection.Observer {
                 override fun onSignalingChange(newState: PeerConnection.SignalingState?) {}
-                override fun onIceConnectionChange(newState: PeerConnection.IceConnectionState?) {
-                    if (newState == PeerConnection.IceConnectionState.FAILED || newState == PeerConnection.IceConnectionState.DISCONNECTED) {
-                        // Keep the request active; the parent can retry without changing the legacy path.
-                    }
-                }
+                override fun onIceConnectionChange(newState: PeerConnection.IceConnectionState?) {}
                 override fun onIceConnectionReceivingChange(receiving: Boolean) {}
                 override fun onIceGatheringChange(newState: PeerConnection.IceGatheringState?) {}
                 override fun onIceCandidate(candidate: IceCandidate) {
-                    val item = mapOf(
-                        "candidate" to candidate.sdp,
-                        "sdpMid" to candidate.sdpMid,
-                        "sdpMLineIndex" to candidate.sdpMLineIndex
-                    )
-                    requestRef.update("childCandidates", FieldValue.arrayUnion(item))
+                    requestRef.update("childCandidates", FieldValue.arrayUnion(mapOf("candidate" to candidate.sdp, "sdpMid" to candidate.sdpMid, "sdpMLineIndex" to candidate.sdpMLineIndex)))
                 }
                 override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
                 override fun onAddStream(stream: org.webrtc.MediaStream?) {}
@@ -153,12 +122,10 @@ class WebRtcAmbientAudioService : Service() {
                 override fun onTrack(transceiver: org.webrtc.RtpTransceiver?) {}
             })
             if (peerConnection == null) throw IllegalStateException("WebRTC PeerConnection yaratilmadi")
-
             audioSource = factory!!.createAudioSource(MediaConstraints())
             audioTrack = factory!!.createAudioTrack("oila-mic", audioSource)
             audioTrack!!.setEnabled(true)
             peerConnection!!.addTrack(audioTrack)
-
             peerConnection!!.setRemoteDescription(object : SdpObserver {
                 override fun onCreateSuccess(desc: SessionDescription?) {}
                 override fun onSetSuccess() { createAnswer(requestRef, id) }
@@ -176,9 +143,7 @@ class WebRtcAmbientAudioService : Service() {
                 if (desc == null) return fail(requestRef, id, "WebRTC answer bo'sh")
                 peerConnection?.setLocalDescription(object : SdpObserver {
                     override fun onCreateSuccess(d: SessionDescription?) {}
-                    override fun onSetSuccess() {
-                        requestRef.update("webrtcAnswer", desc.description, "status", "active", "updatedAt", System.currentTimeMillis())
-                    }
+                    override fun onSetSuccess() { requestRef.update("webrtcAnswer", desc.description, "status", "active", "updatedAt", System.currentTimeMillis()) }
                     override fun onCreateFailure(error: String?) { fail(requestRef, id, error) }
                     override fun onSetFailure(error: String?) { fail(requestRef, id, error) }
                 }, desc)
@@ -191,6 +156,7 @@ class WebRtcAmbientAudioService : Service() {
 
     private fun fail(ref: com.google.firebase.firestore.DocumentReference, id: String, error: String?) {
         if (running.get()) updateRequest(ref, id, "failed", error ?: "WebRTC xatosi")
+        running.set(false)
         stopPeerOnly()
         restoreIdleNotification()
     }
@@ -199,7 +165,7 @@ class WebRtcAmbientAudioService : Service() {
         running.set(false)
         stopPeerOnly()
         val id = requestId
-        if (id != null && status == "stop_requested") updateRequest(ref, id, "stopped")
+        if (id != null && (status == "stop_requested" || status == "webrtc_stop_requested")) updateRequest(ref, id, "stopped")
         restoreIdleNotification()
     }
 
@@ -211,63 +177,24 @@ class WebRtcAmbientAudioService : Service() {
         try { peerConnection?.dispose() } catch (_: Throwable) {}
         try { factory?.dispose() } catch (_: Throwable) {}
         try { audioDeviceModule?.release() } catch (_: Throwable) {}
-        audioTrack = null
-        audioSource = null
-        peerConnection = null
-        factory = null
-        audioDeviceModule = null
+        audioTrack = null; audioSource = null; peerConnection = null; factory = null; audioDeviceModule = null
     }
 
     private fun updateRequest(ref: com.google.firebase.firestore.DocumentReference, id: String, status: String, error: String? = null) {
-        val data = mutableMapOf<String, Any>(
-            "requestId" to id,
-            "status" to status,
-            "updatedAt" to System.currentTimeMillis()
-        )
+        val data = mutableMapOf<String, Any>("requestId" to id, "status" to status, "updatedAt" to System.currentTimeMillis())
         if (error != null) data["error"] = error.take(200)
         ref.update(data)
     }
 
     private fun createChannel() {
-        if (Build.VERSION.SDK_INT >= 26) {
-            getSystemService(NotificationManager::class.java).createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Ovoz nazorati", NotificationManager.IMPORTANCE_LOW)
-            )
-        }
+        if (Build.VERSION.SDK_INT >= 26) getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL_ID, "Ovoz nazorati", NotificationManager.IMPORTANCE_LOW))
     }
 
-    private fun idleNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_blank)
-        .setContentTitle("Oila Nazorati")
-        .setPriority(NotificationCompat.PRIORITY_LOW)
-        .setOngoing(true)
-        .setShowWhen(false)
-        .build()
+    private fun idleNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID).setSmallIcon(R.drawable.ic_blank).setContentTitle("Oila Nazorati").setPriority(NotificationCompat.PRIORITY_LOW).setOngoing(true).setShowWhen(false).build()
+    private fun activeNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID).setSmallIcon(R.drawable.ic_blank).setContentTitle("🎙️ Mikrofon faol").setPriority(NotificationCompat.PRIORITY_LOW).setOngoing(true).setShowWhen(false).build()
+    private fun updateActiveNotification() { if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, activeNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE) else startForeground(NOTIFICATION_ID, activeNotification()) }
+    private fun restoreIdleNotification() { if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, idleNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE) else startForeground(NOTIFICATION_ID, idleNotification()) }
 
-    private fun activeNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_blank)
-        .setContentTitle("🎙️ Mikrofon faol")
-        .setPriority(NotificationCompat.PRIORITY_LOW)
-        .setOngoing(true)
-        .setShowWhen(false)
-        .build()
-
-    private fun updateActiveNotification() {
-        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, activeNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
-        else startForeground(NOTIFICATION_ID, activeNotification())
-    }
-
-    private fun restoreIdleNotification() {
-        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, idleNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
-        else startForeground(NOTIFICATION_ID, idleNotification())
-    }
-
-    override fun onDestroy() {
-        requestListener?.remove()
-        running.set(false)
-        stopPeerOnly()
-        super.onDestroy()
-    }
-
+    override fun onDestroy() { requestListener?.remove(); running.set(false); stopPeerOnly(); super.onDestroy() }
     override fun onBind(intent: Intent?): IBinder? = null
 }
