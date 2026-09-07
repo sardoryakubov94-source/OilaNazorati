@@ -118,7 +118,6 @@ class WebRtcAmbientAudioService : Service() {
                 override fun onAddTrack(receiver: org.webrtc.RtpReceiver?, mediaStreams: Array<out org.webrtc.MediaStream>?) {}
                 override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {}
                 override fun onStandardizedIceConnectionChange(newState: PeerConnection.IceConnectionState?) {}
-                override fun onSelectedCandidatePairChanged(event: PeerConnection.CandidatePairChangeEvent?) {}
                 override fun onTrack(transceiver: org.webrtc.RtpTransceiver?) {}
             })
             if (peerConnection == null) throw IllegalStateException("WebRTC PeerConnection yaratilmadi")
