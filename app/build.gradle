@@ -77,7 +77,9 @@ dependencies {
     implementation 'com.google.firebase:firebase-analytics-ktx'
 
     // WebRTC real-time audio transport. Firestore remains the signaling channel.
-    implementation 'org.webrtc:google-webrtc:1.0.32006'
+    // The original org.webrtc artifact is no longer resolvable from the CI repositories.
+    // QuickBlox publishes the same 1.0.32006 WebRTC Android AAR under this group.
+    implementation 'com.quickblox:google-webrtc:1.0.32006'
 
     // Grafik (statistikani chizish uchun)
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
