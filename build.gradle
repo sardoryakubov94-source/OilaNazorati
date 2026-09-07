@@ -19,5 +19,8 @@ allprojects {
         google()
         mavenCentral()
         maven { url 'https://jitpack.io' } // MPAndroidChart shu yerdan olinadi
+        // org.webrtc:google-webrtc:1.0.32006 Maven Central'da endi topilmaydi.
+        // QuickBlox mirrorida aynan shu AAR mavjud.
+        maven { url 'https://raw.githubusercontent.com/QuickBlox/quickblox-android-sdk-releases/master/' }
     }
 }
