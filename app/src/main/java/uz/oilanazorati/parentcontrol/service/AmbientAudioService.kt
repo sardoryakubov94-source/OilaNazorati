@@ -67,7 +67,11 @@ class AmbientAudioService : Service() {
                 val data = snap.data.orEmpty()
                 val requestId = data["requestId"] as? String ?: return@addSnapshotListener
                 if (data["transport"] == "webrtc") {
-                    if (data["status"] == "requested") {
+                    // The web client uses webrtc_requested while it publishes
+                    // the SDP offer. Start the WebRTC foreground service for
+                    // both states so the child does not miss the request.
+                    val state = data["status"] as? String
+                    if (state == "requested" || state == "webrtc_requested") {
                         try {
                             ContextCompat.startForegroundService(
                                 this,
