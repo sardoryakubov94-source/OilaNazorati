@@ -104,44 +104,39 @@ class AmbientListenActivity : AppCompatActivity() {
         status.text = "⏳ So'rov yuborilmoqda..."
         startButton.isEnabled = false
         stopButton.isEnabled = true
+        currentRequestId = "pending"
         AmbientAudioRepository.requestStart { ok, error ->
             runOnUiThread {
                 if (!ok) {
                     status.text = "❌ ${error ?: "So'rov yuborilmadi"}"
                     resetUi()
                 } else {
-                    // requestId is read back by the status listener; the first
-                    // matching status will activate playback when sessionId arrives.
                     status.text = "⏳ Bola qurilmasidan kutilmoqda..."
                 }
             }
         }
-        // The repository status listener provides the requestId only to its callback;
-        // requestStart itself doesn't return it, so playback is activated by sessionId.
-        currentRequestId = "pending"
     }
 
     private fun startPlayback(sessionId: String) {
         try {
             audioListener?.remove()
             audioTrack?.release()
-            val minBuffer = AudioTrack.getMinBufferSize(AmbientAudioRepositorySampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
-            val bufferSize = maxOf(minBuffer, AmbientAudioRepositorySampleRate * 2)
-            audioTrack = if (android.os.Build.VERSION.SDK_INT >= 21) {
-                AudioTrack.Builder()
-                    .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
-                    .setAudioFormat(AudioFormat.Builder().setSampleRate(AmbientAudioRepositorySampleRate).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
-                    .setBufferSizeInBytes(bufferSize)
-                    .setTransferMode(AudioTrack.MODE_STREAM)
-                    .build()
-            } else null
+            val minBuffer = AudioTrack.getMinBufferSize(16000, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            if (minBuffer <= 0) throw IllegalStateException("AudioTrack buffer xatosi")
+            val bufferSize = maxOf(minBuffer, 16000 * 2)
+            audioTrack = AudioTrack.Builder()
+                .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                .setAudioFormat(AudioFormat.Builder().setSampleRate(16000).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+                .setBufferSizeInBytes(bufferSize)
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .build()
             audioTrack?.play()
             status.text = "🔴 Jonli ovoz"
             audioListener = AmbientAudioRepository.listenAudioChunks(sessionId) { sequence, bytes ->
                 if (!seenSequences.add(sequence)) return@listenAudioChunks
                 try { audioTrack?.write(bytes, 0, bytes.size) } catch (_: Throwable) {}
             }
-        } catch (t: Throwable) {
+        } catch (_: Throwable) {
             status.text = "❌ Ovoz chiqarishda xato"
             resetUi()
         }
@@ -177,6 +172,4 @@ class AmbientListenActivity : AppCompatActivity() {
         audioTrack = null
         super.onDestroy()
     }
-
-    companion object { private const val AmbientAudioRepositorySampleRate = 16000 }
 }
