@@ -1,40 +1,40 @@
 package uz.oilanazorati.parentcontrol.ui
 
 import android.graphics.Typeface
-import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
 import android.os.Bundle
-import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.firestore.ListenerRegistration
+import org.webrtc.IceCandidate
+import org.webrtc.MediaConstraints
+import org.webrtc.MediaStreamTrack
+import org.webrtc.PeerConnection
+import org.webrtc.PeerConnectionFactory
+import org.webrtc.RtpTransceiver
+import org.webrtc.SdpObserver
+import org.webrtc.SessionDescription
+import org.webrtc.audio.JavaAudioDeviceModule
 import uz.oilanazorati.parentcontrol.repo.AmbientAudioRepository
-import java.util.TreeMap
 
+/**
+ * Ota-ona tomonidagi jonli ovoz eshitish ekrani — WebRTC orqali. Firestore
+ * faqat ulanish uchun kerakli signalizatsiya ma'lumotlarini (SDP taklif/javob
+ * va ICE manzillari — bir necha kilobayt matn) uzatadi; ovozning o'zi
+ * to'g'ridan-to'g'ri (peer-to-peer) qurilmalar orasida oqadi va qurilmaning
+ * o'z audio chiqishi (JavaAudioDeviceModule) orqali avtomatik eshitiladi —
+ * eski usuldagi kabi qo'lda AudioTrack'ga yozish kerak emas.
+ */
 class AmbientListenActivity : AppCompatActivity() {
     private var requestListener: ListenerRegistration? = null
-    private var audioListener: ListenerRegistration? = null
-    private var audioTrack: AudioTrack? = null
-    private var currentSessionId: String? = null
-    private val seen = HashSet<Int>()
-
-    // Kelgan audio bo'laklari shu yerga sequence raqami bilan yig'iladi, playback
-    // thread esa ularni faqat qat'iy ketma-ketlikda (0,1,2,...) ijro qiladi. Bu
-    // ilgari har bir bo'lak uchun alohida Thread ochilib, ular tasodifiy tartibda
-    // tugashi (race condition) tufayli ovoz takrorlanib/uzilib turishining oldini oladi.
-    private val pendingChunks = TreeMap<Int, ByteArray>()
-    private val pendingLock = Any()
-    private var nextSeqToPlay = 0
-    private var playbackThread: Thread? = null
-    @Volatile private var playbackRunning = false
-
-    // Agar kutilayotgan bo'lak shuncha millisekund davomida kelmasa (masalan,
-    // internet uzilishi tufayli yo'qolgan bo'lsa), abadiy jim qolmaslik uchun
-    // navbatdagi mavjud bo'lakka o'tib ketamiz.
-    private val STALL_SKIP_MS = 1200L
+    private var sessionListener: ListenerRegistration? = null
+    private var peerConnection: PeerConnection? = null
+    private var factory: PeerConnectionFactory? = null
+    private var audioDeviceModule: JavaAudioDeviceModule? = null
+    private var currentRequestId: String? = null
+    private var remoteDescriptionSet = false
+    private val appliedChildCandidates = HashSet<String>()
 
     private lateinit var status: TextView
     private lateinit var startButton: Button
@@ -43,7 +43,6 @@ class AmbientListenActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Ovoz oynasi ham ilovaning umumiy mavzusidagi fon va matn ranglaridan foydalanadi.
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(28, 28, 28, 28)
@@ -79,8 +78,6 @@ class AmbientListenActivity : AppCompatActivity() {
             icon?.setColorFilter(currentTextColor, android.graphics.PorterDuff.Mode.SRC_IN)
             setCompoundDrawablesWithIntrinsicBounds(icon, null, null, null)
             compoundDrawablePadding = 16
-            // Yuqoridagi "Eshitishni boshlash" tugmasi bilan yopishib
-            // qolmasligi uchun orasiga masofa qo'yiladi.
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
                 topMargin = (16 * resources.displayMetrics.density).toInt()
             }
@@ -93,155 +90,171 @@ class AmbientListenActivity : AppCompatActivity() {
 
         startButton.setOnClickListener { startListening() }
         stopButton.setOnClickListener { stopListening() }
-        requestListener = AmbientAudioRepository.listenRequestStatus { requestId, state, sessionId ->
-            runOnUiThread { handleStatus(state, sessionId) }
+        requestListener = AmbientAudioRepository.listenRequestStatus { _, state, _ ->
+            if (currentRequestId == null) runOnUiThread { status.text = statusLabel(state) }
         }
+    }
+
+    private fun statusLabel(state: String?): String = when (state) {
+        "requested" -> "⏳ Bola qurilmasidan kutilmoqda..."
+        "active" -> "🔴 Jonli ovoz"
+        "stopped" -> "To'xtatildi"
+        "failed" -> "❌ Mikrofonni ulab bo'lmadi"
+        else -> "Tayyor"
     }
 
     private fun startListening() {
-        seen.clear()
-        status.text = "⏳ So'rov yuborilmoqda..."
+        cleanupPeer()
+        status.text = "⏳ Ulanmoqda..."
         startButton.isEnabled = false
-        AmbientAudioRepository.requestStart { ok, error ->
+        remoteDescriptionSet = false
+        appliedChildCandidates.clear()
+
+        try {
+            PeerConnectionFactory.initialize(
+                PeerConnectionFactory.InitializationOptions.builder(applicationContext).createInitializationOptions()
+            )
+            audioDeviceModule = JavaAudioDeviceModule.builder(applicationContext).createAudioDeviceModule()
+            factory = PeerConnectionFactory.builder().setAudioDeviceModule(audioDeviceModule).createPeerConnectionFactory()
+            val iceServers = listOf(
+                PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
+                PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer()
+            )
+            peerConnection = factory?.createPeerConnection(PeerConnection.RTCConfiguration(iceServers), object : PeerConnection.Observer {
+                override fun onSignalingChange(newState: PeerConnection.SignalingState?) {}
+                override fun onIceConnectionChange(newState: PeerConnection.IceConnectionState?) {}
+                override fun onIceConnectionReceivingChange(receiving: Boolean) {}
+                override fun onIceGatheringChange(newState: PeerConnection.IceGatheringState?) {}
+                override fun onIceCandidate(candidate: IceCandidate) {
+                    AmbientAudioRepository.sendParentIceCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
+                }
+                override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
+                override fun onAddStream(stream: org.webrtc.MediaStream?) {}
+                override fun onRemoveStream(stream: org.webrtc.MediaStream?) {}
+                override fun onDataChannel(dataChannel: org.webrtc.DataChannel?) {}
+                override fun onRenegotiationNeeded() {}
+                override fun onAddTrack(receiver: org.webrtc.RtpReceiver?, mediaStreams: Array<out org.webrtc.MediaStream>?) {}
+                override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {
+                    runOnUiThread {
+                        when (newState) {
+                            PeerConnection.PeerConnectionState.CONNECTED -> {
+                                status.text = "🔴 Jonli ovoz"
+                                stopButton.isEnabled = true
+                            }
+                            PeerConnection.PeerConnectionState.FAILED,
+                            PeerConnection.PeerConnectionState.DISCONNECTED,
+                            PeerConnection.PeerConnectionState.CLOSED -> {
+                                if (currentRequestId != null) failListening("Ulanish uzildi")
+                            }
+                            else -> {}
+                        }
+                    }
+                }
+                override fun onStandardizedIceConnectionChange(newState: PeerConnection.IceConnectionState?) {}
+                override fun onSelectedCandidatePairChanged(event: PeerConnection.CandidatePairChangeEvent?) {}
+                override fun onTrack(transceiver: RtpTransceiver?) {
+                    (transceiver?.receiver?.track() as? org.webrtc.AudioTrack)?.setEnabled(true)
+                }
+            })
+            val pc = peerConnection ?: throw IllegalStateException("PeerConnection yaratilmadi")
+            pc.addTransceiver(MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO, RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY))
+
+            pc.createOffer(object : SdpObserver {
+                override fun onCreateSuccess(desc: SessionDescription?) {
+                    if (desc == null) return runOnUiThread { failListening("SDP taklif bo'sh") }
+                    pc.setLocalDescription(object : SdpObserver {
+                        override fun onCreateSuccess(d: SessionDescription?) {}
+                        override fun onSetSuccess() { sendOffer(desc.description) }
+                        override fun onCreateFailure(error: String?) { runOnUiThread { failListening(error) } }
+                        override fun onSetFailure(error: String?) { runOnUiThread { failListening(error) } }
+                    }, desc)
+                }
+                override fun onSetSuccess() {}
+                override fun onCreateFailure(error: String?) { runOnUiThread { failListening(error) } }
+                override fun onSetFailure(error: String?) { runOnUiThread { failListening(error) } }
+            }, MediaConstraints())
+        } catch (t: Throwable) {
+            failListening(t.message ?: "WebRTC ishga tushmadi")
+        }
+    }
+
+    private fun sendOffer(offerSdp: String) {
+        AmbientAudioRepository.requestStartWebRtc(offerSdp) { ok, error, requestId ->
             runOnUiThread {
-                if (!ok) {
-                    status.text = "❌ ${error ?: "Xato"}"
-                    startButton.isEnabled = true
+                if (!ok || requestId == null) {
+                    failListening(error)
+                    return@runOnUiThread
                 }
-            }
-        }
-    }
-
-    private fun handleStatus(state: String?, sessionId: String?) {
-        when (state) {
-            "requested" -> status.text = "⏳ Bola qurilmasidan kutilmoqda..."
-            "active" -> {
-                status.text = "🔴 Jonli ovoz"
-                startButton.isEnabled = false
-                stopButton.isEnabled = true
-                if (sessionId != null && sessionId != currentSessionId) {
-                    currentSessionId = sessionId
-                    attachAudio(sessionId)
-                }
-            }
-            "stopped" -> {
-                status.text = "To'xtatildi"
-                startButton.isEnabled = true
-                stopButton.isEnabled = false
-                detachAudio()
-            }
-            "failed" -> {
-                status.text = "❌ Mikrofonni ulab bo'lmadi"
-                startButton.isEnabled = true
-                stopButton.isEnabled = false
-                detachAudio()
-            }
-        }
-    }
-
-    private fun attachAudio(sessionId: String) {
-        detachAudio()
-        val min = AudioTrack.getMinBufferSize(
-            16000,
-            AudioFormat.CHANNEL_OUT_MONO,
-            AudioFormat.ENCODING_PCM_16BIT
-        )
-        if (min <= 0) {
-            status.text = "❌ Audio chiqishi mavjud emas"
-            return
-        }
-        audioTrack = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setSampleRate(16000)
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build()
-            )
-            .setBufferSizeInBytes(maxOf(min, 16000 * 2))
-            .setTransferMode(AudioTrack.MODE_STREAM)
-            .build()
-        audioTrack?.play()
-
-        nextSeqToPlay = 0
-        synchronized(pendingLock) { pendingChunks.clear() }
-        startPlaybackThread()
-
-        audioListener = AmbientAudioRepository.listenAudioChunks(sessionId) { sequence, bytes ->
-            if (!seen.add(sequence)) return@listenAudioChunks
-            synchronized(pendingLock) {
-                pendingChunks[sequence] = bytes
-            }
-        }
-    }
-
-    // Firestore'dan kelgan bo'laklarni sequence bo'yicha qat'iy ketma-ket, faqat
-    // shu bitta thread orqali AudioTrack'ga yozadi. Tarmoq kechikishi tufayli
-    // bo'laklar tartibsiz yoki bo'shliqlar bilan kelsa ham, ovoz aralashib
-    // ketmaydi; uzoq kutilgan bo'lak bo'lmasa, keyingi mavjudiga o'tib ketadi.
-    private fun startPlaybackThread() {
-        playbackRunning = true
-        playbackThread = Thread {
-            var waitedMs = 0L
-            while (playbackRunning) {
-                val chunk = synchronized(pendingLock) { pendingChunks.remove(nextSeqToPlay) }
-                if (chunk != null) {
-                    waitedMs = 0L
-                    try { audioTrack?.write(chunk, 0, chunk.size) } catch (_: Throwable) {}
-                    nextSeqToPlay++
-                } else {
-                    val skipTo = synchronized(pendingLock) {
-                        if (pendingChunks.isEmpty()) null else pendingChunks.firstKey()
+                currentRequestId = requestId
+                status.text = "⏳ Bola qurilmasidan kutilmoqda..."
+                sessionListener = AmbientAudioRepository.listenWebRtcSession(
+                    requestId,
+                    onAnswer = { answerSdp ->
+                        if (!remoteDescriptionSet) {
+                            remoteDescriptionSet = true
+                            peerConnection?.setRemoteDescription(object : SdpObserver {
+                                override fun onCreateSuccess(d: SessionDescription?) {}
+                                override fun onSetSuccess() {}
+                                override fun onCreateFailure(error: String?) { runOnUiThread { failListening(error) } }
+                                override fun onSetFailure(error: String?) { runOnUiThread { failListening(error) } }
+                            }, SessionDescription(SessionDescription.Type.ANSWER, answerSdp))
+                        }
+                    },
+                    onChildCandidate = { candidate, mid, index ->
+                        if (appliedChildCandidates.add(candidate)) {
+                            peerConnection?.addIceCandidate(IceCandidate(mid, index, candidate))
+                        }
+                    },
+                    onStatus = { newStatus, error ->
+                        runOnUiThread {
+                            when (newStatus) {
+                                "failed" -> failListening(error ?: "Mikrofonni ulab bo'lmadi")
+                                "stopped" -> resetToIdle("To'xtatildi")
+                            }
+                        }
                     }
-                    if (skipTo != null && waitedMs >= STALL_SKIP_MS) {
-                        nextSeqToPlay = skipTo
-                        waitedMs = 0L
-                    } else {
-                        Thread.sleep(25)
-                        waitedMs += 25
-                    }
-                }
+                )
             }
-        }.also { it.start() }
+        }
     }
 
-    private fun stopPlaybackThread() {
-        playbackRunning = false
-        try { playbackThread?.join(300) } catch (_: Throwable) {}
-        playbackThread = null
+    private fun failListening(error: String?) {
+        status.text = "❌ ${error ?: "Xato"}"
+        resetToIdle(null, keepMessage = true)
+    }
+
+    private fun resetToIdle(message: String?, keepMessage: Boolean = false) {
+        if (!keepMessage) status.text = message ?: "Tayyor"
+        startButton.isEnabled = true
+        stopButton.isEnabled = false
+        currentRequestId = null
+        cleanupPeer()
     }
 
     private fun stopListening() {
         status.text = "⏳ To'xtatilmoqda..."
         stopButton.isEnabled = false
         AmbientAudioRepository.requestStop()
+        resetToIdle("To'xtatildi")
     }
 
-    private fun detachAudio() {
-        audioListener?.remove()
-        audioListener = null
-        stopPlaybackThread()
-        try { audioTrack?.pause() } catch (_: Throwable) {}
-        try { audioTrack?.flush() } catch (_: Throwable) {}
-        try { audioTrack?.release() } catch (_: Throwable) {}
-        audioTrack = null
-        currentSessionId = null
-        seen.clear()
-        synchronized(pendingLock) { pendingChunks.clear() }
-        nextSeqToPlay = 0
+    private fun cleanupPeer() {
+        sessionListener?.remove()
+        sessionListener = null
+        try { peerConnection?.close() } catch (_: Throwable) {}
+        try { peerConnection?.dispose() } catch (_: Throwable) {}
+        try { factory?.dispose() } catch (_: Throwable) {}
+        try { audioDeviceModule?.release() } catch (_: Throwable) {}
+        peerConnection = null
+        factory = null
+        audioDeviceModule = null
     }
 
     override fun onDestroy() {
-        AmbientAudioRepository.requestStop()
+        if (currentRequestId != null) AmbientAudioRepository.requestStop()
         requestListener?.remove()
         requestListener = null
-        detachAudio()
+        cleanupPeer()
         super.onDestroy()
     }
 }

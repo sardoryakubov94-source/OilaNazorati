@@ -25,6 +25,77 @@ object AmbientAudioRepository {
         .document(FirebaseRepo.childId.orEmpty())
         .collection("mic_audio")
 
+    // --- WebRTC signalizatsiya (Firestore faqat SDP/ICE matnlarini uzatadi,
+    // ovozning o'zi to'g'ridan-to'g'ri, peer-to-peer uzatiladi — bu eski
+    // "mic_audio" bo'lak-bo'lak yozish usuliga qaraganda Firestore
+    // limitini deyarli sarflamaydi). ---
+
+    /** Ota-ona qurilmasi WebRTC taklifini (SDP offer) bola qurilmasiga yuboradi. */
+    fun requestStartWebRtc(offerSdp: String, onResult: (Boolean, String?, String?) -> Unit) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        val family = FirebaseRepo.familyCode
+        val child = FirebaseRepo.childId
+        if (uid == null || family.isNullOrBlank() || child.isNullOrBlank()) {
+            onResult(false, "Farzand qurilmasi tanlanmagan", null)
+            return
+        }
+        val requestId = "web_${System.currentTimeMillis()}_${UUID.randomUUID().toString().take(6)}"
+        requestRef().set(
+            mapOf(
+                "requestId" to requestId,
+                "status" to "requested",
+                "transport" to "webrtc",
+                "webrtcOffer" to offerSdp,
+                "parentCandidates" to emptyList<Any>(),
+                "childCandidates" to emptyList<Any>(),
+                "requestedByUid" to uid,
+                "requestedAt" to System.currentTimeMillis(),
+                "updatedAt" to System.currentTimeMillis()
+            )
+        ).addOnSuccessListener { onResult(true, null, requestId) }
+            .addOnFailureListener { onResult(false, it.message ?: "So'rov yuborilmadi", null) }
+    }
+
+    /** Ota-onaning o'z ICE manzilini bola qurilmasiga yetkazish uchun Firestore'ga qo'shadi. */
+    fun sendParentIceCandidate(candidate: String, sdpMid: String?, sdpMLineIndex: Int) {
+        requestRef().update(
+            "parentCandidates",
+            com.google.firebase.firestore.FieldValue.arrayUnion(
+                mapOf("candidate" to candidate, "sdpMid" to sdpMid, "sdpMLineIndex" to sdpMLineIndex)
+            )
+        )
+    }
+
+    /**
+     * WebRTC sessiyasini kuzatadi: bola qurilmasi javobi (SDP answer), uning
+     * ICE manzillari va umumiy holatni (active/failed/stopped) qaytaradi.
+     */
+    fun listenWebRtcSession(
+        requestId: String,
+        onAnswer: (String) -> Unit,
+        onChildCandidate: (String, String?, Int) -> Unit,
+        onStatus: (String, String?) -> Unit
+    ): ListenerRegistration {
+        val applied = HashSet<String>()
+        return requestRef().addSnapshotListener { snap, error ->
+            if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
+            val data = snap.data.orEmpty()
+            if (data["requestId"] as? String != requestId) return@addSnapshotListener
+            (data["status"] as? String)?.let { onStatus(it, data["error"] as? String) }
+            (data["webrtcAnswer"] as? String)?.let { onAnswer(it) }
+            val candidates = data["childCandidates"] as? List<*> ?: emptyList<Any>()
+            candidates.forEach { raw ->
+                val m = raw as? Map<*, *> ?: return@forEach
+                val candidate = m["candidate"] as? String ?: return@forEach
+                if (applied.add(candidate)) {
+                    val mid = m["sdpMid"] as? String
+                    val index = (m["sdpMLineIndex"] as? Number)?.toInt() ?: 0
+                    onChildCandidate(candidate, mid, index)
+                }
+            }
+        }
+    }
+
     fun requestStart(onResult: (Boolean, String?) -> Unit) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid
         val family = FirebaseRepo.familyCode
