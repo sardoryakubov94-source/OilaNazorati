@@ -13,6 +13,7 @@ const SIM_FIREBASE_CONFIG = {
 const simApp = initializeApp(SIM_FIREBASE_CONFIG, 'sim-panel');
 const simDb = getFirestore(simApp);
 let selectedChildId = null;
+let selectedFamily = null;
 let simUnsub = null;
 
 const esc = value => String(value ?? '').replace(/[&<>\"']/g, c => ({
@@ -88,8 +89,10 @@ function stop() {
 
 function watch(childId) {
   const family = familyCode();
-  if (!family || !childId || childId === selectedChildId) return;
+  if (!family || !childId) return;
+  if (family === selectedFamily && childId === selectedChildId && simUnsub) return;
   stop();
+  selectedFamily = family;
   selectedChildId = childId;
   const ref = doc(simDb, 'families', family, 'children', childId);
   simUnsub = onSnapshot(ref, snap => render(snap.exists() ? snap.data() : {}), () => render({}));
