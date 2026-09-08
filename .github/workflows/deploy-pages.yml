@@ -12,6 +12,10 @@ on:
       - 'downloads/**'
       - 'panel.html'
       - 'screenshot-request.js'
+      - 'sim-panel.js'
+      - 'mic-request.js'
+      - 'mic-webrtc.js'
+      - 'ios-panel.css'
       - 'manifest.json'
       - 'manifest.webmanifest'
       - 'sw.js'
@@ -45,7 +49,7 @@ jobs:
         run: |
           rm -rf _site
           mkdir -p _site
-          cp index.html ios.html site.css notice.css privacy.html panel.html screenshot-request.js manifest.json manifest.webmanifest sw.js _site/
+          cp index.html ios.html site.css notice.css privacy.html panel.html screenshot-request.js sim-panel.js mic-request.js mic-webrtc.js ios-panel.css manifest.json manifest.webmanifest sw.js _site/
           if [ -d downloads ]; then cp -R downloads _site/downloads; fi
           if [ -d icons ]; then cp -R icons _site/icons; fi
           touch _site/.nojekyll
