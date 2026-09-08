@@ -139,13 +139,18 @@ class WebRtcAmbientAudioService : Service() {
     private fun createAnswer(requestRef: com.google.firebase.firestore.DocumentReference, id: String) {
         peerConnection?.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(desc: SessionDescription?) {
-                if (desc == null) return fail(requestRef, id, "WebRTC answer bo'sh")
-                peerConnection?.setLocalDescription(object : SdpObserver {
-                    override fun onCreateSuccess(d: SessionDescription?) {}
-                    override fun onSetSuccess() { requestRef.update("webrtcAnswer", desc.description, "status", "active", "updatedAt", System.currentTimeMillis()) }
-                    override fun onCreateFailure(error: String?) { fail(requestRef, id, error) }
-                    override fun onSetFailure(error: String?) { fail(requestRef, id, error) }
-                }, desc)
+                try {
+                    if (desc == null) return fail(requestRef, id, "WebRTC answer bo'sh")
+                    peerConnection?.setLocalDescription(object : SdpObserver {
+                        override fun onCreateSuccess(d: SessionDescription?) {}
+                        override fun onSetSuccess() {
+                            try { requestRef.update("webrtcAnswer", desc.description, "status", "active", "updatedAt", System.currentTimeMillis()) }
+                            catch (t: Throwable) { fail(requestRef, id, t.message) }
+                        }
+                        override fun onCreateFailure(error: String?) { fail(requestRef, id, error) }
+                        override fun onSetFailure(error: String?) { fail(requestRef, id, error) }
+                    }, desc)
+                } catch (t: Throwable) { fail(requestRef, id, t.message) }
             }
             override fun onSetSuccess() {}
             override fun onCreateFailure(error: String?) { fail(requestRef, id, error) }

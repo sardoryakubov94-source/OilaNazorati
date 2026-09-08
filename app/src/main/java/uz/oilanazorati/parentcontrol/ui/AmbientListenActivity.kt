@@ -217,37 +217,45 @@ class AmbientListenActivity : AppCompatActivity() {
     private fun sendOffer(offerSdp: String) {
         AmbientAudioRepository.requestStartWebRtc(offerSdp) { ok, error, requestId ->
             runOnUiThread {
-                if (!ok || requestId == null) {
-                    fail(error ?: "So'rov yuborilmadi")
-                    return@runOnUiThread
-                }
-                currentRequestId = requestId
-                status.text = "⏳ Bola qurilmasidan kutilmoqda..."
-                sessionListener = AmbientAudioRepository.listenWebRtcSession(
-                    requestId,
-                    onAnswer = { answerSdp ->
-                        peerConnection?.setRemoteDescription(object : SdpObserver {
-                            override fun onCreateSuccess(desc: SessionDescription?) {}
-                            override fun onSetSuccess() { runOnUiThread { status.text = "🔴 Jonli ovoz" } }
-                            override fun onCreateFailure(error: String?) {}
-                            override fun onSetFailure(error: String?) { runOnUiThread { fail(error) } }
-                        }, SessionDescription(SessionDescription.Type.ANSWER, answerSdp))
-                    },
-                    onChildCandidate = { candidate, mid, index ->
-                        if (appliedChildCandidates.add(candidate)) {
-                            peerConnection?.addIceCandidate(IceCandidate(mid, index, candidate))
-                        }
-                    },
-                    onStatus = { state, error ->
-                        runOnUiThread {
-                            when (state) {
-                                "active" -> status.text = "🔴 Jonli ovoz"
-                                "failed" -> fail(error ?: "Mikrofonni ulab bo'lmadi")
-                                "stopped" -> if (!stopping) resetUi("To'xtatildi")
+                try {
+                    if (!ok || requestId == null) {
+                        fail(error ?: "So'rov yuborilmadi")
+                        return@runOnUiThread
+                    }
+                    currentRequestId = requestId
+                    status.text = "⏳ Bola qurilmasidan kutilmoqda..."
+                    sessionListener = AmbientAudioRepository.listenWebRtcSession(
+                        requestId,
+                        onAnswer = { answerSdp ->
+                            try {
+                                peerConnection?.setRemoteDescription(object : SdpObserver {
+                                    override fun onCreateSuccess(desc: SessionDescription?) {}
+                                    override fun onSetSuccess() { runOnUiThread { status.text = "🔴 Jonli ovoz" } }
+                                    override fun onCreateFailure(error: String?) {}
+                                    override fun onSetFailure(error: String?) { runOnUiThread { fail(error) } }
+                                }, SessionDescription(SessionDescription.Type.ANSWER, answerSdp))
+                            } catch (t: Throwable) { runOnUiThread { fail(t.message) } }
+                        },
+                        onChildCandidate = { candidate, mid, index ->
+                            try {
+                                if (appliedChildCandidates.add(candidate)) {
+                                    peerConnection?.addIceCandidate(IceCandidate(mid, index, candidate))
+                                }
+                            } catch (_: Throwable) {}
+                        },
+                        onStatus = { state, error ->
+                            runOnUiThread {
+                                try {
+                                    when (state) {
+                                        "active" -> status.text = "🔴 Jonli ovoz"
+                                        "failed" -> fail(error ?: "Mikrofonni ulab bo'lmadi")
+                                        "stopped" -> if (!stopping) resetUi("To'xtatildi")
+                                    }
+                                } catch (t: Throwable) { fail(t.message) }
                             }
                         }
-                    }
-                )
+                    )
+                } catch (t: Throwable) { fail(t.message) }
             }
         }
     }
