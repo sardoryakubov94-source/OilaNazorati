@@ -1,5 +1,6 @@
 package uz.oilanazorati.parentcontrol.ui
 
+import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.media.AudioManager
 import android.os.Build
@@ -7,6 +8,7 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.firebase.firestore.ListenerRegistration
@@ -48,6 +50,19 @@ class AmbientListenActivity : AppCompatActivity() {
     private lateinit var status: TextView
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
+
+    private val micPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) startListening()
+        else {
+            status.text = "❌ Mikrofon ruxsati kerak"
+            startButton.isEnabled = true
+            stopButton.isEnabled = false
+            currentRequestId = null
+        }
+    }
+
+    private fun hasMicPermission(): Boolean =
+        ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,7 +109,9 @@ class AmbientListenActivity : AppCompatActivity() {
         root.addView(stopButton)
         setContentView(root)
 
-        startButton.setOnClickListener { startListening() }
+        startButton.setOnClickListener {
+            if (hasMicPermission()) startListening() else micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+        }
         stopButton.setOnClickListener { stopListening() }
 
         requestListener = AmbientAudioRepository.listenRequestStatus { _, state, _ ->
@@ -114,6 +131,10 @@ class AmbientListenActivity : AppCompatActivity() {
 
     private fun startListening() {
         if (currentRequestId != null) return
+        if (!hasMicPermission()) {
+            micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+            return
+        }
         stopping = false
         appliedChildCandidates.clear()
         status.text = "⏳ Ulanmoqda..."
