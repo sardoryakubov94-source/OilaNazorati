@@ -26,7 +26,8 @@
     <Button android:id="@+id/btnBatteryOptimization" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="🔋 Batareya tejashdan chiqarish (muhim!)" android:layout_marginBottom="8dp"/>
     <Button android:id="@+id/btnNotificationAccess" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Ijtimoiy tarmoq bildirishnomalarini yoqish" android:layout_marginBottom="8dp"/>
     <Button android:id="@+id/btnSyncContacts" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Kontaktlarni hoziroq sinxronlash (avtomatik ham ishlaydi)" android:layout_marginBottom="8dp"/>
-    <Button android:id="@+id/btnDeviceAdmin" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="🔒 Ilovani o'chirishdan himoyalash" android:layout_marginBottom="24dp"/>
+    <Button android:id="@+id/btnDeviceAdmin" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="🔒 Ilovani o'chirishdan himoyalash" android:layout_marginBottom="8dp"/>
+    <Button android:id="@+id/btnPlayProtect" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="🛡️ Google Play Protect sozlamalarini ochish" android:layout_marginBottom="24dp"/>
     <Button android:id="@+id/btnFinish" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="✅ Sozlashni yakunlash va boshlash"/>
 </LinearLayout>
 </ScrollView>
