@@ -2,6 +2,7 @@ package uz.oilanazorati.parentcontrol.screenshot
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.KeyguardManager
 import android.app.usage.UsageStatsManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -11,6 +12,7 @@ import android.graphics.Bitmap
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
 import android.view.Display
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityManager
@@ -42,9 +44,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private var burstScheduledRunnable: Runnable? = null
 
     // "Avtomatik TOP 3" va "qo'lda tanlangan ilovalar" — ikkita mustaqil
-    // manba. TOP-3 o'chirilgan bo'lsa ham, agar ota-ona kamida bitta ilovani
-    // qo'lda tanlagan bo'lsa, o'sha ilova(lar) uchun avtomatik kuzatish
-    // davom etishi kerak.
+    // manba. TOP-3 o'chirilgan bo'lsa ham, qo'lda tanlangan ilovalar kuzatiladi.
     private val autoCaptureActive: Boolean
         get() = settings.autoTop3Enabled || settings.manualPackageNames.isNotEmpty()
 
@@ -88,44 +88,61 @@ class AccessibilityScreenshotService : AccessibilityService() {
     }
 
     private fun queueRemoteCapture(requestId: String): Unit {
-        if (!settings.enabled || captureRunning) return
+        if (!settings.enabled || captureRunning || !isScreenInteractive()) return
         ScreenshotRepository.markScreenshotRequest(requestId, "processing")
         captureAndUpload(currentForegroundPackage() ?: "uz.oilanazorati.screen", 0, currentUsageSeconds(), "remote_$requestId", requestId, null)
     }
 
-    /** After the configured continuous foreground threshold, capture the same app 3 times, one minute apart. */
+    /**
+     * Auto trigger is NOT a wall-clock screenshot timer.
+     * It checks the currently foreground app and its continuous foreground time.
+     * Once that same target app stays active for the configured threshold
+     * (15/30/45/60 min), exactly 3 screenshots are taken, one minute apart.
+     */
     private fun evaluateAndQueue(): Unit {
         if (!settings.enabled || !autoCaptureActive || captureRunning || burstPackage != null) return
+        if (!isScreenInteractive()) {
+            clearBurst()
+            return
+        }
+
         val usm: UsageStatsManager = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager ?: return
         val now: Long = System.currentTimeMillis()
-        val start: Long = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
-        val stats = usm.queryAndAggregateUsageStats(start, now)
-        val userStats = stats.filter { (pkg, stat) ->
-            pkg != packageName && stat.totalTimeInForeground > 0 &&
-                (getApplicationInfoSafe(pkg)?.flags?.and(android.content.pm.ApplicationInfo.FLAG_SYSTEM) ?: 0) == 0
-        }
-        // TOP-3 to'plami faqat "Avtomatik TOP 3" tugmasi yoqiq bo'lsagina
-        // hisoblanadi — bu tugma o'chirilgan bo'lsa, faqat qo'lda tanlangan
-        // ilovalar (pastda qo'shiladi) kuzatiladi.
-        val auto = if (settings.autoTop3Enabled) {
-            userStats.entries.sortedByDescending { it.value.totalTimeInForeground }.take(3).map { it.key }.toSet()
-        } else emptySet()
-        val targets = auto + settings.manualPackageNames.toSet()
-        val foreground: Pair<String, Long> = currentForegroundInfo() ?: return
+        val foreground: Pair<String, Long> = currentForegroundInfo(usm, now) ?: return
         val current: String = foreground.first
-        if (current !in targets) return
         val continuousSec: Long = ((now - foreground.second).coerceAtLeast(0L)) / 1000L
         val frequency: Long = settings.frequencyMinutes.coerceIn(15, 60).toLong()
-        val threshold: Long = ((continuousSec / 60L) / frequency) * frequency
-        if (threshold < frequency) return
+
+        // Threshold is based ONLY on continuous time in the active app.
+        // Daily accumulated usage is deliberately not used as the trigger.
+        if (continuousSec < frequency * 60L) return
+
+        val auto: Set<String> = if (settings.autoTop3Enabled) {
+            val start: Long = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }.timeInMillis
+            usm.queryAndAggregateUsageStats(start, now)
+                .filter { (pkg, stat) ->
+                    pkg != packageName && stat.totalTimeInForeground > 0 &&
+                        (getApplicationInfoSafe(pkg)?.flags?.and(android.content.pm.ApplicationInfo.FLAG_SYSTEM) ?: 0) == 0
+                }
+                .entries.sortedByDescending { it.value.totalTimeInForeground }
+                .take(3).map { it.key }.toSet()
+        } else emptySet()
+
+        val targets = auto + settings.manualPackageNames.toSet()
+        if (current !in targets) return
+
+        // Trigger at the first configured threshold crossing only; after the
+        // 3-shot burst, the next threshold is reached only after another full
+        // frequency interval of continuous use.
+        val threshold = (continuousSec / 60L / frequency * frequency).toInt()
         val child: String = FirebaseRepo.childId ?: return
-        val key: String = triggerKey(child, current, todayKey(), threshold.toInt())
+        val key: String = triggerKey(child, current, todayKey(), threshold)
         ScreenshotRepository.reserveTrigger(key) { reserved: Boolean ->
-            if (!reserved || !settings.enabled || !autoCaptureActive || currentForegroundPackage() != current) return@reserveTrigger
+            if (!reserved || !settings.enabled || !autoCaptureActive || !isScreenInteractive() || currentForegroundPackage() != current) return@reserveTrigger
             burstPackage = current
-            burstThreshold = threshold.toInt()
+            burstThreshold = threshold
             burstCount = 0
             scheduleBurstCapture(0L)
         }
@@ -147,6 +164,10 @@ class AccessibilityScreenshotService : AccessibilityService() {
             if (burstCount >= AUTO_BURST_COUNT) clearBurst()
             return
         }
+        if (!isScreenInteractive()) {
+            clearBurst()
+            return
+        }
         val current: String = currentForegroundPackage() ?: run { clearBurst(); return }
         if (current != target) {
             clearBurst()
@@ -155,7 +176,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         val usage: Long = currentUsageSeconds()
         burstCount++
         captureAndUpload(target, burstThreshold, usage, "auto_burst_${todayKey()}_${target.hashCode()}_${burstThreshold}_$burstCount", null) {
-            if (burstCount < AUTO_BURST_COUNT && burstPackage == target) {
+            if (burstCount < AUTO_BURST_COUNT && burstPackage == target && isScreenInteractive() && currentForegroundPackage() == target) {
                 scheduleBurstCapture(AUTO_BURST_INTERVAL_MS)
             } else {
                 clearBurst()
@@ -168,7 +189,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
             finishCapture(false, key, remoteRequestId, "Bu Android versiyasida Accessibility screenshot mavjud emas", onFinished)
             return
         }
-        if (captureRunning) return
+        if (captureRunning || !isScreenInteractive()) return
         captureRunning = true
         takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
             override fun onSuccess(screenshot: ScreenshotResult) {
@@ -221,24 +242,38 @@ class AccessibilityScreenshotService : AccessibilityService() {
         })
     }
 
-    private fun currentForegroundInfo(): Pair<String, Long>? {
-        val usm: UsageStatsManager = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager ?: return null
-        val now: Long = System.currentTimeMillis()
-        val events = usm.queryEvents((now - 30 * 60_000L).coerceAtLeast(0L), now)
+    /** Returns the current app only when its latest foreground event has not been followed by a background event. */
+    private fun currentForegroundInfo(usm: UsageStatsManager, now: Long): Pair<String, Long>? {
+        val events = usm.queryEvents((now - 24 * 60 * 60_000L).coerceAtLeast(0L), now)
         val event = android.app.usage.UsageEvents.Event()
-        var pkg: String? = null
-        var timestamp: Long = 0L
+        val starts = HashMap<String, Long>()
+        var currentPkg: String? = null
+        var currentStart = 0L
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
-            if (event.eventType == android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND && event.timeStamp >= timestamp) {
-                timestamp = event.timeStamp
-                pkg = event.packageName
+            when (event.eventType) {
+                android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND -> {
+                    starts[event.packageName] = event.timeStamp
+                    currentPkg = event.packageName
+                    currentStart = event.timeStamp
+                }
+                android.app.usage.UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    val start = starts.remove(event.packageName)
+                    if (currentPkg == event.packageName && start != null && event.timeStamp >= currentStart) {
+                        currentPkg = null
+                        currentStart = 0L
+                    }
+                }
             }
         }
-        return pkg?.let { it to timestamp }
+        return if (currentPkg != null && currentStart > 0L) currentPkg!! to currentStart else null
     }
 
-    private fun currentForegroundPackage(): String? = currentForegroundInfo()?.first
+    private fun currentForegroundPackage(): String? {
+        val now = System.currentTimeMillis()
+        val usm = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager ?: return null
+        return currentForegroundInfo(usm, now)?.first
+    }
 
     private fun currentUsageSeconds(): Long {
         val pkg: String = currentForegroundPackage() ?: return 0L
@@ -247,6 +282,12 @@ class AccessibilityScreenshotService : AccessibilityService() {
             set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
         }.timeInMillis
         return (usm.queryAndAggregateUsageStats(start, System.currentTimeMillis())[pkg]?.totalTimeInForeground ?: 0L) / 1000L
+    }
+
+    private fun isScreenInteractive(): Boolean {
+        val power = getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return false
+        val keyguard = getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+        return power.isInteractive && keyguard?.isKeyguardLocked != true
     }
 
     private fun getApplicationInfoSafe(pkg: String) = try { packageManager.getApplicationInfo(pkg, 0) } catch (_: Exception) { null }
