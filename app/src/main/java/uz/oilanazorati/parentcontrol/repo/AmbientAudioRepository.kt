@@ -58,12 +58,20 @@ object AmbientAudioRepository {
 
     /** Ota-onaning o'z ICE manzilini bola qurilmasiga yetkazish uchun Firestore'ga qo'shadi. */
     fun sendParentIceCandidate(candidate: String, sdpMid: String?, sdpMLineIndex: Int) {
-        requestRef().update(
-            "parentCandidates",
-            com.google.firebase.firestore.FieldValue.arrayUnion(
-                mapOf("candidate" to candidate, "sdpMid" to sdpMid, "sdpMLineIndex" to sdpMLineIndex)
-            )
-        )
+        if (FirebaseRepo.familyCode.isNullOrBlank() || FirebaseRepo.childId.isNullOrBlank()) {
+            Log.w(TAG, "sendParentIceCandidate: familyCode/childId hali tayyor emas, o'tkazib yuborildi")
+            return
+        }
+        try {
+            requestRef().update(
+                "parentCandidates",
+                com.google.firebase.firestore.FieldValue.arrayUnion(
+                    mapOf("candidate" to candidate, "sdpMid" to sdpMid, "sdpMLineIndex" to sdpMLineIndex)
+                )
+            ).addOnFailureListener { Log.e(TAG, "sendParentIceCandidate failed", it) }
+        } catch (t: Throwable) {
+            Log.e(TAG, "sendParentIceCandidate exception", t)
+        }
     }
 
     /**
