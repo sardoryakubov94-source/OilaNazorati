@@ -9,9 +9,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.firebase.firestore.ListenerRegistration
-import org.webrtc.AudioDeviceModule
 import org.webrtc.IceCandidate
-import org.webrtc.JavaAudioDeviceModule
 import org.webrtc.MediaConstraints
 import org.webrtc.MediaStreamTrack
 import org.webrtc.PeerConnection
@@ -20,6 +18,8 @@ import org.webrtc.RtpReceiver
 import org.webrtc.RtpTransceiver
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
+import org.webrtc.audio.AudioDeviceModule
+import org.webrtc.audio.JavaAudioDeviceModule
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.repo.AmbientAudioRepository
 
@@ -106,7 +106,7 @@ class AmbientListenActivity : AppCompatActivity() {
         "requested" -> "⏳ Bola qurilmasidan kutilmoqda..."
         "active" -> "🔴 Jonli ovoz"
         "stopped" -> "To'xtatildi"
-        "failed" -> "❌ Ovoz ulanmadi"
+        "failed" -> "❌ Ovoz ulanmaydi"
         else -> "Tayyor"
     }
 
