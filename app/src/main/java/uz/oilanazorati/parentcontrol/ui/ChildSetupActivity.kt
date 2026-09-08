@@ -42,6 +42,7 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnBatteryOptimization.setOnClickListener { requestIgnoreBatteryOptimization() }
         binding.btnSyncContacts.setOnClickListener { syncContactsNow() }
         binding.btnDeviceAdmin.setOnClickListener { requestDeviceAdmin() }
+        binding.btnPlayProtect.setOnClickListener { openPlayProtectSettings() }
         binding.btnFinish.setOnClickListener { finishSetupAndStartMonitoring() }
         restoreSavedPairingIntoUi()
     }
@@ -51,6 +52,27 @@ class ChildSetupActivity : AppCompatActivity() {
             .setMessage("Android sozlamalarida 'Oila Nazorati — Accessibility Screenshot' xizmatini qo'lda yoqing. Bu xizmat MediaProjection screenshotiga tegmaydi.")
             .setPositiveButton("Sozlamani ochish") { _, _ -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
             .setNegativeButton("Bekor qilish", null).show()
+    }
+
+    private fun openPlayProtectSettings() {
+        AlertDialog.Builder(this)
+            .setTitle("Google Play Protect")
+            .setMessage("Bu bo'lim Google Play Protect xavfsizlik sozlamalariga olib boradi. Agar APK o'rnatishda Google ogohlantirish yoki blok ko'rsatsa, uni e'tiborsiz qoldirish o'rniga ogohlantirish sababini tekshiring. Ilovani faqat ishonchli manbadan o'rnating.")
+            .setPositiveButton("Play Protectni ochish") { _, _ ->
+                try {
+                    startActivity(Intent("com.google.android.finsky.settings.PLAY_PROTECT_SETTINGS").apply {
+                        setPackage("com.android.vending")
+                    })
+                } catch (_: Exception) {
+                    try {
+                        startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS))
+                    } catch (_: Exception) {
+                        startActivity(Intent(Settings.ACTION_SETTINGS))
+                    }
+                }
+            }
+            .setNegativeButton("Bekor qilish", null)
+            .show()
     }
 
     private fun requestMicrophonePermission() { val granted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED; if (granted) { binding.pairStatusText.text = "✅ Mikrofon ruxsati berilgan"; updatePermissionStatusUi(); return }; microphonePermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO) }
