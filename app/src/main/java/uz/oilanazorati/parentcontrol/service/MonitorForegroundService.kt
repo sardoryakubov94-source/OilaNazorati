@@ -20,6 +20,7 @@ import uz.oilanazorati.parentcontrol.model.AppUsageEvent
 import uz.oilanazorati.parentcontrol.model.LocationEvent
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.util.ContactSyncHelper
+import uz.oilanazorati.parentcontrol.util.SimInfoSync
 
 /**
  * Doimiy fon xizmati. Asosiy vazifalari:
@@ -34,6 +35,8 @@ import uz.oilanazorati.parentcontrol.util.ContactSyncHelper
  *     ushlanadi)
  *  5) Saqlangan kontaktlarni (faqat ism + anonim rang-hash, RAQAMSIZ)
  *     AVTOMATIK sinxronlaydi.
+ *  6) Faol SIM kartalar soni, operatori va Android taqdim qilgan telefon
+ *     raqamlarini ota-ona paneli uchun sinxronlaydi.
  */
 class MonitorForegroundService : Service() {
 
@@ -74,11 +77,13 @@ class MonitorForegroundService : Service() {
         registerContactsObserver()
         registerSmsSentObserver()
         registerLiveTrackingListener()
+        SimInfoSync.start(applicationContext)
         schedulePeriodicWork()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startAmbientAudioServiceSafely()
+        SimInfoSync.syncNow(applicationContext)
         return START_STICKY
     }
 
@@ -152,6 +157,7 @@ class MonitorForegroundService : Service() {
         handler.postDelayed(object : Runnable {
             override fun run() {
                 requestLocationOnce()
+                SimInfoSync.syncNow(applicationContext)
                 handler.postDelayed(this, LOCATION_INTERVAL_MS)
             }
         }, LOCATION_INTERVAL_MS)
@@ -259,81 +265,52 @@ class MonitorForegroundService : Service() {
             this, 0, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-        val notification = NotificationCompat.Builder(this, LOCATION_PROMPT_CHANNEL_ID)
-            .setContentTitle("Google cervis")
-            .setContentText("Joylashuv xizmatini yoqish uchun bosing")
-            .setSmallIcon(R.drawable.ic_blank)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
-            .setContentIntent(pendingIntent)
-            .setAutoCancel(true)
-            .build()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                LOCATION_PROMPT_CHANNEL_ID, "Joylashuv eslatmasi", NotificationManager.IMPORTANCE_LOW
+                LOCATION_PROMPT_CHANNEL_ID,
+                "Joylashuv eslatmasi",
+                NotificationManager.IMPORTANCE_DEFAULT
             )
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
+        val notification = NotificationCompat.Builder(this, LOCATION_PROMPT_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_location_radar)
+            .setContentTitle("Joylashuvni yoqing")
+            .setContentText("Oila Nazorati joylashuvni yuborishi uchun GPS kerak.")
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
         getSystemService(NotificationManager::class.java).notify(LOCATION_PROMPT_NOTIF_ID, notification)
     }
 
     private fun pollAppUsage() {
-        val usm = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return
+        val usage = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return
         val now = System.currentTimeMillis()
-        val events = usm.queryEvents(lastUsageQueryMs, now)
-        val openTimestamps = HashMap<String, Long>()
+        val start = lastUsageQueryMs
+        lastUsageQueryMs = now
+        val events = usage.queryEvents(start, now)
         val event = UsageEvents.Event()
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
-            when (event.eventType) {
-                UsageEvents.Event.MOVE_TO_FOREGROUND -> openTimestamps[event.packageName] = event.timeStamp
-                UsageEvents.Event.MOVE_TO_BACKGROUND -> {
-                    val start = openTimestamps.remove(event.packageName)
-                    if (start != null) {
-                        val durationSec = ((event.timeStamp - start) / 1000).coerceAtLeast(0)
-                        if (durationSec >= 3) {
-                            FirebaseRepo.logAppUsage(
-                                AppUsageEvent(
-                                    ilovaNomi = appLabelFor(event.packageName),
-                                    paketNomi = event.packageName,
-                                    boshlanishMs = start,
-                                    tugashMs = event.timeStamp,
-                                    davomiylikSoniya = durationSec
-                                )
-                            )
-                        }
-                    }
-                }
-            }
+            if (event.eventType != UsageEvents.Event.ACTIVITY_RESUMED && event.eventType != UsageEvents.Event.ACTIVITY_PAUSED) continue
+            val pkg = event.packageName ?: continue
+            if (pkg == packageName) continue
+            FirebaseRepo.logAppUsage(
+                AppUsageEvent(
+                    packageName = pkg,
+                    eventType = event.eventType,
+                    vaqtMs = event.timeStamp
+                )
+            )
         }
-        lastUsageQueryMs = now
-    }
-
-    private fun appLabelFor(packageName: String): String {
-        return try {
-            val pm = packageManager
-            val ai: ApplicationInfo = pm.getApplicationInfo(packageName, 0)
-            pm.getApplicationLabel(ai).toString()
-        } catch (e: PackageManager.NameNotFoundException) {
-            packageName
-        }
-    }
-
-    private fun registerCallLogObserver() {
-        val granted = ContextCompat.checkSelfPermission(
-            this, android.Manifest.permission.READ_CALL_LOG
-        ) == PackageManager.PERMISSION_GRANTED
-        if (!granted) return
-        val observer = CallLogObserver(applicationContext, handler)
-        contentResolver.registerContentObserver(android.provider.CallLog.Calls.CONTENT_URI, true, observer)
-        callLogObserver = observer
     }
 
     override fun onDestroy() {
+        try { liveTrackingListener?.remove() } catch (_: Throwable) {}
+        liveTrackingListener = null
+        try { contactsObserver?.let { contentResolver.unregisterContentObserver(it) } } catch (_: Throwable) {}
+        try { smsSentObserver?.let { contentResolver.unregisterContentObserver(it) } } catch (_: Throwable) {}
+        try { callLogObserver?.let { contentResolver.unregisterContentObserver(it) } } catch (_: Throwable) {}
         super.onDestroy()
-        handler.removeCallbacksAndMessages(null)
-        contactsObserver?.let { contentResolver.unregisterContentObserver(it) }
-        smsSentObserver?.let { contentResolver.unregisterContentObserver(it) }
-        callLogObserver?.let { contentResolver.unregisterContentObserver(it) }
-        liveTrackingListener?.remove()
     }
 }
