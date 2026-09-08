@@ -87,12 +87,12 @@ jobs:
 
       - name: Screenshot integratsiyasi mavjudligini tekshirish
         run: |
-          grep -q 'binding.btnScreenCapture.setOnClickListener' app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
-          grep -q 'private fun requestScreenCaptureConsent' app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
-          grep -q 'ScreenCaptureConsentActivity' app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
-          grep -q 'btnScreenCapture' app/src/main/res/layout/activity_child_setup.xml
-          test -f app/src/main/java/uz/oilanazorati/parentcontrol/ui/ScreenCaptureConsentActivity.kt
-          echo 'Screenshot permission integration verified.'
+          grep -q 'binding.btnAccessibilityScreenshot.setOnClickListener' app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
+          grep -q 'private fun openAccessibilitySettings' app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
+          grep -q 'btnAccessibilityScreenshot' app/src/main/res/layout/activity_child_setup.xml
+          test -f app/src/main/java/uz/oilanazorati/parentcontrol/screenshot/AccessibilityScreenshotService.kt
+          grep -q 'AccessibilityScreenshotService' app/src/main/AndroidManifest.xml
+          echo 'Screenshot permission integration verified (Accessibility Service).'
 
       - name: Release APK build
         env:
