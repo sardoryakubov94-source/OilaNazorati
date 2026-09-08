@@ -113,6 +113,12 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnDeviceAdmin.text = if (dpm.isAdminActive(compName)) "✅ O'chirishdan himoyalangan — o'chirish" else "🔒 Ilovani o'chirishdan himoyalash"
     }
 
+    private fun updatePermissionStatusUi() {
+        val micGranted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        binding.btnMicrophonePermission.text = if (micGranted) "✅ Mikrofon ruxsati berilgan — o'chirish" else "🎙️ Mikrofon ruxsatini berish"
+        updateRoleStatusUi()
+    }
+
     private fun restoreSavedPairingIntoUi() {
         val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE); val savedCode = prefs.getString("family_code", null); val isChildDevice = prefs.getBoolean("is_child_device", false)
         if (savedCode != null) { binding.inputFamilyCode.setText(savedCode); prefs.getString("child_name", null)?.let { binding.inputChildName.setText(it) }; if (FirebaseRepo.familyCode == null) FirebaseRepo.familyCode = savedCode; if (FirebaseRepo.childId == null) FirebaseRepo.childId = prefs.getString("child_id", null) ?: FirebaseAuth.getInstance().currentUser?.uid; binding.pairStatusText.text = if (isChildDevice) "✅ Ulandi: $savedCode (nazorat ishga tushirilgan)" else "✅ Ulandi: $savedCode" }
