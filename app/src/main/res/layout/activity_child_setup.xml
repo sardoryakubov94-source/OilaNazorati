@@ -21,7 +21,6 @@
 
     <Button android:id="@+id/btnAccessibilityScreenshot" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="♿ Accessibility screenshot ruxsatini yoqish" android:layout_marginBottom="8dp"/>
 
-    <Button android:id="@+id/btnScreenCapture" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="📸 Ekran tasviriga ruxsat berish" android:layout_marginBottom="8dp"/>
     <Button android:id="@+id/btnDefaultPhone" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Qo'ng'iroq kuzatuvini yoqish" android:layout_marginBottom="8dp"/>
     <Button android:id="@+id/btnDefaultSms" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="SMS kuzatuvini yoqish" android:layout_marginBottom="8dp"/>
     <Button android:id="@+id/btnBatteryOptimization" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="🔋 Batareya tejashdan chiqarish (muhim!)" android:layout_marginBottom="8dp"/>
