@@ -58,7 +58,31 @@ class ChildSetupActivity : AppCompatActivity() {
     }
 
     private fun openAccessibilitySettings() {
-        AlertDialog.Builder(this).setTitle("Accessibility ruxsati").setMessage("Ruxsat berilgan bo'lsa, uni o'chirish uchun ham Android Accessibility sozlamalarini ochishingiz mumkin.").setPositiveButton("Sozlamani ochish") { _, _ -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }.setNegativeButton("Bekor qilish", null).show()
+        AlertDialog.Builder(this)
+            .setTitle("♿ Ekran skrinshoti uchun Accessibility")
+            .setMessage("""
+                Accessibility ruxsati ekran skrinshotlarini olish uchun kerak.
+
+                Agar Accessibility bo'limida "Oila Nazorati" xira bo'lib, yoqilmasa, Android xavfsizlik sababli ilova uchun cheklangan sozlamalar hali ochilmagan bo'ladi.
+
+                1-qadam — ilova sozlamalarini oching
+                "Ilova sozlamalariga o'tish" tugmasini bosing. Ochilgan sahifada aynan "Oila Nazorati" ilovasi bo'ladi.
+
+                2-qadam — cheklangan imkoniyatlarni oching
+                Ilova sahifasining yuqori o'ng tomonidagi ⋮ uch nuqtani bosing va "Cheklangan sozlamalarga ruxsat berish"ni tanlang. Bu Accessibility xira bo'lib qolishining oldini oladi.
+
+                3-qadam — Accessibility'ga qayting
+                Orqaga qaytib Accessibility bo'limini oching. Endi "Oila Nazorati" xira bo'lmasligi kerak.
+
+                4-qadam — skrinshot ruxsatini yoqing
+                "Oila Nazorati" xizmatiga kiring va Accessibility ruxsatini yoqing.
+
+                Agar telefon uch nuqtani ko'rsatmasa, avval ilova sahifasida "Cheklangan sozlamalar" bilan bog'liq bandni qidiring. Android/telefon ishlab chiqaruvchisiga qarab nomi biroz farq qilishi mumkin.
+            """.trimIndent())
+            .setPositiveButton("📱 Ilova sozlamalariga o'tish") { _, _ -> openAppSettings() }
+            .setNeutralButton("♿ Accessibility'ni ochish") { _, _ -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+            .setNegativeButton("Yopish", null)
+            .show()
     }
 
     private fun requestMicrophonePermission() {
