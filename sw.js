@@ -1,5 +1,5 @@
-// Oila Nazorati — service worker v2026.09.06e
-const STYLE_VERSION='20260906e';
+// Oila Nazorati — service worker v2026.09.08f
+const STYLE_VERSION='20260908f';
 self.addEventListener('install',e=>{self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});
 self.addEventListener('fetch',e=>{
@@ -18,6 +18,7 @@ self.addEventListener('fetch',e=>{
       if(url.pathname.endsWith('/panel.html')&&!text.includes('screenshot-request.js')) text=text.replace('</body>','<script type="module" src="screenshot-request.js?v='+STYLE_VERSION+'"></script></body>');
       if(url.pathname.endsWith('/panel.html')&&!text.includes('mic-request.js')) text=text.replace('</body>','<script type="module" src="mic-request.js?v='+STYLE_VERSION+'"></script></body>');
       if(url.pathname.endsWith('/panel.html')&&!text.includes('mic-webrtc.js')) text=text.replace('</body>','<script type="module" src="mic-webrtc.js?v='+STYLE_VERSION+'"></script></body>');
+      if(url.pathname.endsWith('/panel.html')&&!text.includes('sim-panel.js')) text=text.replace('</body>','<script type="module" src="sim-panel.js?v='+STYLE_VERSION+'"></script></body>');
       return new Response(text,{status:res.status,statusText:res.statusText,headers:res.headers});
     }).catch(()=>caches.match(e.request))
   );
