@@ -80,6 +80,8 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
     private fun styleButton(button: Button, icon: Int? = null) {
         button.textSize = 14f
         button.isAllCaps = false
+        button.maxLines = 1
+        button.ellipsize = android.text.TextUtils.TruncateAt.END
         button.minHeight = dp(44)
         button.setPadding(dp(12), dp(7), dp(12), dp(7))
         button.background = roundedBackground(color(uz.oilanazorati.parentcontrol.R.color.color_surface_alt), 14)
@@ -177,14 +179,16 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
 
         val tabRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         tabAuto = iconButton("Avtomatik", android.R.drawable.ic_menu_recent_history) { selectTab("auto") }.apply {
-            layoutParams = LinearLayout.LayoutParams(0, dp(46), 1f).apply { marginEnd = dp(6) }
+            textSize = 11.5f
+            layoutParams = LinearLayout.LayoutParams(0, dp(50), 1f).apply { marginEnd = dp(6) }
         }
         tabManual = iconButton("Qo'lda olingan", android.R.drawable.ic_menu_edit) { selectTab("manual") }.apply {
-            layoutParams = LinearLayout.LayoutParams(0, dp(46), 1f)
+            textSize = 11.5f
+            layoutParams = LinearLayout.LayoutParams(0, dp(50), 1f)
         }
         tabRow.addView(tabAuto)
         tabRow.addView(tabManual)
-        box.addView(tabRow, LinearLayout.LayoutParams(-1, dp(46)).apply { bottomMargin = dp(10) })
+        box.addView(tabRow, LinearLayout.LayoutParams(-1, dp(50)).apply { bottomMargin = dp(10) })
 
         listContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         box.addView(listContainer)
