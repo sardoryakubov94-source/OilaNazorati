@@ -74,7 +74,8 @@ async function requestScreenshot() {
     const timer = setInterval(async () => {
       try {
         const snap = await getDoc(ref);
-        const status = snap.data()?.status;
+        const data = snap.data() || {};
+        const status = data.status;
         if (status === 'completed') {
           clearInterval(timer);
           setStatus('✅ Screenshot tayyor', true);
@@ -83,9 +84,14 @@ async function requestScreenshot() {
           setTimeout(() => setStatus('📸 Screenshot olish'), 2500);
         } else if (status === 'failed' || Date.now() - started > 45000) {
           clearInterval(timer);
-          setStatus('❌ Screenshot olinmadi');
+          const message = data.message?.trim();
+          if (message) {
+            setStatus(`❌ ${message}`);
+          } else {
+            setStatus('❌ Screenshot olinmadi. Internet va ruxsatlarni tekshiring.');
+          }
           busy = false;
-          setTimeout(() => setStatus('📸 Screenshot olish'), 2500);
+          setTimeout(() => setStatus('📸 Screenshot olish'), 5000);
         }
       } catch (e) {
         console.error('screenshot request poll', e);
