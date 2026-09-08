@@ -40,6 +40,7 @@ class ParentDashboardActivity : AppCompatActivity() {
             isPremiumUser = isPremium
             contactSummaryAdapter.setPremium(isPremium)
             smsAdapter.setPremium(isPremium)
+            binding.premiumBannerHome.visibility = if (isPremium) android.view.View.GONE else android.view.View.VISIBLE
         }
         val savedCode = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).getString("family_code", null)
         if (savedCode != null) { binding.headerFamilyCode.text = savedCode; loadFamily(savedCode) }
