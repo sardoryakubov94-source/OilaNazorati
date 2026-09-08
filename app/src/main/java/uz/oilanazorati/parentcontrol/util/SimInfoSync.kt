@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import android.telephony.SubscriptionInfo
 import android.telephony.SubscriptionManager
 import androidx.core.content.ContextCompat
 import com.google.firebase.firestore.FieldValue
@@ -27,8 +26,6 @@ object SimInfoSync {
     @Volatile
     private var listenerRegistered = false
 
-    private var subscriptionListener: SubscriptionManager.OnSubscriptionsChangedListener? = null
-
     fun start(context: Context) {
         syncNow(context)
         if (listenerRegistered) return
@@ -40,11 +37,12 @@ object SimInfoSync {
             }
         }
         try {
-            manager.addOnSubscriptionsChangedListener(
-                context.mainExecutor,
-                listener
-            )
-            subscriptionListener = listener
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                manager.addOnSubscriptionsChangedListener(context.mainExecutor, listener)
+            } else {
+                @Suppress("DEPRECATION")
+                manager.addOnSubscriptionsChangedListener(listener)
+            }
             listenerRegistered = true
         } catch (_: Throwable) {
             // Some vendor ROMs may reject listener registration; periodic
@@ -76,7 +74,6 @@ object SimInfoSync {
 
         val sims = subscriptions.map { info ->
             val number = if (canReadNumbers) readPhoneNumber(manager, info.subscriptionId) else ""
-            hashSafeNumber(number)
             mapOf(
                 "slot" to info.simSlotIndex,
                 "subscriptionId" to info.subscriptionId,
@@ -128,11 +125,5 @@ object SimInfoSync {
         } catch (_: Throwable) {
             ""
         }
-    }
-
-    // Keeps the compiler from accidentally optimizing/using the raw value
-    // for diagnostics. The actual number is sent only to the paired child doc.
-    private fun hashSafeNumber(number: String) {
-        if (number.isNotEmpty()) number.hashCode()
     }
 }
