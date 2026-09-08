@@ -68,6 +68,14 @@ object ScreenshotRepository {
     }
     fun fetchHistory(onResult: (List<ScreenshotMetadata>) -> Unit) { val col = childDoc()?.collection("screenshots") ?: return onResult(emptyList()); col.orderBy("capturedAt", com.google.firebase.firestore.Query.Direction.DESCENDING).limit(100).get().addOnSuccessListener { onResult(it.documents.mapNotNull { d -> d.toObject(ScreenshotMetadata::class.java) }) }.addOnFailureListener { onResult(emptyList()) } }
     fun loadImageBytes(id: String, onResult: (ByteArray?) -> Unit) { val child = childDoc() ?: return onResult(null); child.collection("screenshot_data").document(id).get().addOnSuccessListener { onResult(it.getBlob("image")?.toBytes()) }.addOnFailureListener { onResult(null) } }
+    fun deleteScreenshot(id: String, onResult: (Boolean) -> Unit = {}) {
+        val child = childDoc() ?: return onResult(false)
+        val dataRef = child.collection("screenshot_data").document(id)
+        val metaRef = child.collection("screenshots").document(id)
+        db.batch().delete(dataRef).delete(metaRef).commit()
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
     private fun prepareImage(file: File): ByteArray {
         val original = file.readBytes(); if (original.size <= MAX_IMAGE_BYTES) return original; val source = BitmapFactory.decodeByteArray(original, 0, original.size) ?: return ByteArray(0)
         try { var width = source.width; var height = source.height; var quality = 78; repeat(8) { val scaled = Bitmap.createScaledBitmap(source, width, height, true); try { val out = ByteArrayOutputStream(); scaled.compress(Bitmap.CompressFormat.JPEG, quality, out); val bytes = out.toByteArray(); if (bytes.size <= MAX_IMAGE_BYTES) return bytes } finally { scaled.recycle() }; width = (width * .82f).toInt().coerceAtLeast(480); height = (height * .82f).toInt().coerceAtLeast(480); quality = (quality - 5).coerceAtLeast(40) }; return ByteArray(0) } finally { source.recycle() }
