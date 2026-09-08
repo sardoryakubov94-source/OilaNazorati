@@ -108,7 +108,11 @@ class WebRtcAmbientAudioService : Service() {
                 override fun onIceConnectionReceivingChange(receiving: Boolean) {}
                 override fun onIceGatheringChange(newState: PeerConnection.IceGatheringState?) {}
                 override fun onIceCandidate(candidate: IceCandidate) {
-                    requestRef.update("childCandidates", FieldValue.arrayUnion(mapOf("candidate" to candidate.sdp, "sdpMid" to candidate.sdpMid, "sdpMLineIndex" to candidate.sdpMLineIndex)))
+                    try {
+                        requestRef.update("childCandidates", FieldValue.arrayUnion(mapOf("candidate" to candidate.sdp, "sdpMid" to candidate.sdpMid, "sdpMLineIndex" to candidate.sdpMLineIndex)))
+                    } catch (t: Throwable) {
+                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(t)
+                    }
                 }
                 override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
                 override fun onAddStream(stream: org.webrtc.MediaStream?) {}
@@ -132,6 +136,10 @@ class WebRtcAmbientAudioService : Service() {
                 override fun onSetFailure(error: String?) { fail(requestRef, id, error) }
             }, SessionDescription(SessionDescription.Type.OFFER, offer))
         } catch (t: Throwable) {
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().apply {
+                setCustomKey("webrtc_child_phase", "startSession")
+                recordException(t)
+            }
             fail(requestRef, id, t.message ?: "WebRTC ishga tushmadi")
         }
     }
