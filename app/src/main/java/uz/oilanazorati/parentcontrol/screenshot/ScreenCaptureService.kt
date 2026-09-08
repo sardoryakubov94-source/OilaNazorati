@@ -41,7 +41,11 @@ class ScreenCaptureService : Service() {
     data class PendingCapture(val packageName: String, val threshold: Int, val usageSeconds: Long, val key: String, val remoteRequestId: String? = null)
 
     override fun onCreate() {
-        super.onCreate(); createNotificationChannel()
+        super.onCreate()
+        // Android requires the foreground notification to be established immediately
+        // after startForegroundService(). Do not perform Firebase/other initialization first.
+        startForegroundNow()
+        createNotificationChannel()
         settingsListener = ScreenshotRepository.listenSettings { newSettings ->
             settings = newSettings
             if (!newSettings.enabled) {
@@ -54,6 +58,18 @@ class ScreenCaptureService : Service() {
         ensureRequestListener()
         handler.post(evalRunnable)
         ScreenshotRepository.updateProjectionStatus(false)
+    }
+
+    private fun startForegroundNow() {
+        if (Build.VERSION.SDK_INT >= 29) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification(),
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            )
+        } else {
+            startForeground(NOTIFICATION_ID, notification())
+        }
     }
 
     private fun ensureRequestListener() {
@@ -80,6 +96,7 @@ class ScreenCaptureService : Service() {
         if (!settings.enabled || AccessibilityScreenshotService.isServiceEnabled(this)) return
         val crashlytics = com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance()
         try {
+            // Keep the service in the foreground before initializing MediaProjection.
             if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, notification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION) else startForeground(NOTIFICATION_ID, notification())
             val mgr = getSystemService(MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             projection = mgr.getMediaProjection(resultCode, data) ?: run { stopSelf(); return }
