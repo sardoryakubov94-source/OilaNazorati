@@ -9,11 +9,14 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.firebase.firestore.ListenerRegistration
+import org.webrtc.AudioDeviceModule
 import org.webrtc.IceCandidate
+import org.webrtc.JavaAudioDeviceModule
 import org.webrtc.MediaConstraints
 import org.webrtc.MediaStreamTrack
 import org.webrtc.PeerConnection
 import org.webrtc.PeerConnectionFactory
+import org.webrtc.RtpReceiver
 import org.webrtc.RtpTransceiver
 import org.webrtc.SdpObserver
 import org.webrtc.SessionDescription
@@ -23,9 +26,8 @@ import uz.oilanazorati.parentcontrol.repo.AmbientAudioRepository
 /**
  * Ota-ona tomonidagi jonli ovoz — WebRTC transport.
  *
- * Ota-ona qurilmasi faqat audio qabul qiladi. Mikrofon permissioni va lokal
- * AudioSource yaratilmaydi; bu boshqa audio/mikrofon jarayonlari bilan
- * to'qnashuv va ayrim qurilmalardagi crashlarni kamaytiradi.
+ * Ota-ona lokal mikrofon trekini yubormaydi, faqat bolaning audio trekini
+ * qabul qiladi. WebRTC audio device module playback uchun saqlanadi.
  * Firestore faqat WebRTC signalizatsiyasi uchun ishlatiladi.
  */
 class AmbientListenActivity : AppCompatActivity() {
@@ -36,6 +38,7 @@ class AmbientListenActivity : AppCompatActivity() {
 
     private var factory: PeerConnectionFactory? = null
     private var peerConnection: PeerConnection? = null
+    private var audioDeviceModule: AudioDeviceModule? = null
     private val appliedChildCandidates = HashSet<String>()
 
     private lateinit var status: TextView
@@ -127,8 +130,17 @@ class AmbientListenActivity : AppCompatActivity() {
                 PeerConnectionFactory.InitializationOptions.builder(applicationContext)
                     .createInitializationOptions()
             )
-            // Parent receiver-only: no RECORD_AUDIO request and no local AudioSource.
-            factory = PeerConnectionFactory.builder().createPeerConnectionFactory()
+
+            // WebRTC ADM is required for reliable audio playback on the parent.
+            // It does not create or publish a local audio track in this activity.
+            audioDeviceModule = JavaAudioDeviceModule.builder(applicationContext)
+                .setUseHardwareAcousticEchoCanceler(false)
+                .setUseHardwareNoiseSuppressor(false)
+                .createAudioDeviceModule()
+
+            factory = PeerConnectionFactory.builder()
+                .setAudioDeviceModule(audioDeviceModule)
+                .createPeerConnectionFactory()
 
             val iceServers = listOf(
                 PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
@@ -159,7 +171,7 @@ class AmbientListenActivity : AppCompatActivity() {
                     override fun onRemoveStream(stream: org.webrtc.MediaStream?) {}
                     override fun onDataChannel(dataChannel: org.webrtc.DataChannel?) {}
                     override fun onRenegotiationNeeded() {}
-                    override fun onAddTrack(receiver: org.webrtc.RtpReceiver?, mediaStreams: Array<out org.webrtc.MediaStream>?) {
+                    override fun onAddTrack(receiver: RtpReceiver?, mediaStreams: Array<out org.webrtc.MediaStream>?) {
                         runOnUiThread { status.text = "🔴 Jonli ovoz" }
                     }
                     override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {
@@ -176,7 +188,6 @@ class AmbientListenActivity : AppCompatActivity() {
 
             if (peerConnection == null) throw IllegalStateException("WebRTC ulanish yaratilmadi")
 
-            // Haqiqiy lokal audio trek kerak emas: ota-ona faqat qabul qiladi.
             peerConnection!!.addTransceiver(
                 MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO,
                 RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY)
@@ -266,12 +277,14 @@ class AmbientListenActivity : AppCompatActivity() {
         sessionListener = null
         try { peerConnection?.close() } catch (_: Throwable) {}
         try { peerConnection?.dispose() } catch (_: Throwable) {}
+        try { audioDeviceModule?.release() } catch (_: Throwable) {}
         try { factory?.dispose() } catch (_: Throwable) {}
         try {
             val am = getSystemService(AUDIO_SERVICE) as AudioManager
             am.isSpeakerphoneOn = false
         } catch (_: Throwable) {}
         peerConnection = null
+        audioDeviceModule = null
         factory = null
         currentRequestId = null
         startButton.isEnabled = true
@@ -285,6 +298,7 @@ class AmbientListenActivity : AppCompatActivity() {
         sessionListener?.remove()
         try { peerConnection?.close() } catch (_: Throwable) {}
         try { peerConnection?.dispose() } catch (_: Throwable) {}
+        try { audioDeviceModule?.release() } catch (_: Throwable) {}
         try { factory?.dispose() } catch (_: Throwable) {}
         super.onDestroy()
     }
