@@ -95,7 +95,7 @@ class MonitorForegroundService : Service() {
             checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
         ) return
         try {
-            ContextCompat.startForegroundService(this, Intent(this, AmbientAudioService::class.java))
+            ContextCompat.startForegroundService(this, Intent(this, WebRtcAmbientAudioService::class.java))
         } catch (_: Throwable) {
             // Android may reject microphone FGS startup when this service was
             // itself restarted from the background/boot. A later visible app
