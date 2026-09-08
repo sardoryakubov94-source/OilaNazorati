@@ -37,7 +37,8 @@ function findSelectedChildId() {
 
 function ensureCard() {
   const content = document.getElementById('content');
-  if (!content) return null;
+  const dashboard = document.getElementById('dashboard');
+  if (!content || !dashboard?.classList.contains('active')) return null;
   let card = document.getElementById('simPanelCard');
   if (!card) {
     card = document.createElement('div');
@@ -57,7 +58,7 @@ function render(data) {
   const updated = Number(data?.simUpdatedMs || 0);
 
   if (!count) {
-    card.innerHTML = '<div style="font-weight:850;font-size:15px">📱 SIM / telefon raqamlari</div><div style="color:#8993a2;font-size:12px;margin-top:6px">Faol SIM karta topilmadi yoki ma’lumot hali yuborilmagan.</div>';
+    card.innerHTML = '<div style="font-weight:850;font-size:15px">📱 SIM / telefon raqamlari</div><div style="color:#8993a2;font-size:12px;margin-top:6px">Raqam aniqlanmadi. Farzand telefonidan SIM ma’lumoti kutilmoqda.</div>';
     return;
   }
 
@@ -89,7 +90,10 @@ function stop() {
 
 function watch(childId) {
   const family = familyCode();
-  if (!family || !childId) return;
+  if (!family || !childId) {
+    render({});
+    return;
+  }
   if (family === selectedFamily && childId === selectedChildId && simUnsub) return;
   stop();
   selectedFamily = family;
@@ -103,6 +107,7 @@ function refreshSelection() {
   if (!dashboard?.classList.contains('active')) return;
   const id = findSelectedChildId();
   if (id) watch(id);
+  else render({});
 }
 
 const rootObserver = new MutationObserver(() => {
@@ -115,4 +120,5 @@ const rootObserver = new MutationObserver(() => {
 });
 rootObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
 
+refreshSelection();
 setInterval(refreshSelection, 1200);
