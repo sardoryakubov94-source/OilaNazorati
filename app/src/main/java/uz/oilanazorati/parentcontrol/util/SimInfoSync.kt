@@ -87,7 +87,11 @@ object SimInfoSync {
             "${it["slot"]}:${it["subscriptionId"]}:${it["operator"]}:${it["phoneNumber"]}"
         }
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        if (prefs.getString(KEY_FINGERPRINT, null) == fingerprint) return
+        // Raqam bo'sh bo'lsa fingerprintni yakunlangan deb hisoblamaymiz.
+        // Ba'zi telefon/operatorlarda raqam keyinroq paydo bo'ladi; keyingi
+        // syncNow() uni yana o'qib Firestore'ga yuborishi kerak.
+        val numberAvailable = sims.isNotEmpty() && sims.all { !it["phoneNumber"].toString().isNullOrBlank() }
+        if (prefs.getString(KEY_FINGERPRINT, null) == fingerprint && numberAvailable) return
 
         val childRef = FirebaseFirestore.getInstance()
             .collection("families").document(familyCode)
