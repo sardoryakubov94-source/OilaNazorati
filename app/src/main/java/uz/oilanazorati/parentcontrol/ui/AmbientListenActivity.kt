@@ -48,8 +48,8 @@ class AmbientListenActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        crashlytics.setKey("webrtc_activity", "AmbientListenActivity")
-        crashlytics.setKey("webrtc_phase", "onCreate")
+        crashlytics.setCustomKey("webrtc_activity", "AmbientListenActivity")
+        crashlytics.setCustomKey("webrtc_phase", "onCreate")
         crashlytics.log("WebRTC audio activity created")
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -107,11 +107,11 @@ class AmbientListenActivity : AppCompatActivity() {
     }
 
     private fun diag(phase: String, error: Throwable? = null) {
-        crashlytics.setKey("webrtc_phase", phase)
+        crashlytics.setCustomKey("webrtc_phase", phase)
         crashlytics.log("WebRTC phase: $phase")
         if (error != null) {
-            crashlytics.setKey("webrtc_error", error.javaClass.name)
-            crashlytics.setKey("webrtc_error_message", error.message ?: "")
+            crashlytics.setCustomKey("webrtc_error", error.javaClass.name)
+            crashlytics.setCustomKey("webrtc_error_message", error.message ?: "")
             crashlytics.recordException(error)
         }
     }
@@ -172,7 +172,7 @@ class AmbientListenActivity : AppCompatActivity() {
                 object : PeerConnection.Observer {
                     override fun onSignalingChange(newState: PeerConnection.SignalingState?) {}
                     override fun onIceConnectionChange(newState: PeerConnection.IceConnectionState?) {
-                        crashlytics.setKey("webrtc_ice_state", newState?.name ?: "null")
+                        crashlytics.setCustomKey("webrtc_ice_state", newState?.name ?: "null")
                         crashlytics.log("WebRTC ICE state: ${newState?.name}")
                         runOnUiThread {
                             when (newState) {
@@ -199,7 +199,7 @@ class AmbientListenActivity : AppCompatActivity() {
                         runOnUiThread { status.text = "🔴 Jonli ovoz" }
                     }
                     override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {
-                        crashlytics.setKey("webrtc_connection_state", newState?.name ?: "null")
+                        crashlytics.setCustomKey("webrtc_connection_state", newState?.name ?: "null")
                         crashlytics.log("WebRTC connection state: ${newState?.name}")
                         if (newState == PeerConnection.PeerConnectionState.FAILED) {
                             runOnUiThread { fail("WebRTC ulanishi muvaffaqiyatsiz") }
@@ -256,7 +256,7 @@ class AmbientListenActivity : AppCompatActivity() {
                         return@runOnUiThread
                     }
                     currentRequestId = requestId
-                    crashlytics.setKey("webrtc_request_id", requestId)
+                    crashlytics.setCustomKey("webrtc_request_id", requestId)
                     status.text = "⏳ Bola qurilmasidan kutilmoqda..."
                     diag("listen_webrtc_session")
                     sessionListener = AmbientAudioRepository.listenWebRtcSession(
@@ -298,7 +298,7 @@ class AmbientListenActivity : AppCompatActivity() {
     }
 
     private fun fail(message: String?) {
-        crashlytics.setKey("webrtc_failure_message", message ?: "Ulanmadi")
+        crashlytics.setCustomKey("webrtc_failure_message", message ?: "Ulanmadi")
         crashlytics.log("WebRTC failure: ${message ?: "Ulanmadi"}")
         val text = "❌ ${message ?: "Ulanmadi"}"
         resetUi(text)
