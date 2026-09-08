@@ -43,8 +43,6 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private var burstCount: Int = 0
     private var burstScheduledRunnable: Runnable? = null
 
-    // "Avtomatik TOP 3" va "qo'lda tanlangan ilovalar" — ikkita mustaqil
-    // manba. TOP-3 o'chirilgan bo'lsa ham, qo'lda tanlangan ilovalar kuzatiladi.
     private val autoCaptureActive: Boolean
         get() = settings.autoTop3Enabled || settings.manualPackageNames.isNotEmpty()
 
@@ -88,7 +86,12 @@ class AccessibilityScreenshotService : AccessibilityService() {
     }
 
     private fun queueRemoteCapture(requestId: String): Unit {
-        if (!settings.enabled || captureRunning || !isScreenInteractive()) return
+        if (!settings.enabled) return
+        if (!isScreenInteractive()) {
+            ScreenshotRepository.markScreenshotRequest(requestId, "failed", LOCKED_SCREEN_MESSAGE)
+            return
+        }
+        if (captureRunning) return
         ScreenshotRepository.markScreenshotRequest(requestId, "processing")
         captureAndUpload(currentForegroundPackage() ?: "uz.oilanazorati.screen", 0, currentUsageSeconds(), "remote_$requestId", requestId, null)
     }
@@ -113,8 +116,6 @@ class AccessibilityScreenshotService : AccessibilityService() {
         val continuousSec: Long = ((now - foreground.second).coerceAtLeast(0L)) / 1000L
         val frequency: Long = settings.frequencyMinutes.coerceIn(15, 60).toLong()
 
-        // Threshold is based ONLY on continuous time in the active app.
-        // Daily accumulated usage is deliberately not used as the trigger.
         if (continuousSec < frequency * 60L) return
 
         val auto: Set<String> = if (settings.autoTop3Enabled) {
@@ -133,9 +134,6 @@ class AccessibilityScreenshotService : AccessibilityService() {
         val targets = auto + settings.manualPackageNames.toSet()
         if (current !in targets) return
 
-        // Trigger at the first configured threshold crossing only; after the
-        // 3-shot burst, the next threshold is reached only after another full
-        // frequency interval of continuous use.
         val threshold = (continuousSec / 60L / frequency * frequency).toInt()
         val child: String = FirebaseRepo.childId ?: return
         val key: String = triggerKey(child, current, todayKey(), threshold)
@@ -189,7 +187,10 @@ class AccessibilityScreenshotService : AccessibilityService() {
             finishCapture(false, key, remoteRequestId, "Bu Android versiyasida Accessibility screenshot mavjud emas", onFinished)
             return
         }
-        if (captureRunning || !isScreenInteractive()) return
+        if (captureRunning || !isScreenInteractive()) {
+            if (remoteRequestId != null && !isScreenInteractive()) finishCapture(false, key, remoteRequestId, LOCKED_SCREEN_MESSAGE, onFinished)
+            return
+        }
         captureRunning = true
         takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
             override fun onSuccess(screenshot: ScreenshotResult) {
@@ -242,7 +243,6 @@ class AccessibilityScreenshotService : AccessibilityService() {
         })
     }
 
-    /** Returns the current app only when its latest foreground event has not been followed by a background event. */
     private fun currentForegroundInfo(usm: UsageStatsManager, now: Long): Pair<String, Long>? {
         val events = usm.queryEvents((now - 24 * 60 * 60_000L).coerceAtLeast(0L), now)
         val event = android.app.usage.UsageEvents.Event()
@@ -314,6 +314,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         const val AUTO_WATCH_INTERVAL_MS = 30_000L
         const val AUTO_BURST_INTERVAL_MS = 60_000L
         const val AUTO_BURST_COUNT = 3
+        const val LOCKED_SCREEN_MESSAGE = "📱 Ekran blokirovka qilingan yoki ekran o‘chiq bo‘lgani sabab screenshot olinmadi. Ekranni ochib, qayta urinib ko‘ring."
 
         fun isServiceEnabled(context: Context): Boolean {
             val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager ?: return false
