@@ -98,7 +98,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
                     ScreenshotRepository.markScreenshotRequest(requestId, "failed", LOCKED_SCREEN_MESSAGE)
                 } else {
                     ScreenshotRepository.markScreenshotRequest(requestId, "processing")
-                    captureAndUpload(currentForegroundPackage() ?: "uz.oilanazorati.screen", 0, currentUsageSeconds(), "remote_$requestId", requestId, null, requireUnlocked = false)
+                    captureAndUpload(currentForegroundPackage() ?: "uz.oilanazorati.screen", 0, currentUsageSeconds(), "remote_$requestId", requestId, requireUnlocked = false, onFinished = null)
                 }
             }, 700L)
             return
@@ -106,7 +106,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         ScreenshotRepository.markScreenshotRequest(requestId, "processing")
         // Qo'lda so'ralgan screenshot uchun faqat ekran YONIQ bo'lishi kifoya —
         // qulflangan bo'lsa ham (masalan qulf ekrani) suratga olinadi.
-        captureAndUpload(currentForegroundPackage() ?: "uz.oilanazorati.screen", 0, currentUsageSeconds(), "remote_$requestId", requestId, null, requireUnlocked = false)
+        captureAndUpload(currentForegroundPackage() ?: "uz.oilanazorati.screen", 0, currentUsageSeconds(), "remote_$requestId", requestId, requireUnlocked = false, onFinished = null)
     }
 
     /**
@@ -195,7 +195,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         }
     }
 
-    private fun captureAndUpload(packageName: String, threshold: Int, usageSeconds: Long, key: String, remoteRequestId: String?, onFinished: (() -> Unit)?, requireUnlocked: Boolean = true): Unit {
+    private fun captureAndUpload(packageName: String, threshold: Int, usageSeconds: Long, key: String, remoteRequestId: String?, requireUnlocked: Boolean = true, onFinished: (() -> Unit)?): Unit {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             finishCapture(false, key, remoteRequestId, "Bu Android versiyasida Accessibility screenshot mavjud emas", onFinished)
             return
