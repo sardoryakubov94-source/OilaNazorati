@@ -87,13 +87,26 @@ class AccessibilityScreenshotService : AccessibilityService() {
 
     private fun queueRemoteCapture(requestId: String): Unit {
         if (!settings.enabled) return
-        if (!isScreenInteractive()) {
-            ScreenshotRepository.markScreenshotRequest(requestId, "failed", LOCKED_SCREEN_MESSAGE)
+        if (captureRunning) return
+        if (!isPowerOn()) {
+            // Ekran butunlay o'chiq — qisqa muddatga uyg'otib ko'ramiz, chunki
+            // qulflangan (lekin yoniq) ekrandan farqli o'laroq, o'chiq ekrandan
+            // hech qanday dasturiy screenshot API orqali suratga olish mumkin emas.
+            wakeScreenBriefly()
+            mainHandler.postDelayed({
+                if (!isPowerOn()) {
+                    ScreenshotRepository.markScreenshotRequest(requestId, "failed", LOCKED_SCREEN_MESSAGE)
+                } else {
+                    ScreenshotRepository.markScreenshotRequest(requestId, "processing")
+                    captureAndUpload(currentForegroundPackage() ?: "uz.oilanazorati.screen", 0, currentUsageSeconds(), "remote_$requestId", requestId, null, requireUnlocked = false)
+                }
+            }, 700L)
             return
         }
-        if (captureRunning) return
         ScreenshotRepository.markScreenshotRequest(requestId, "processing")
-        captureAndUpload(currentForegroundPackage() ?: "uz.oilanazorati.screen", 0, currentUsageSeconds(), "remote_$requestId", requestId, null)
+        // Qo'lda so'ralgan screenshot uchun faqat ekran YONIQ bo'lishi kifoya —
+        // qulflangan bo'lsa ham (masalan qulf ekrani) suratga olinadi.
+        captureAndUpload(currentForegroundPackage() ?: "uz.oilanazorati.screen", 0, currentUsageSeconds(), "remote_$requestId", requestId, null, requireUnlocked = false)
     }
 
     /**
@@ -173,7 +186,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         }
         val usage: Long = currentUsageSeconds()
         burstCount++
-        captureAndUpload(target, burstThreshold, usage, "auto_burst_${todayKey()}_${target.hashCode()}_${burstThreshold}_$burstCount", null) {
+        captureAndUpload(target, burstThreshold, usage, "auto_burst_${todayKey()}_${target.hashCode()}_${burstThreshold}_$burstCount", null, requireUnlocked = true) {
             if (burstCount < AUTO_BURST_COUNT && burstPackage == target && isScreenInteractive() && currentForegroundPackage() == target) {
                 scheduleBurstCapture(AUTO_BURST_INTERVAL_MS)
             } else {
@@ -182,13 +195,17 @@ class AccessibilityScreenshotService : AccessibilityService() {
         }
     }
 
-    private fun captureAndUpload(packageName: String, threshold: Int, usageSeconds: Long, key: String, remoteRequestId: String?, onFinished: (() -> Unit)?): Unit {
+    private fun captureAndUpload(packageName: String, threshold: Int, usageSeconds: Long, key: String, remoteRequestId: String?, onFinished: (() -> Unit)?, requireUnlocked: Boolean = true): Unit {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             finishCapture(false, key, remoteRequestId, "Bu Android versiyasida Accessibility screenshot mavjud emas", onFinished)
             return
         }
-        if (captureRunning || !isScreenInteractive()) {
-            if (remoteRequestId != null && !isScreenInteractive()) finishCapture(false, key, remoteRequestId, LOCKED_SCREEN_MESSAGE, onFinished)
+        // Avtomatik (top-3/tanlangan ilova) kuzatuv uchun ekran ochiq VA qulfsiz
+        // bo'lishi shart — aks holda foreground ilova umuman ko'rinmaydi. Qo'lda
+        // so'ralgan screenshot uchun esa faqat ekran yoniq bo'lishi kifoya.
+        val screenOk = if (requireUnlocked) isScreenInteractive() else isPowerOn()
+        if (captureRunning || !screenOk) {
+            if (remoteRequestId != null && !screenOk) finishCapture(false, key, remoteRequestId, LOCKED_SCREEN_MESSAGE, onFinished)
             return
         }
         captureRunning = true
@@ -290,6 +307,30 @@ class AccessibilityScreenshotService : AccessibilityService() {
         return power.isInteractive && keyguard?.isKeyguardLocked != true
     }
 
+    /** Faqat displey quvvatlanganini (yoniq) tekshiradi — qulf holatidan qat'i nazar. */
+    private fun isPowerOn(): Boolean = (getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isInteractive == true
+
+    /**
+     * Ekran butunlay o'chiq bo'lganda, qo'lda so'ralgan screenshot uchun uni
+     * qisqa muddatga (bir necha soniya) uyg'otadi. Qulflangan holatda ham
+     * chiroyli qulf ekrani ko'rinadi va shu holat suratga olinadi — bu
+     * "chiroq o'chgan"dan farqli, chunki hech qanday screenshot API ekran
+     * o'chiq paytda hech narsani suratga ololmaydi (bu OS darajasidagi
+     * cheklov, faqat shu ilovaga xos emas).
+     */
+    private fun wakeScreenBriefly() {
+        try {
+            val power = getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return
+            @Suppress("DEPRECATION")
+            val wakeLock = power.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
+                "OilaNazorati:ScreenshotWake"
+            )
+            wakeLock.acquire(3000L)
+            mainHandler.postDelayed({ try { if (wakeLock.isHeld) wakeLock.release() } catch (_: Throwable) {} }, 2500L)
+        } catch (_: Throwable) {}
+    }
+
     private fun getApplicationInfoSafe(pkg: String) = try { packageManager.getApplicationInfo(pkg, 0) } catch (_: Exception) { null }
     private fun label(pkg: String): String = try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() } catch (_: Exception) { pkg }
     private fun todayKey(): String = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
@@ -314,7 +355,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         const val AUTO_WATCH_INTERVAL_MS = 30_000L
         const val AUTO_BURST_INTERVAL_MS = 60_000L
         const val AUTO_BURST_COUNT = 3
-        const val LOCKED_SCREEN_MESSAGE = "📱 Ekran blokirovka qilingan yoki ekran o‘chiq bo‘lgani sabab screenshot olinmadi. Ekranni ochib, qayta urinib ko‘ring."
+        const val LOCKED_SCREEN_MESSAGE = "📱 Bola qurilmasi ekranini uyg'otib bo'lmadi, shuning uchun screenshot olinmadi. Birozdan so'ng qayta urinib ko'ring."
 
         fun isServiceEnabled(context: Context): Boolean {
             val manager = context.getSystemService(Context.ACCESSIBILITY_SERVICE) as? AccessibilityManager ?: return false
