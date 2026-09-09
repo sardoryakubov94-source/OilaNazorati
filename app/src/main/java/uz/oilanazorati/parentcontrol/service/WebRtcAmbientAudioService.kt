@@ -148,7 +148,7 @@ class WebRtcAmbientAudioService : Service() {
                     peerConnection?.setLocalDescription(object : SdpObserver {
                         override fun onCreateSuccess(d: SessionDescription?) {}
                         override fun onSetSuccess() {
-                            try { requestRef.update("webrtcAnswer", desc.description, "updatedAt", System.currentTimeMillis()) }
+                            try { requestRef.update("webrtcAnswer", desc.description, "status", "active", "updatedAt", System.currentTimeMillis()) }
                             catch (t: Throwable) { fail(requestRef, id, t.message) }
                         }
                         override fun onCreateFailure(error: String?) { fail(requestRef, id, error) }
@@ -174,6 +174,8 @@ class WebRtcAmbientAudioService : Service() {
     private fun stopSession(status: String, ref: com.google.firebase.firestore.DocumentReference) {
         running.set(false)
         stopPeerOnly()
+        val id = requestId
+        if (id != null && (status == "stop_requested" || status == "webrtc_stop_requested")) updateRequest(ref, id, "stopped")
         requestListener?.remove(); requestListener = null
         restoreIdleNotification()
         stopSelf()
