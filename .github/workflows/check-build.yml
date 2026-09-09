@@ -37,7 +37,7 @@ jobs:
       - name: Build debug APK
         id: build
         continue-on-error: true
-        run: gradle --no-daemon assembleDebug 2>&1 | tee /tmp/build_output.log
+        run: gradle --no-daemon assembleDebug > /tmp/build_output.log 2>&1
 
       - name: Save build log on failure (temporary diagnostics)
         if: steps.build.outcome == 'failure'
