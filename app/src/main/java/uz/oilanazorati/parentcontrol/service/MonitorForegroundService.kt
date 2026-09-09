@@ -5,7 +5,6 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.location.Location
@@ -47,29 +46,37 @@ class MonitorForegroundService : Service() {
         private const val KEY_LAST_TIME_MS = "last_time_ms"
         const val LOCATION_INTERVAL_MS = 30 * 60 * 1000L
         const val LIVE_LOCATION_INTERVAL_MS = 8 * 1000L
-        const val USAGE_POLL_INTERVAL_MS = 2 * 60 * 1000L
-        const val CONTACTS_RESYNC_INTERVAL_MS = 6 * 60 * 60 * 1000L
+        // Usage polling is deliberately less frequent; event history remains intact.
+        const val USAGE_POLL_INTERVAL_MS = 5 * 60 * 1000L
+        const val CONTACTS_RESYNC_INTERVAL_MS = 12 * 60 * 60 * 1000L
+        private const val NORMAL_LOCATION_MAX_AGE_MS = 5 * 60 * 1000L
     }
 
     override fun onCreate() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         startForeground(NOTIF_ID, buildNotification())
+
+        // Keep only listeners that are needed for event-driven monitoring/request wake-up.
         registerMicRequestListener()
         registerCallLogObserver()
         registerContactsObserver()
         registerSmsSentObserver()
         registerLiveTrackingListener()
+
+        // SIM is synchronized once and afterwards only when Android reports a SIM change.
         SimInfoSync.start(applicationContext)
         schedulePeriodicWork()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        SimInfoSync.syncNow(applicationContext)
+        // Do not repeat SIM/location/usage work on every service restart.
+        // SimInfoSync.start() already performs the initial sync and registers
+        // the subscription-change listener.
         return START_STICKY
     }
 
-    /** Keeps only one lightweight request listener in the existing monitor FGS.
+    /** Keeps one lightweight request listener in the existing monitor FGS.
      * The microphone/WebRTC service itself is created only after a real request. */
     private fun registerMicRequestListener() {
         val family = FirebaseRepo.familyCode ?: return
@@ -114,6 +121,7 @@ class MonitorForegroundService : Service() {
         liveTrackingListener = FirebaseRepo.listenLiveTrackingFlag { untilMs ->
             liveTrackingUntilMs = untilMs
             if (untilMs > System.currentTimeMillis() && !liveTrackingLoopRunning) startLiveTrackingLoop()
+            if (untilMs <= System.currentTimeMillis()) liveTrackingLoopRunning = false
         }
     }
 
@@ -121,49 +129,103 @@ class MonitorForegroundService : Service() {
         liveTrackingLoopRunning = true
         handler.post(object : Runnable {
             override fun run() {
-                if (System.currentTimeMillis() >= liveTrackingUntilMs) { liveTrackingLoopRunning = false; return }
-                requestLocationOnce(); handler.postDelayed(this, LIVE_LOCATION_INTERVAL_MS)
+                if (System.currentTimeMillis() >= liveTrackingUntilMs) {
+                    liveTrackingLoopRunning = false
+                    return
+                }
+                // High accuracy is used only while live tracking is explicitly active.
+                requestLocationOnce(highAccuracy = true, maxAgeMs = 0L)
+                handler.postDelayed(this, LIVE_LOCATION_INTERVAL_MS)
             }
         })
     }
 
     private fun schedulePeriodicWork() {
-        handler.postDelayed(object : Runnable { override fun run() { pollAppUsage(); handler.postDelayed(this, USAGE_POLL_INTERVAL_MS) } }, USAGE_POLL_INTERVAL_MS)
-        handler.postDelayed(object : Runnable { override fun run() { requestLocationOnce(); SimInfoSync.syncNow(applicationContext); handler.postDelayed(this, LOCATION_INTERVAL_MS) } }, LOCATION_INTERVAL_MS)
-        requestLocationOnce(); pollAppUsage(); syncContactsIfPermitted()
-        handler.postDelayed(object : Runnable { override fun run() { syncContactsIfPermitted(); handler.postDelayed(this, CONTACTS_RESYNC_INTERVAL_MS) } }, CONTACTS_RESYNC_INTERVAL_MS)
+        // App usage remains available, but polling is reduced from 2 min to 5 min.
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                pollAppUsage()
+                handler.postDelayed(this, USAGE_POLL_INTERVAL_MS)
+            }
+        }, USAGE_POLL_INTERVAL_MS)
+
+        // Normal location history remains available every 30 min, but avoids
+        // forcing a fresh high-power GPS fix when a recent cached location exists.
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                requestLocationOnce(highAccuracy = false, maxAgeMs = NORMAL_LOCATION_MAX_AGE_MS)
+                handler.postDelayed(this, LOCATION_INTERVAL_MS)
+            }
+        }, LOCATION_INTERVAL_MS)
+
+        // Preserve the initial behavior so existing location/usage/contact features
+        // still populate after setup, but normal location now uses balanced power.
+        requestLocationOnce(highAccuracy = false, maxAgeMs = NORMAL_LOCATION_MAX_AGE_MS)
+        pollAppUsage()
+        syncContactsIfPermitted()
+
+        // Contacts are primarily event-driven; periodic reconciliation is only a fallback.
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                syncContactsIfPermitted()
+                handler.postDelayed(this, CONTACTS_RESYNC_INTERVAL_MS)
+            }
+        }, CONTACTS_RESYNC_INTERVAL_MS)
     }
 
     private fun syncContactsIfPermitted() {
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) ContactSyncHelper.syncNow(applicationContext)
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) {
+            ContactSyncHelper.syncNow(applicationContext)
+        }
     }
+
     private fun registerContactsObserver() {
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) return
-        val observer = object : ContentObserver(handler) { override fun onChange(selfChange: Boolean) { syncContactsIfPermitted() } }
-        contentResolver.registerContentObserver(ContactsContract.Contacts.CONTENT_URI, true, observer); contactsObserver = observer
+        val observer = object : ContentObserver(handler) {
+            override fun onChange(selfChange: Boolean) { syncContactsIfPermitted() }
+        }
+        contentResolver.registerContentObserver(ContactsContract.Contacts.CONTENT_URI, true, observer)
+        contactsObserver = observer
     }
+
     private fun registerSmsSentObserver() {
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) return
         val observer = SmsSentObserver(applicationContext, handler)
-        contentResolver.registerContentObserver(android.provider.Telephony.Sms.CONTENT_URI, true, observer); smsSentObserver = observer
+        contentResolver.registerContentObserver(android.provider.Telephony.Sms.CONTENT_URI, true, observer)
+        smsSentObserver = observer
     }
-    private fun requestLocationOnce() {
+
+    private fun requestLocationOnce(highAccuracy: Boolean, maxAgeMs: Long) {
         if (!isLocationServiceEnabled()) { showEnableLocationPrompt(); return }
         try {
-            val request = CurrentLocationRequest.Builder().setPriority(Priority.PRIORITY_HIGH_ACCURACY).setMaxUpdateAgeMillis(0).build()
+            val priority = if (highAccuracy) Priority.PRIORITY_HIGH_ACCURACY else Priority.PRIORITY_BALANCED_POWER_ACCURACY
+            val request = CurrentLocationRequest.Builder()
+                .setPriority(priority)
+                .setMaxUpdateAgeMillis(maxAgeMs)
+                .build()
             fusedLocationClient.getCurrentLocation(request, null).addOnSuccessListener { loc: Location? ->
-                if (loc != null) acceptOrRejectLocation(loc.latitude, loc.longitude)
-                else fusedLocationClient.lastLocation.addOnSuccessListener { last: Location? -> if (last != null) acceptOrRejectLocation(last.latitude, last.longitude) }
+                if (loc != null) {
+                    acceptOrRejectLocation(loc.latitude, loc.longitude)
+                } else {
+                    fusedLocationClient.lastLocation.addOnSuccessListener { last: Location? ->
+                        if (last != null) acceptOrRejectLocation(last.latitude, last.longitude)
+                    }
+                }
             }
         } catch (_: SecurityException) {}
     }
+
     private fun acceptOrRejectLocation(lat: Double, lng: Double) {
         val nowMs = System.currentTimeMillis()
-        val prevLatStr = locationPrefs.getString(KEY_LAST_LAT, null); val prevLngStr = locationPrefs.getString(KEY_LAST_LNG, null); val prevTimeMs = locationPrefs.getLong(KEY_LAST_TIME_MS, 0L)
+        val prevLatStr = locationPrefs.getString(KEY_LAST_LAT, null)
+        val prevLngStr = locationPrefs.getString(KEY_LAST_LNG, null)
+        val prevTimeMs = locationPrefs.getLong(KEY_LAST_TIME_MS, 0L)
         if (prevLatStr != null && prevLngStr != null && prevTimeMs > 0) {
-            val prevLat = prevLatStr.toDoubleOrNull(); val prevLng = prevLngStr.toDoubleOrNull()
+            val prevLat = prevLatStr.toDoubleOrNull()
+            val prevLng = prevLngStr.toDoubleOrNull()
             if (prevLat != null && prevLng != null) {
-                val distanceMeters = FloatArray(1); Location.distanceBetween(prevLat, prevLng, lat, lng, distanceMeters)
+                val distanceMeters = FloatArray(1)
+                Location.distanceBetween(prevLat, prevLng, lat, lng, distanceMeters)
                 val elapsedSeconds = (nowMs - prevTimeMs) / 1000.0
                 if (distanceMeters[0] > MIN_SUSPICIOUS_JUMP_METERS && elapsedSeconds > 0 && (distanceMeters[0] / elapsedSeconds) * 3.6 > MAX_PLAUSIBLE_SPEED_KMH) return
             }
@@ -171,10 +233,12 @@ class MonitorForegroundService : Service() {
         FirebaseRepo.logLocation(LocationEvent(lat = lat, lng = lng, vaqtMs = nowMs))
         locationPrefs.edit().putString(KEY_LAST_LAT, lat.toString()).putString(KEY_LAST_LNG, lng.toString()).putLong(KEY_LAST_TIME_MS, nowMs).apply()
     }
+
     private fun isLocationServiceEnabled(): Boolean {
         val lm = getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager ?: return false
         return lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) || lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER) || lm.isProviderEnabled(android.location.LocationManager.PASSIVE_PROVIDER)
     }
+
     private fun showEnableLocationPrompt() {
         val intent = Intent(this, uz.oilanazorati.parentcontrol.ui.LocationPromptActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
         val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
@@ -182,22 +246,47 @@ class MonitorForegroundService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(LOCATION_PROMPT_CHANNEL_ID, "Joylashuv eslatmasi", NotificationManager.IMPORTANCE_LOW))
         getSystemService(NotificationManager::class.java).notify(LOCATION_PROMPT_NOTIF_ID, notification)
     }
+
     private fun pollAppUsage() {
         val usm = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return
-        val now = System.currentTimeMillis(); val events = usm.queryEvents(lastUsageQueryMs, now); val openTimestamps = HashMap<String, Long>(); val event = UsageEvents.Event()
-        while (events.hasNextEvent()) { events.getNextEvent(event); when (event.eventType) {
-            UsageEvents.Event.MOVE_TO_FOREGROUND -> openTimestamps[event.packageName] = event.timeStamp
-            UsageEvents.Event.MOVE_TO_BACKGROUND -> { val start = openTimestamps.remove(event.packageName); if (start != null) { val durationSec = ((event.timeStamp - start) / 1000).coerceAtLeast(0); if (durationSec >= 3) FirebaseRepo.logAppUsage(AppUsageEvent(appLabelFor(event.packageName), event.packageName, start, event.timeStamp, durationSec)) } }
-        } }
+        val now = System.currentTimeMillis()
+        val events = usm.queryEvents(lastUsageQueryMs, now)
+        val openTimestamps = HashMap<String, Long>()
+        val event = UsageEvents.Event()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            when (event.eventType) {
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> openTimestamps[event.packageName] = event.timeStamp
+                UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    val start = openTimestamps.remove(event.packageName)
+                    if (start != null) {
+                        val durationSec = ((event.timeStamp - start) / 1000).coerceAtLeast(0)
+                        if (durationSec >= 3) FirebaseRepo.logAppUsage(AppUsageEvent(appLabelFor(event.packageName), event.packageName, start, event.timeStamp, durationSec))
+                    }
+                }
+            }
+        }
         lastUsageQueryMs = now
     }
-    private fun appLabelFor(packageName: String): String = try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString() } catch (_: PackageManager.NameNotFoundException) { packageName }
+
+    private fun appLabelFor(packageName: String): String = try {
+        packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+    } catch (_: PackageManager.NameNotFoundException) { packageName }
+
     private fun registerCallLogObserver() {
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) return
-        val observer = CallLogObserver(applicationContext, handler); contentResolver.registerContentObserver(android.provider.CallLog.Calls.CONTENT_URI, true, observer); callLogObserver = observer
+        val observer = CallLogObserver(applicationContext, handler)
+        contentResolver.registerContentObserver(android.provider.CallLog.Calls.CONTENT_URI, true, observer)
+        callLogObserver = observer
     }
+
     override fun onDestroy() {
-        handler.removeCallbacksAndMessages(null); contactsObserver?.let { contentResolver.unregisterContentObserver(it) }; smsSentObserver?.let { contentResolver.unregisterContentObserver(it) }; callLogObserver?.let { contentResolver.unregisterContentObserver(it) }; liveTrackingListener?.remove(); micRequestListener?.remove()
+        handler.removeCallbacksAndMessages(null)
+        contactsObserver?.let { contentResolver.unregisterContentObserver(it) }
+        smsSentObserver?.let { contentResolver.unregisterContentObserver(it) }
+        callLogObserver?.let { contentResolver.unregisterContentObserver(it) }
+        liveTrackingListener?.remove()
+        micRequestListener?.remove()
         super.onDestroy()
     }
 }
