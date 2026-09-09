@@ -186,8 +186,10 @@ class AmbientListenActivity : AppCompatActivity() {
                     override fun onIceConnectionReceivingChange(receiving: Boolean) {}
                     override fun onIceGatheringChange(newState: PeerConnection.IceGatheringState?) {}
                     override fun onIceCandidate(candidate: IceCandidate) {
-                        crashlytics.log("WebRTC parent ICE candidate generated")
-                        AmbientAudioRepository.sendParentIceCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
+                        try {
+                            crashlytics.log("WebRTC parent ICE candidate generated")
+                            AmbientAudioRepository.sendParentIceCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
+                        } catch (t: Throwable) { diag("on_ice_candidate_exception", t) }
                     }
                     override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
                     override fun onAddStream(stream: org.webrtc.MediaStream?) {}
@@ -224,17 +226,21 @@ class AmbientListenActivity : AppCompatActivity() {
             diag("create_offer")
             peerConnection!!.createOffer(object : SdpObserver {
                 override fun onCreateSuccess(desc: SessionDescription?) {
-                    if (desc == null) return runOnUiThread { fail("WebRTC taklif bo'sh") }
-                    diag("set_local_description")
-                    peerConnection?.setLocalDescription(object : SdpObserver {
-                        override fun onCreateSuccess(d: SessionDescription?) {}
-                        override fun onSetSuccess() {
-                            diag("send_offer")
-                            sendOffer(desc.description)
-                        }
-                        override fun onCreateFailure(error: String?) { runOnUiThread { fail(error) } }
-                        override fun onSetFailure(error: String?) { runOnUiThread { fail(error) } }
-                    }, desc)
+                    try {
+                        if (desc == null) return runOnUiThread { fail("WebRTC taklif bo'sh") }
+                        diag("set_local_description")
+                        peerConnection?.setLocalDescription(object : SdpObserver {
+                            override fun onCreateSuccess(d: SessionDescription?) {}
+                            override fun onSetSuccess() {
+                                try {
+                                    diag("send_offer")
+                                    sendOffer(desc.description)
+                                } catch (t: Throwable) { diag("send_offer_exception", t); runOnUiThread { fail(t.message) } }
+                            }
+                            override fun onCreateFailure(error: String?) { runOnUiThread { fail(error) } }
+                            override fun onSetFailure(error: String?) { runOnUiThread { fail(error) } }
+                        }, desc)
+                    } catch (t: Throwable) { diag("set_local_description_exception", t); runOnUiThread { fail(t.message) } }
                 }
                 override fun onSetSuccess() {}
                 override fun onCreateFailure(error: String?) { runOnUiThread { fail(error) } }

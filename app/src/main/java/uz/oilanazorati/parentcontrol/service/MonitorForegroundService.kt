@@ -96,10 +96,15 @@ class MonitorForegroundService : Service() {
         ) return
         try {
             ContextCompat.startForegroundService(this, Intent(this, WebRtcAmbientAudioService::class.java))
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
             // Android may reject microphone FGS startup when this service was
             // itself restarted from the background/boot. A later visible app
             // launch calls onStartCommand again and retries safely.
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().apply {
+                setCustomKey("webrtc_ambient_start_failed", t.javaClass.name)
+                log("WebRtcAmbientAudioService start failed: ${t.message}")
+                recordException(t)
+            }
         }
     }
 
