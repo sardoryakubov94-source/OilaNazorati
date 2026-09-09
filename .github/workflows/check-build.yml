@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,7 +35,24 @@ jobs:
           echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > app/google-services.json
 
       - name: Build debug APK
-        run: gradle --no-daemon assembleDebug
+        id: build
+        continue-on-error: true
+        run: gradle --no-daemon assembleDebug 2>&1 | tee /tmp/build_output.log
+
+      - name: Save build log on failure (temporary diagnostics)
+        if: steps.build.outcome == 'failure'
+        run: |
+          mkdir -p ci-logs
+          tail -n 400 /tmp/build_output.log > ci-logs/last-build-error.txt
+          git config user.email "ci-bot@users.noreply.github.com"
+          git config user.name "CI Bot"
+          git add -f ci-logs/last-build-error.txt
+          git commit -m "ci: capture build failure log [skip ci]" || echo "nothing to commit"
+          git push origin HEAD:${{ github.ref_name }}
+
+      - name: Fail job if build failed
+        if: steps.build.outcome == 'failure'
+        run: exit 1
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
