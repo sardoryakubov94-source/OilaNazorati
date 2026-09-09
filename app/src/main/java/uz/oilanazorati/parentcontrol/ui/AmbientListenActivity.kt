@@ -269,13 +269,21 @@ class AmbientListenActivity : AppCompatActivity() {
                         requestId,
                         onAnswer = { answerSdp ->
                             try {
-                                diag("set_remote_description")
-                                peerConnection?.setRemoteDescription(object : SdpObserver {
-                                    override fun onCreateSuccess(desc: SessionDescription?) {}
-                                    override fun onSetSuccess() { runOnUiThread { status.text = "🔴 Jonli ovoz" } }
-                                    override fun onCreateFailure(error: String?) { runOnUiThread { fail(error) } }
-                                    override fun onSetFailure(error: String?) { runOnUiThread { fail(error) } }
-                                }, SessionDescription(SessionDescription.Type.ANSWER, answerSdp))
+                                // Bu Firestore real-vaqt tinglovchisi — hujjatdagi keyingi HAR
+                                // QANDAY o'zgarish (masalan navbatdagi ICE candidate) yana shu
+                                // yerni chaqiradi, javob allaqachon qo'llanilgan bo'lsa ham.
+                                // setRemoteDescription()ni ikkinchi marta chaqirish "Called in
+                                // wrong state: stable" xatosini berardi. Faqat kutilayotgan
+                                // holatda (hali javob qo'yilmagan) qo'llaymiz.
+                                if (peerConnection?.signalingState() == PeerConnection.SignalingState.HAVE_LOCAL_OFFER) {
+                                    diag("set_remote_description")
+                                    peerConnection?.setRemoteDescription(object : SdpObserver {
+                                        override fun onCreateSuccess(desc: SessionDescription?) {}
+                                        override fun onSetSuccess() { runOnUiThread { status.text = "🔴 Jonli ovoz" } }
+                                        override fun onCreateFailure(error: String?) { runOnUiThread { fail(error) } }
+                                        override fun onSetFailure(error: String?) { runOnUiThread { fail(error) } }
+                                    }, SessionDescription(SessionDescription.Type.ANSWER, answerSdp))
+                                }
                             } catch (t: Throwable) { diag("set_remote_description_exception", t); runOnUiThread { fail(t.message) } }
                         },
                         onChildCandidate = { candidate, mid, index ->
