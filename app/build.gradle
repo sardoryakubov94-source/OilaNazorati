@@ -41,8 +41,14 @@ android {
             if (keystorePath && keystorePassword && keyAliasValue && keyPasswordValue) {
                 signingConfig signingConfigs.release
             }
+            firebaseCrashlytics {
+                nativeSymbolUploadEnabled true
+            }
         }
         debug {
+            firebaseCrashlytics {
+                nativeSymbolUploadEnabled true
+            }
         }
     }
 
@@ -74,12 +80,17 @@ dependencies {
     implementation 'com.google.firebase:firebase-auth-ktx'
     implementation 'com.google.firebase:firebase-firestore-ktx'
     implementation 'com.google.firebase:firebase-crashlytics-ktx'
+    // Captures native (C++/WebRTC) crashes too, not just JVM exceptions —
+    // needed to actually see WebRTC library crashes in Crashlytics.
+    implementation 'com.google.firebase:firebase-crashlytics-ndk'
     implementation 'com.google.firebase:firebase-analytics-ktx'
 
     // WebRTC real-time audio transport. Firestore remains the signaling channel.
-    // The original org.webrtc artifact is no longer resolvable from the CI repositories.
-    // QuickBlox publishes the same 1.0.32006 WebRTC Android AAR under this group.
-    implementation 'com.quickblox:google-webrtc:1.0.32006'
+    // The original org.webrtc artifact is no longer resolvable, and the QuickBlox
+    // mirror (1.0.32006, built ~2017) was causing unexplained native crashes with
+    // no Java stack trace on some devices. Switched to Stream's actively maintained
+    // WebRTC AAR, published on Maven Central and tracking current upstream libwebrtc.
+    implementation 'io.github.webrtc-sdk:android:144.7559.09'
 
     // Grafik (statistikani chizish uchun)
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
