@@ -41,13 +41,19 @@ android {
             if (keystorePath && keystorePassword && keyAliasValue && keyPasswordValue) {
                 signingConfig signingConfigs.release
             }
+            // Native symbol upload requires an NDK/CMake build task Gradle can infer
+            // unstrippedNativeLibsDir from. This project only consumes a prebuilt
+            // WebRTC AAR (no native build step of our own), so that can't be
+            // inferred and uploadEnabled=true fails configuration. Crash capture
+            // via firebase-crashlytics-ndk still works with this off — reports
+            // just won't have fully symbolicated native stack frames.
             firebaseCrashlytics {
-                nativeSymbolUploadEnabled true
+                nativeSymbolUploadEnabled false
             }
         }
         debug {
             firebaseCrashlytics {
-                nativeSymbolUploadEnabled true
+                nativeSymbolUploadEnabled false
             }
         }
     }
