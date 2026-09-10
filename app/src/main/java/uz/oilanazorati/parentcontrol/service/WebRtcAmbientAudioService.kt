@@ -38,6 +38,9 @@ class WebRtcAmbientAudioService : Service() {
     private var requestId: String? = null
     private var lastOffer: String? = null
     private val appliedParentCandidates = HashSet<String>()
+    private val idleHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val idleStopRunnable = Runnable { stopSelf() }
+    private val IDLE_STOP_DELAY_MS = 30_000L
 
     companion object {
         const val CHANNEL_ID = "oila_nazorati_mic_webrtc"
@@ -49,6 +52,7 @@ class WebRtcAmbientAudioService : Service() {
         createChannel()
         startForeground(NOTIFICATION_ID, idleNotification(), foregroundTypes())
         listenForRequests()
+        idleHandler.postDelayed(idleStopRunnable, IDLE_STOP_DELAY_MS)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
@@ -84,6 +88,7 @@ class WebRtcAmbientAudioService : Service() {
     }
 
     private fun startSession(id: String, offer: String, requestRef: com.google.firebase.firestore.DocumentReference) {
+        idleHandler.removeCallbacks(idleStopRunnable)
         if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             updateRequest(requestRef, id, "failed", "Mikrofon ruxsati berilmagan")
             return
@@ -183,6 +188,8 @@ class WebRtcAmbientAudioService : Service() {
         running.set(false)
         stopPeerOnly()
         restoreIdleNotification()
+        idleHandler.removeCallbacks(idleStopRunnable)
+        idleHandler.postDelayed(idleStopRunnable, IDLE_STOP_DELAY_MS)
     }
 
     private fun stopSession(status: String, ref: com.google.firebase.firestore.DocumentReference) {
@@ -191,6 +198,12 @@ class WebRtcAmbientAudioService : Service() {
         val id = requestId
         if (id != null && (status == "stop_requested" || status == "webrtc_stop_requested")) updateRequest(ref, id, "stopped")
         restoreIdleNotification()
+        // Battery: don't keep this service (and its audio device module) alive
+        // indefinitely after a call ends. If no new request starts it again
+        // within IDLE_STOP_DELAY_MS, shut it down; MonitorForegroundService's
+        // lightweight listener will restart it instantly on the next request.
+        idleHandler.removeCallbacks(idleStopRunnable)
+        idleHandler.postDelayed(idleStopRunnable, IDLE_STOP_DELAY_MS)
     }
 
     private fun stopPeerOnly() {
@@ -219,6 +232,6 @@ class WebRtcAmbientAudioService : Service() {
     private fun updateActiveNotification() { if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, activeNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE) else startForeground(NOTIFICATION_ID, activeNotification()) }
     private fun restoreIdleNotification() { if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, idleNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE) else startForeground(NOTIFICATION_ID, idleNotification()) }
 
-    override fun onDestroy() { requestListener?.remove(); running.set(false); stopPeerOnly(); super.onDestroy() }
+    override fun onDestroy() { idleHandler.removeCallbacks(idleStopRunnable); requestListener?.remove(); running.set(false); stopPeerOnly(); super.onDestroy() }
     override fun onBind(intent: Intent?): IBinder? = null
 }
