@@ -106,7 +106,7 @@ async function loadParentGating(){
   try{const p=await getDoc(doc(db,'parents',auth.currentUser.uid));isPremiumParent=p.exists()&&p.data()?.premium===true}catch(e){isPremiumParent=false}
   try{const c=await getDocs(collection(db,'families',family,'children',child,'contacts'));contactNames={};c.forEach(d=>{const v=d.data();if(v.kontaktHash)contactNames[v.kontaktHash]=v.nomi})}catch(e){contactNames={}}
 }
-function openChild(id,n){child=id;childName=n;$('childName').textContent=n;$('childId').textContent='Qurilma ID: '+id.slice(0,12);show('dashboard');document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));document.querySelector('[data-tab=home]').classList.add('active');loadParentGating().finally(()=>load('home'))}
+function openChild(id,n){child=id;childName=n;$('childName').textContent=n;$('childId').textContent='Oila kodi: '+family;show('dashboard');document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));document.querySelector('[data-tab=home]').classList.add('active');loadParentGating().finally(()=>load('home'))}
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('active'));b.classList.add('active');load(b.dataset.tab)});
 let liveDocUnsub=null,liveLocUnsub=null,routeMapInst=null,cardsUnsub=null,attachedScreenshotBase64='';
 function stopLiveListeners(){if(liveDocUnsub){liveDocUnsub();liveDocUnsub=null}if(liveLocUnsub){liveLocUnsub();liveLocUnsub=null}if(micActive)stopVoice(null,false)}
