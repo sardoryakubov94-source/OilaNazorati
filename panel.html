@@ -117,7 +117,16 @@ function miniMap(lat,lng){const d=0.006;const bbox=(lng-d)+','+(lat-d)+','+(lng+
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function dayRangeMs(dateStr){const s=new Date(dateStr+'T00:00:00');const start=s.getTime();return[start,start+86400000-1]}
 async function loadLocationsForDate(dateStr){const[start,end]=dayRangeMs(dateStr);const q=query(collection(db,'families',family,'children',child,'locations'),where('vaqtMs','>=',start),where('vaqtMs','<=',end),orderBy('vaqtMs','desc'));return(await getDocs(q)).docs.map(d=>({id:d.id,...d.data()}))}
-function drawRoute(points){const box=$('routeMapBox');if(!box||!window.L)return;if(routeMapInst){routeMapInst.remove();routeMapInst=null}if(!points.length)return;const coords=points.slice().reverse().map(p=>[p.lat,p.lng]);routeMapInst=L.map('routeMapBox',{zoomControl:true});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(routeMapInst);if(coords.length>1)L.polyline(coords,{color:'#16a34a',weight:4,opacity:.85}).addTo(routeMapInst);coords.forEach((c,i)=>{const isLast=i===coords.length-1;L.circleMarker(c,{radius:isLast?8:5,color:'#fff',weight:2,fillColor:isLast?'#dc2626':'#16a34a',fillOpacity:1}).addTo(routeMapInst)});routeMapInst.fitBounds(coords.length>1?coords:[coords[0],coords[0]],{padding:[26,26],maxZoom:16})}
+let routeMarkers=[],selectedMarker=null;
+function drawRoute(points){const box=$('routeMapBox');if(!box||!window.L)return;if(routeMapInst){routeMapInst.remove();routeMapInst=null}routeMarkers=[];selectedMarker=null;if(!points.length)return;const coords=points.slice().reverse().map(p=>[p.lat,p.lng]);routeMapInst=L.map('routeMapBox',{zoomControl:true});L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(routeMapInst);if(coords.length>1)L.polyline(coords,{color:'#16a34a',weight:4,opacity:.85}).addTo(routeMapInst);points.forEach((p,idx)=>{const isNewest=idx===0;const m=L.circleMarker([p.lat,p.lng],{radius:isNewest?8:5,color:'#fff',weight:2,fillColor:isNewest?'#dc2626':'#16a34a',fillOpacity:1}).addTo(routeMapInst);routeMarkers[idx]=m});routeMapInst.fitBounds(coords.length>1?coords:[coords[0],coords[0]],{padding:[26,26],maxZoom:16})}
+function highlightLocation(idx){
+  const p=routeMarkers[idx];if(!p||!routeMapInst)return;
+  if(selectedMarker){routeMapInst.removeLayer(selectedMarker);selectedMarker=null}
+  const ll=p.getLatLng();
+  selectedMarker=L.circleMarker(ll,{radius:12,color:'#F2C94C',weight:4,fillColor:'#F2C94C',fillOpacity:.35}).addTo(routeMapInst);
+  routeMapInst.flyTo(ll,16,{duration:.6});
+  $('routeMapBox')?.scrollIntoView({behavior:'smooth',block:'center'});
+}
 async function loc(){
   const dateStr=$('locDate')?$('locDate').value:todayStr();
   const childRef=doc(db,'families',family,'children',child);
@@ -136,7 +145,8 @@ async function loc(){
   };
   const x=await loadLocationsForDate(dateStr);
   drawRoute(x);
-  $('locList').innerHTML=x.length?'<h3 style="margin:18px 0 8px">Ro‘yxat ('+x.length+' ta yozuv)</h3>'+x.map(v=>'<div class="row"><div class="rowtop"><b>'+Number(v.lat).toFixed(5)+'°, '+Number(v.lng).toFixed(5)+'°</b><span class="badge">'+fmt(v.vaqtMs)+'</span></div><p><a class="dirLink" target="_blank" href="https://www.google.com/maps?q='+v.lat+','+v.lng+'">📍 Yo‘nalish →</a></p></div>').join(''):'<div class="empty">Bu sana uchun joylashuv ma’lumoti yo‘q.</div>';
+  $('locList').innerHTML=x.length?'<h3 style="margin:18px 0 8px">Ro‘yxat ('+x.length+' ta yozuv)</h3>'+x.map((v,idx)=>'<div class="row locRow" data-idx="'+idx+'"><div class="rowtop"><b>'+Number(v.lat).toFixed(5)+'°, '+Number(v.lng).toFixed(5)+'°</b><span class="badge">'+fmt(v.vaqtMs)+'</span></div><p><a class="dirLink" target="_blank" href="https://www.google.com/maps?q='+v.lat+','+v.lng+'" onclick="event.stopPropagation()">📍 Yo‘nalish →</a></p></div>').join(''):'<div class="empty">Bu sana uchun joylashuv ma’lumoti yo‘q.</div>';
+  document.querySelectorAll('.locRow').forEach(el=>el.onclick=()=>highlightLocation(Number(el.dataset.idx)));
   // Agar jonli kuzatish allaqachon yoqilgan bo'lsa, uni aniqlab UI'ni yangilaymiz
   const snap=await getDoc(childRef);
   const untilMs=snap.exists()?(snap.data().liveTrackingUntilMs||0):0;
