@@ -1,100 +1,352 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAdmin() { return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous' && request.auth.token.email == 'sardoryakubov94@gmail.com'; }
-    function isRealUser() { return request.auth != null && request.auth.token.firebase.sign_in_provider != 'anonymous'; }
+
+    // =========================
+    // ADMIN
+    // =========================
+
+    function isAdmin() {
+      return request.auth != null &&
+        request.auth.token.firebase.sign_in_provider != 'anonymous' &&
+        request.auth.token.email == 'sardoryakubov94@gmail.com';
+    }
+
+    // =========================
+    // REAL USER
+    // =========================
+
+    function isRealUser() {
+      return request.auth != null &&
+        request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // =========================
+    // FAMILIES
+    // =========================
 
     match /families/{familyCode} {
-      function isRealOwner() { return isRealUser() && exists(/databases/$(database)/documents/families/$(familyCode)) && get(/databases/$(database)/documents/families/$(familyCode)).data.ownerUid == request.auth.uid; }
-      allow create: if isRealUser() && request.resource.data.ownerUid == request.auth.uid;
+
+      function isRealOwner() {
+        return isRealUser() &&
+          exists(
+            /databases/$(database)/documents/families/$(familyCode)
+          ) &&
+          get(
+            /databases/$(database)/documents/families/$(familyCode)
+          ).data.ownerUid == request.auth.uid;
+      }
+
+      allow create: if isRealUser() &&
+        request.resource.data.ownerUid == request.auth.uid;
+
+      // Single-document reads/writes go through isRealOwner() (needs get()).
       allow get, update, delete: if isRealOwner();
+
+      // List/query reads (e.g. "which families do I own") must be provable
+      // directly from resource.data, or Firestore rejects the whole query —
+      // that was silently breaking "Mening oilalarim" / the free-tier check.
       allow list: if isRealUser() && resource.data.ownerUid == request.auth.uid;
 
+      // =========================
+      // CHILD
+      // =========================
+
       match /children/{childId} {
-        function isThisChildsOwnSession() { return request.auth != null && request.auth.uid == childId; }
-        allow read, write: if isRealOwner() || isThisChildsOwnSession();
+
+        function isThisChildsOwnSession() {
+          return request.auth != null &&
+            request.auth.uid == childId;
+        }
+
+        // SMS, Calls, Location va boshqa ma'lumotlar
+        allow read, write:
+          if isRealOwner() || isThisChildsOwnSession();
+
+
+        // =========================
+        // SCREENSHOT SETTINGS
+        // =========================
 
         match /screenshot_settings/{docId} {
-          allow read: if isRealOwner() || isThisChildsOwnSession();
-          allow create, update: if (isRealOwner() || isThisChildsOwnSession()) && docId == 'current';
-          allow delete: if isRealOwner();
+
+          allow read:
+            if isRealOwner() || isThisChildsOwnSession();
+
+          allow create, update:
+            if isRealOwner() && docId == 'current';
+
+          allow delete:
+            if isRealOwner();
         }
+
+
+        // =========================
+        // SCREENSHOT TRIGGER
+        // =========================
+
         match /screenshot_trigger_state/{docId} {
-          allow read: if isRealOwner() || isThisChildsOwnSession();
-          allow create, update: if isThisChildsOwnSession();
-          allow delete: if isRealOwner();
+
+          allow read:
+            if isRealOwner() || isThisChildsOwnSession();
+
+          allow create, update:
+            if isThisChildsOwnSession();
+
+          allow delete:
+            if isRealOwner();
         }
+
+
+        // =========================
+        // SCREENSHOT REQUEST
+        // =========================
+
         match /screenshot_requests/{docId} {
-          allow read: if isRealOwner() || isThisChildsOwnSession();
-          allow create: if isRealOwner()
-            && docId == 'current'
-            && get(/databases/$(database)/documents/families/$(familyCode)/children/$(childId)/screenshot_settings/current).data.enabled == true;
-          allow update: if isRealOwner() || isThisChildsOwnSession();
-          allow delete: if isRealOwner();
+
+          allow read:
+            if isRealOwner() || isThisChildsOwnSession();
+
+          allow create:
+            if isRealOwner() &&
+              docId == 'current' &&
+              request.resource.data.status == 'requested' &&
+              request.resource.data.requestedByUid == request.auth.uid;
+
+          allow update:
+            if (
+              isRealOwner() &&
+              docId == 'current'
+            ) ||
+            (
+              isThisChildsOwnSession() &&
+              docId == 'current' &&
+              request.resource.data.requestId == resource.data.requestId
+            );
+
+          allow delete:
+            if isRealOwner();
         }
+
+
+        // =========================
+        // SCREENSHOT METADATA
+        // =========================
+
         match /screenshots/{docId} {
-          allow read: if isRealOwner();
-          allow create: if isThisChildsOwnSession();
-          allow update, delete: if isRealOwner();
+
+          allow read:
+            if isRealOwner();
+
+          allow create:
+            if isThisChildsOwnSession();
+
+          allow update, delete:
+            if isRealOwner();
         }
+
+
+        // =========================
+        // SCREENSHOT DATA
+        // =========================
+
         match /screenshot_data/{docId} {
-          allow create: if isThisChildsOwnSession();
-          allow read, delete: if isRealOwner();
-          allow update: if false;
+
+          allow read:
+            if isRealOwner();
+
+          allow create:
+            if isThisChildsOwnSession();
+
+          allow update, delete:
+            if isRealOwner();
         }
 
-        // Remote microphone control: owner requests/stops, child reports state.
+
+        // =========================
+        // LIVE MICROPHONE REQUEST
+        // =========================
+        //
+        // Ota-ona:
+        // requested / stop_requested
+        //
+        // Bola:
+        // active / stopped / failed
+        //
+        // =========================
+
         match /mic_requests/{docId} {
-          allow read: if isRealOwner() || isThisChildsOwnSession();
-          allow create, update: if isRealOwner() || isThisChildsOwnSession();
-          allow delete: if isRealOwner();
+
+          // Ota-ona va bola request holatini ko'rishi mumkin
+          allow read:
+            if isRealOwner() || isThisChildsOwnSession();
+
+          // Ota-ona so'rov yuboradi,
+          // bola esa o'z holatini yangilaydi
+          allow create, update:
+            if isRealOwner() || isThisChildsOwnSession();
+
+          // Faqat ota-ona o'chiradi
+          allow delete:
+            if isRealOwner();
         }
 
-        // Live PCM audio chunks: only the paired child may upload; only the owner may read/delete.
+
+        // =========================
+        // LIVE MICROPHONE AUDIO
+        // =========================
+        //
+        // Bola -> qisqa audio chunk yozadi
+        // Ota-ona -> audio chunklarni o'qiydi
+        //
+        // =========================
+
         match /mic_audio/{docId} {
-          allow create: if isThisChildsOwnSession();
-          allow read, delete: if isRealOwner();
-          allow update: if false;
+
+          // Faqat ulangan bola audio yuboradi
+          allow create:
+            if isThisChildsOwnSession();
+
+          // Faqat ota-ona audio oqimini o'qiydi
+          allow read:
+            if isRealOwner();
+
+          // Ota-ona eski chunklarni tozalashi mumkin
+          allow delete:
+            if isRealOwner();
+
+          // Audio chunk o'zgartirilmaydi
+          allow update:
+            if false;
         }
 
-        // Saved voice recordings: only the paired child may upload; only the owner may read/delete.
+
+        // =========================
+        // SAVED VOICE RECORDINGS
+        // =========================
+        //
+        // Bola:
+        //   ovoz yozuvini yaratadi
+        //
+        // Ota-ona:
+        //   yozuvlarni ko'radi/eshitadi
+        //   yozuvni o'chiradi
+        //
+        // =========================
+
         match /voice_recordings/{docId} {
-          allow create: if isThisChildsOwnSession();
-          allow read, delete: if isRealOwner();
-          allow update: if false;
+
+          // Bola faqat o'z qurilmasidan yozuv yaratadi
+          allow create:
+            if isThisChildsOwnSession();
+
+          // Faqat ota-ona yozuvni o'qiydi
+          allow read:
+            if isRealOwner();
+
+          // Faqat ota-ona yozuvni o'chiradi
+          allow delete:
+            if isRealOwner();
+
+          // Yaratilgan yozuv o'zgartirilmaydi
+          allow update:
+            if false;
         }
+
+
+        // =========================
+        // OTHER COLLECTIONS
+        // =========================
 
         match /{subcollection}/{docId} {
-          allow read, write: if (isRealOwner() || isThisChildsOwnSession())
-            && subcollection != 'screenshot_settings'
-            && subcollection != 'screenshot_trigger_state'
-            && subcollection != 'screenshot_requests'
-            && subcollection != 'screenshots'
-            && subcollection != 'screenshot_data'
-            && subcollection != 'mic_requests'
-            && subcollection != 'mic_audio'
-            && subcollection != 'voice_recordings';
+
+          allow read, write:
+            if (isRealOwner() || isThisChildsOwnSession())
+              && subcollection != 'screenshot_settings'
+              && subcollection != 'screenshot_trigger_state'
+              && subcollection != 'screenshot_requests'
+              && subcollection != 'screenshots'
+              && subcollection != 'screenshot_data'
+              && subcollection != 'mic_requests'
+              && subcollection != 'mic_audio'
+              && subcollection != 'voice_recordings';
         }
       }
     }
 
+
+    // =========================
+    // PARENTS
+    // =========================
+
     match /parents/{uid} {
-      allow read: if isRealUser() && (request.auth.uid == uid || isAdmin());
-      allow write: if isRealUser() && (request.auth.uid == uid || isAdmin());
+
+      allow read:
+        if isRealUser() &&
+        (request.auth.uid == uid || isAdmin());
+
+      allow write:
+        if isRealUser() &&
+        (request.auth.uid == uid || isAdmin());
     }
+
+
+    // =========================
+    // SUPPORT MESSAGES
+    // =========================
+
     match /support_messages/{msgId} {
-      allow create: if isRealUser() && request.resource.data.fromUid == request.auth.uid;
-      allow read: if isRealUser() && (resource.data.fromUid == request.auth.uid || isAdmin());
-      allow update: if isAdmin();
+
+      allow create:
+        if isRealUser() &&
+        request.resource.data.fromUid == request.auth.uid;
+
+      allow read:
+        if isRealUser() &&
+        (
+          resource.data.fromUid == request.auth.uid ||
+          isAdmin()
+        );
+
+      allow update:
+        if isAdmin();
     }
+
+
+    // =========================
+    // PREMIUM REQUESTS
+    // =========================
+
     match /premium_requests/{reqId} {
-      allow create: if isRealUser() && request.resource.data.fromUid == request.auth.uid;
-      allow read: if isRealUser() && (resource.data.fromUid == request.auth.uid || isAdmin());
-      allow update: if isAdmin();
+
+      allow create:
+        if isRealUser() &&
+        request.resource.data.fromUid == request.auth.uid;
+
+      allow read:
+        if isRealUser() &&
+        (
+          resource.data.fromUid == request.auth.uid ||
+          isAdmin()
+        );
+
+      allow update:
+        if isAdmin();
     }
+
+
+    // =========================
+    // ADMIN CARDS
+    // =========================
+
     match /admin_cards/{cardId} {
-      allow read: if isRealUser();
-      allow write: if isAdmin();
+
+      allow read:
+        if isRealUser();
+
+      allow write:
+        if isAdmin();
     }
   }
 }
