@@ -15,6 +15,7 @@ android {
         targetSdk 34
         versionCode 2
         versionName "1.0.1"
+        buildConfigField "String", "BUILD_TAG", "\"${new Date().format('MM-dd HH:mm')}\""
     }
 
     // Release signing is supplied locally/through CI environment variables.
@@ -67,6 +68,7 @@ android {
     }
     buildFeatures {
         viewBinding true
+        buildConfig true
     }
 }
 

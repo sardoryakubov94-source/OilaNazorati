@@ -36,6 +36,9 @@ class AmbientListenActivity : AppCompatActivity() {
     private var sessionListener: ListenerRegistration? = null
     private var currentRequestId: String? = null
     private var stopping = false
+    private var localCandCount = 0
+    private var remoteCandCount = 0
+    private var gotAnswer = false
 
     private var factory: PeerConnectionFactory? = null
     private var peerConnection: PeerConnection? = null
@@ -68,6 +71,11 @@ class AmbientListenActivity : AppCompatActivity() {
             setPadding(0, 18, 0, 18)
             setTextColor(getColor(R.color.color_text_secondary))
         }
+        val buildTag = TextView(this).apply {
+            text = "build ${uz.oilanazorati.parentcontrol.BuildConfig.BUILD_TAG}"
+            textSize = 11f
+            setTextColor(getColor(R.color.color_text_secondary))
+        }
         startButton = Button(this).apply {
             text = "Eshitishni boshlash"
             setTextColor(getColor(R.color.color_text_primary))
@@ -91,6 +99,7 @@ class AmbientListenActivity : AppCompatActivity() {
             }
         }
         root.addView(title)
+        root.addView(buildTag)
         root.addView(status)
         root.addView(startButton)
         root.addView(stopButton)
@@ -128,6 +137,9 @@ class AmbientListenActivity : AppCompatActivity() {
         if (currentRequestId != null) return
         stopping = false
         appliedChildCandidates.clear()
+        localCandCount = 0
+        remoteCandCount = 0
+        gotAnswer = false
         status.text = "⏳ Ulanmoqda..."
         startButton.isEnabled = false
         stopButton.isEnabled = true
@@ -197,6 +209,7 @@ class AmbientListenActivity : AppCompatActivity() {
                     override fun onIceCandidate(candidate: IceCandidate) {
                         try {
                             crashlytics.log("WebRTC parent ICE candidate generated")
+                            localCandCount++
                             AmbientAudioRepository.sendParentIceCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
                         } catch (t: Throwable) { diag("on_ice_candidate_exception", t) }
                     }
@@ -278,6 +291,7 @@ class AmbientListenActivity : AppCompatActivity() {
                         requestId,
                         onAnswer = { answerSdp ->
                             try {
+                                gotAnswer = true
                                 // Bu Firestore real-vaqt tinglovchisi — hujjatdagi keyingi HAR
                                 // QANDAY o'zgarish (masalan navbatdagi ICE candidate) yana shu
                                 // yerni chaqiradi, javob allaqachon qo'llanilgan bo'lsa ham.
@@ -299,6 +313,7 @@ class AmbientListenActivity : AppCompatActivity() {
                             try {
                                 if (appliedChildCandidates.add(candidate)) {
                                     crashlytics.log("WebRTC child ICE candidate received")
+                                    remoteCandCount++
                                     peerConnection?.addIceCandidate(IceCandidate(mid, index, candidate))
                                 }
                             } catch (t: Throwable) { diag("add_child_ice_exception", t) }
@@ -323,7 +338,8 @@ class AmbientListenActivity : AppCompatActivity() {
     private fun fail(message: String?) {
         crashlytics.setCustomKey("webrtc_failure_message", message ?: "Ulanmadi")
         crashlytics.log("WebRTC failure: ${message ?: "Ulanmadi"}")
-        val text = "❌ ${message ?: "Ulanmadi"}"
+        val diagSuffix = " [men:$localCandCount bola:$remoteCandCount javob:${if (gotAnswer) "bor" else "yo'q"}]"
+        val text = "❌ ${message ?: "Ulanmadi"}$diagSuffix"
         resetUi(text)
     }
 
