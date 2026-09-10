@@ -7,7 +7,8 @@ service cloud.firestore {
     match /families/{familyCode} {
       function isRealOwner() { return isRealUser() && exists(/databases/$(database)/documents/families/$(familyCode)) && get(/databases/$(database)/documents/families/$(familyCode)).data.ownerUid == request.auth.uid; }
       allow create: if isRealUser() && request.resource.data.ownerUid == request.auth.uid;
-      allow read, update, delete: if isRealOwner();
+      allow get, update, delete: if isRealOwner();
+      allow list: if isRealUser() && resource.data.ownerUid == request.auth.uid;
 
       match /children/{childId} {
         function isThisChildsOwnSession() { return request.auth != null && request.auth.uid == childId; }
