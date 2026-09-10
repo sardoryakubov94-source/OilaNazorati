@@ -188,12 +188,15 @@ class AmbientListenActivity : AppCompatActivity() {
                 // TURN relay: STUN alone often fails when both devices are on mobile
                 // data behind carrier-grade/symmetric NAT (common on 4G). TURN relays
                 // the audio through a server so the call still connects.
-                PeerConnection.IceServer.builder("turn:openrelay.metered.ca:80")
-                    .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer(),
-                PeerConnection.IceServer.builder("turn:openrelay.metered.ca:443")
-                    .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer(),
-                PeerConnection.IceServer.builder("turn:openrelay.metered.ca:443?transport=tcp")
-                    .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer()
+                PeerConnection.IceServer.builder("stun:stun.relay.metered.ca:80").createIceServer(),
+                PeerConnection.IceServer.builder("turn:standard.relay.metered.ca:80")
+                    .setUsername("af995878e6ecdbb7cba4b5c7").setPassword("osjSuj4NtjUsvY99").createIceServer(),
+                PeerConnection.IceServer.builder("turn:standard.relay.metered.ca:80?transport=tcp")
+                    .setUsername("af995878e6ecdbb7cba4b5c7").setPassword("osjSuj4NtjUsvY99").createIceServer(),
+                PeerConnection.IceServer.builder("turn:standard.relay.metered.ca:443")
+                    .setUsername("af995878e6ecdbb7cba4b5c7").setPassword("osjSuj4NtjUsvY99").createIceServer(),
+                PeerConnection.IceServer.builder("turns:standard.relay.metered.ca:443?transport=tcp")
+                    .setUsername("af995878e6ecdbb7cba4b5c7").setPassword("osjSuj4NtjUsvY99").createIceServer()
             )
 
             peerConnection = factory?.createPeerConnection(

@@ -101,12 +101,15 @@ class WebRtcAmbientAudioService : Service() {
             val iceServers = listOf(
                 PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
                 PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer(),
-                PeerConnection.IceServer.builder("turn:openrelay.metered.ca:80")
-                    .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer(),
-                PeerConnection.IceServer.builder("turn:openrelay.metered.ca:443")
-                    .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer(),
-                PeerConnection.IceServer.builder("turn:openrelay.metered.ca:443?transport=tcp")
-                    .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer()
+                PeerConnection.IceServer.builder("stun:stun.relay.metered.ca:80").createIceServer(),
+                PeerConnection.IceServer.builder("turn:standard.relay.metered.ca:80")
+                    .setUsername("af995878e6ecdbb7cba4b5c7").setPassword("osjSuj4NtjUsvY99").createIceServer(),
+                PeerConnection.IceServer.builder("turn:standard.relay.metered.ca:80?transport=tcp")
+                    .setUsername("af995878e6ecdbb7cba4b5c7").setPassword("osjSuj4NtjUsvY99").createIceServer(),
+                PeerConnection.IceServer.builder("turn:standard.relay.metered.ca:443")
+                    .setUsername("af995878e6ecdbb7cba4b5c7").setPassword("osjSuj4NtjUsvY99").createIceServer(),
+                PeerConnection.IceServer.builder("turns:standard.relay.metered.ca:443?transport=tcp")
+                    .setUsername("af995878e6ecdbb7cba4b5c7").setPassword("osjSuj4NtjUsvY99").createIceServer()
             )
             peerConnection = factory?.createPeerConnection(PeerConnection.RTCConfiguration(iceServers), object : PeerConnection.Observer {
                 override fun onSignalingChange(newState: PeerConnection.SignalingState?) {}

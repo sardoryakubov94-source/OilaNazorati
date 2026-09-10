@@ -283,9 +283,11 @@ async function startVoice(){
     micPc=new RTCPeerConnection({iceServers:[
       {urls:'stun:stun.l.google.com:19302'},
       {urls:'stun:stun1.l.google.com:19302'},
-      {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
-      {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
-      {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
+      {urls:'stun:stun.relay.metered.ca:80'},
+      {urls:'turn:standard.relay.metered.ca:80',username:'af995878e6ecdbb7cba4b5c7',credential:'osjSuj4NtjUsvY99'},
+      {urls:'turn:standard.relay.metered.ca:80?transport=tcp',username:'af995878e6ecdbb7cba4b5c7',credential:'osjSuj4NtjUsvY99'},
+      {urls:'turn:standard.relay.metered.ca:443',username:'af995878e6ecdbb7cba4b5c7',credential:'osjSuj4NtjUsvY99'},
+      {urls:'turns:standard.relay.metered.ca:443?transport=tcp',username:'af995878e6ecdbb7cba4b5c7',credential:'osjSuj4NtjUsvY99'}
     ]});
     micPc.addTransceiver('audio',{direction:'recvonly'});
     micPc.ontrack=(e)=>{ const a=$('micAudio'); if(a)a.srcObject=e.streams[0] };
