@@ -63,11 +63,19 @@ object AmbientAudioRepository {
             return
         }
         try {
-            requestRef().update(
-                "parentCandidates",
-                com.google.firebase.firestore.FieldValue.arrayUnion(
-                    mapOf("candidate" to candidate, "sdpMid" to sdpMid, "sdpMLineIndex" to sdpMLineIndex)
-                )
+            // set(merge=true) instead of update(): ICE candidates can start
+            // arriving (onIceCandidate) before requestStartWebRtc()'s set()
+            // has finished creating the "current" document (createOffer +
+            // setLocalDescription both happen first). update() fails silently
+            // on a not-yet-existing document, which was dropping every early
+            // candidate; set+merge works whether or not the doc exists yet.
+            requestRef().set(
+                mapOf(
+                    "parentCandidates" to com.google.firebase.firestore.FieldValue.arrayUnion(
+                        mapOf("candidate" to candidate, "sdpMid" to sdpMid, "sdpMLineIndex" to sdpMLineIndex)
+                    )
+                ),
+                com.google.firebase.firestore.SetOptions.merge()
             ).addOnFailureListener { Log.e(TAG, "sendParentIceCandidate failed", it) }
         } catch (t: Throwable) {
             Log.e(TAG, "sendParentIceCandidate exception", t)

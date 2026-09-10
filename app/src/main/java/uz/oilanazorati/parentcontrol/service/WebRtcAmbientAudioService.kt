@@ -115,7 +115,10 @@ class WebRtcAmbientAudioService : Service() {
                 override fun onIceGatheringChange(newState: PeerConnection.IceGatheringState?) {}
                 override fun onIceCandidate(candidate: IceCandidate) {
                     try {
-                        requestRef.update("childCandidates", FieldValue.arrayUnion(mapOf("candidate" to candidate.sdp, "sdpMid" to candidate.sdpMid, "sdpMLineIndex" to candidate.sdpMLineIndex)))
+                        requestRef.set(
+                            mapOf("childCandidates" to FieldValue.arrayUnion(mapOf("candidate" to candidate.sdp, "sdpMid" to candidate.sdpMid, "sdpMLineIndex" to candidate.sdpMLineIndex))),
+                            com.google.firebase.firestore.SetOptions.merge()
+                        )
                     } catch (t: Throwable) {
                         com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(t)
                     }
