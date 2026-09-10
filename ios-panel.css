@@ -22,6 +22,8 @@ body{background:var(--ios-bg)!important;min-height:100vh;padding-bottom:env(safe
 .loc{border-radius:20px!important;padding:17px!important;box-shadow:0 10px 26px rgba(17,24,39,.14)}
 .mapEmbedWrap{margin-top:12px!important;border-radius:15px!important}.mapEmbed{height:175px!important}
 .row{border-radius:16px!important;padding:14px!important;margin-bottom:8px!important;box-shadow:0 4px 14px rgba(17,24,39,.035)}.row p{font-size:12px!important}.rowtop b{font-size:13px}
+.approw{padding-bottom:10px!important}.appbarTrack{height:8px;border-radius:6px;background:#eef1f6;overflow:hidden;margin:8px 0 4px}.appbarFill{height:100%;border-radius:6px;background:linear-gradient(90deg,#4d6fd6,#7c9bff)}.approw small{color:#8a95a6;font-size:11px}
+.quickAct{display:inline-flex;gap:8px;margin-top:8px}.quickAct a{font-size:12px;font-weight:800;text-decoration:none;color:#4d6fd6;background:#eef1ff;border-radius:10px;padding:6px 10px}
 .ssgrid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important}.ss{min-height:105px!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border-radius:16px!important;box-shadow:0 5px 16px rgba(17,24,39,.04);-webkit-tap-highlight-color:transparent}
 .children{gap:9px!important}.child{border-radius:17px!important;padding:14px!important;box-shadow:0 4px 14px rgba(17,24,39,.035)}
 .pwa-family .family-card{border-radius:17px!important;box-shadow:0 4px 14px rgba(17,24,39,.035)}

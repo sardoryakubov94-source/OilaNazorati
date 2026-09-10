@@ -219,15 +219,27 @@ function contactLabel(hash,raqam){
 async function sms(){const x=await sub('sms','vaqtMs',100);$('content').innerHTML=x.length?x.map(v=>{
   const dir=v.turi==='yuborilgan'?'📤 Yuborilgan':'📥 Qabul qilingan';
   const body=!isPremiumParent?'🔒 Matnni o\u2018qish faqat Premium uchun':esc(v.matn||'');
-  return'<div class="row"><div class="rowtop"><b>'+esc(contactLabel(v.kontaktHash,v.raqam))+'</b><span class="badge">'+fmt(v.vaqtMs)+'</span></div><p>'+dir+(body?' · '+body:'')+'</p></div>';
+  const canAct=isPremiumParent&&v.raqam;
+  const act=canAct?'<div class="quickAct"><a href="sms:'+esc(v.raqam)+'">✉️ SMS yozish</a><a href="tel:'+esc(v.raqam)+'">📞 Qo\u2018ng\u2018iroq</a></div>':'';
+  return'<div class="row"><div class="rowtop"><b>'+esc(contactLabel(v.kontaktHash,v.raqam))+'</b><span class="badge">'+fmt(v.vaqtMs)+'</span></div><p>'+dir+(body?' · '+body:'')+'</p>'+act+'</div>';
 }).join(''):'<div class="empty">SMS topilmadi.</div>'}
 async function calls(){const x=await sub('calls','boshlanishMs',100);$('content').innerHTML=x.length?x.map(v=>{
   const dir=v.turi==='kiruvchi'?'📥 Kiruvchi':v.turi==='chiquvchi'?'📤 Chiquvchi':'❌ Javobsiz';
   const sec=v.davomiylikSoniya||0;
   const durTxt=sec>0?' · '+Math.floor(sec/60)+' daq '+(sec%60)+' son':'';
-  return'<div class="row"><div class="rowtop"><b>'+esc(contactLabel(v.kontaktHash,v.raqam))+'</b><span class="badge">'+fmt(v.boshlanishMs)+'</span></div><p>'+dir+durTxt+'</p></div>';
+  const canAct=isPremiumParent&&v.raqam;
+  const act=canAct?'<div class="quickAct"><a href="tel:'+esc(v.raqam)+'">📞 Qo\u2018ng\u2018iroq</a><a href="sms:'+esc(v.raqam)+'">✉️ SMS yozish</a></div>':'';
+  return'<div class="row"><div class="rowtop"><b>'+esc(contactLabel(v.kontaktHash,v.raqam))+'</b><span class="badge">'+fmt(v.boshlanishMs)+'</span></div><p>'+dir+durTxt+'</p>'+act+'</div>';
 }).join(''):'<div class="empty">Qo‘ng‘iroqlar topilmadi.</div>'}
-async function apps(){const x=await sub('app_usage','boshlanishMs',100);$('content').innerHTML=x.length?x.map(v=>'<div class="row"><div class="rowtop"><b>'+esc(v.ilovaNomi||v.paketNomi||'Ilova')+'</b><span class="badge">'+dur(v.davomiylikSoniya)+'</span></div><small>'+fmt(v.boshlanishMs)+'</small></div>').join(''):'<div class="empty">Ilova statistikasi topilmadi.</div>'}
+async function apps(){const x=await sub('app_usage','boshlanishMs',300);
+  if(!x.length){$('content').innerHTML='<div class="empty">Ilova statistikasi topilmadi.</div>';return}
+  const totals={};x.forEach(v=>{const key=v.paketNomi||v.ilovaNomi||'?';if(!totals[key])totals[key]={nomi:v.ilovaNomi||v.paketNomi||'Ilova',sec:0,son:0};totals[key].sec+=Number(v.davomiylikSoniya||0);totals[key].son++});
+  const ranked=Object.values(totals).sort((a,b)=>b.sec-a.sec);
+  const maxSec=ranked[0]?.sec||1;
+  const top=ranked.slice(0,10).map(v=>'<div class="row approw"><div class="rowtop"><b>'+esc(v.nomi)+'</b><span class="badge">'+dur(v.sec)+'</span></div><div class="appbarTrack"><div class="appbarFill" style="width:'+Math.max(4,Math.round(v.sec/maxSec*100))+'%"></div></div><small>'+v.son+' marta ochilgan</small></div>').join('');
+  const recent=x.slice(0,30).map(v=>'<div class="row"><div class="rowtop"><b>'+esc(v.ilovaNomi||v.paketNomi||'Ilova')+'</b><span class="badge">'+dur(v.davomiylikSoniya)+'</span></div><small>'+fmt(v.boshlanishMs)+'</small></div>').join('');
+  $('content').innerHTML='<h3 style="margin:4px 0 8px">Eng ko\\u2018p ishlatilgan ilovalar</h3>'+top+'<h3 style="margin:18px 0 8px">So\\u2018nggi faoliyat</h3>'+recent;
+}
 async function notif(){const x=await sub('notifications','vaqtMs',100);$('content').innerHTML=x.length?x.map(v=>'<div class="row"><div class="rowtop"><b>'+esc(v.ilovaNomi||v.ilovaPaket||'Ilova')+'</b><span class="badge">'+fmt(v.vaqtMs)+'</span></div><p>'+esc(v.sarlavha||'')+(v.matn?' — '+esc(v.matn):'')+'</p></div>').join(''):'<div class="empty">Bildirishnomalar topilmadi.</div>'}
 async function shots(){const cd=await getDoc(doc(db,'families',family,'children',child));const cv=cd.data()||{};const active=cv.screenProjectionActive===true;const upd=cv.screenProjectionUpdatedAt;const bannerText=active?'🟢 Ekran nazorati ulangan':'🔴 Ekran nazorati ulanmagan'+(upd?' ('+fmt(upd)+')':'')+' — farzand qurilmasida ilova ochilishi kerak';const banner='<div class="empty" style="margin-bottom:12px;text-align:left">'+bannerText+'</div>';const q=query(collection(db,'families',family,'children',child,'screenshots'),orderBy('capturedAt','desc'),limit(100));const x=(await getDocs(q)).docs.map(d=>({id:d.id,...d.data()}));$('content').innerHTML=banner+(x.length?'<div class="ssgrid">'+x.map(v=>'<button class="ss" data-id="'+esc(v.id)+'">▣<small>'+esc(v.appLabel||'Ilova')+'</small><small>'+fmt(v.capturedAt)+'</small></button>').join('')+'</div>':'<div class="empty">Screenshot topilmadi.</div>');document.querySelectorAll('.ss').forEach(b=>b.onclick=async()=>{try{const d=await getDoc(doc(db,'families',family,'children',child,'screenshot_data',b.dataset.id));const v=d.data();const blob=v?.image;if(blob){const b64=typeof blob.toBase64==='function'?blob.toBase64():btoa(String.fromCharCode(...blob.toUint8Array()));$('shot').src='data:image/jpeg;base64,'+b64;$('lightbox').classList.add('active')}}catch(e){console.error(e)}})}
 
@@ -256,7 +268,13 @@ async function startVoice(){
   const requestId='web_'+Date.now();
   micRequestId=requestId;
   try{
-    micPc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]});
+    micPc=new RTCPeerConnection({iceServers:[
+      {urls:'stun:stun.l.google.com:19302'},
+      {urls:'stun:stun1.l.google.com:19302'},
+      {urls:'turn:openrelay.metered.ca:80',username:'openrelayproject',credential:'openrelayproject'},
+      {urls:'turn:openrelay.metered.ca:443',username:'openrelayproject',credential:'openrelayproject'},
+      {urls:'turn:openrelay.metered.ca:443?transport=tcp',username:'openrelayproject',credential:'openrelayproject'}
+    ]});
     micPc.addTransceiver('audio',{direction:'recvonly'});
     micPc.ontrack=(e)=>{ const a=$('micAudio'); if(a)a.srcObject=e.streams[0] };
     micPc.onicecandidate=(e)=>{
