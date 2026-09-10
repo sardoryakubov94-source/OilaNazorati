@@ -234,12 +234,14 @@ async function sms(){const x=await sub('sms','vaqtMs',100);$('content').innerHTM
   return'<div class="row"><div class="rowtop"><b>'+esc(contactLabel(v.kontaktHash,v.raqam))+'</b><span class="badge">'+fmt(v.vaqtMs)+'</span></div><p>'+dir+(body?' · '+body:'')+'</p>'+act+'</div>';
 }).join(''):'<div class="empty">SMS topilmadi.</div>'}
 async function calls(){const x=await sub('calls','boshlanishMs',100);$('content').innerHTML=x.length?x.map(v=>{
-  const dir=v.turi==='kiruvchi'?'📥 Kiruvchi':v.turi==='chiquvchi'?'📤 Chiquvchi':'❌ Javobsiz';
+  const dirIcon=v.turi==='kiruvchi'?'📥':v.turi==='chiquvchi'?'📤':'❌';
+  const dirWord=v.turi==='kiruvchi'?'Kiruvchi':v.turi==='chiquvchi'?'Chiquvchi':'Javobsiz';
   const sec=v.davomiylikSoniya||0;
   const durTxt=sec>0?' · '+Math.floor(sec/60)+' daq '+(sec%60)+' son':'';
   const canAct=isPremiumParent&&v.raqam;
+  const numTxt=canAct?' <small class="callNum">'+esc(v.raqam)+'</small>':'';
   const act=canAct?'<div class="quickAct"><a href="tel:'+esc(v.raqam)+'">📞 Qo\u2018ng\u2018iroq</a><a href="sms:'+esc(v.raqam)+'">✉️ SMS yozish</a></div>':'';
-  return'<div class="row"><div class="rowtop"><b>'+esc(contactLabel(v.kontaktHash,v.raqam))+'</b><span class="badge">'+fmt(v.boshlanishMs)+'</span></div><p>'+dir+durTxt+'</p>'+act+'</div>';
+  return'<div class="row callRow"><span class="callIcon">'+dirIcon+'</span><div class="callBody"><div class="rowtop"><b>'+esc(contactLabel(v.kontaktHash,v.raqam))+numTxt+'</b><span class="badge">'+fmt(v.boshlanishMs)+'</span></div><p>'+dirWord+durTxt+'</p>'+act+'</div></div>';
 }).join(''):'<div class="empty">Qo‘ng‘iroqlar topilmadi.</div>'}
 async function apps(){const x=await sub('app_usage','boshlanishMs',300);
   if(!x.length){$('content').innerHTML='<div class="empty">Ilova statistikasi topilmadi.</div>';return}
