@@ -100,7 +100,13 @@ class WebRtcAmbientAudioService : Service() {
             factory = PeerConnectionFactory.builder().setAudioDeviceModule(audioDeviceModule).createPeerConnectionFactory()
             val iceServers = listOf(
                 PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
-                PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer()
+                PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer(),
+                PeerConnection.IceServer.builder("turn:openrelay.metered.ca:80")
+                    .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer(),
+                PeerConnection.IceServer.builder("turn:openrelay.metered.ca:443")
+                    .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer(),
+                PeerConnection.IceServer.builder("turn:openrelay.metered.ca:443?transport=tcp")
+                    .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer()
             )
             peerConnection = factory?.createPeerConnection(PeerConnection.RTCConfiguration(iceServers), object : PeerConnection.Observer {
                 override fun onSignalingChange(newState: PeerConnection.SignalingState?) {}

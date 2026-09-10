@@ -164,7 +164,16 @@ class AmbientListenActivity : AppCompatActivity() {
             diag("create_peer_connection")
             val iceServers = listOf(
                 PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
-                PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer()
+                PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer(),
+                // TURN relay: STUN alone often fails when both devices are on mobile
+                // data behind carrier-grade/symmetric NAT (common on 4G). TURN relays
+                // the audio through a server so the call still connects.
+                PeerConnection.IceServer.builder("turn:openrelay.metered.ca:80")
+                    .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer(),
+                PeerConnection.IceServer.builder("turn:openrelay.metered.ca:443")
+                    .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer(),
+                PeerConnection.IceServer.builder("turn:openrelay.metered.ca:443?transport=tcp")
+                    .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer()
             )
 
             peerConnection = factory?.createPeerConnection(
