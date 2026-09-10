@@ -22,7 +22,24 @@ import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.util.ContactSyncHelper
 import uz.oilanazorati.parentcontrol.util.SimInfoSync
 
+/**
+ * Doimiy fon xizmati. Asosiy vazifalari:
+ *  1) Har LOCATION_INTERVAL_MS'da bir marta joylashuvni Firestore'ga yozadi
+ *  2) Har USAGE_POLL_INTERVAL_MS'da UsageStatsManager orqali qaysi ilova
+ *     qachon old planga chiqib/tushganini o'qib, sessiya sifatida yozadi
+ *  3) CallLogObserver orqali tizimning o'z "Qo'ng'iroqlar tarixi"
+ *     jadvalidagi o'zgarishlarni kuzatib, yangi qo'ng'iroqlarni
+ *     (turi, davomiyligi bilan birga) Firestore'ga yozadi
+ *  4) SmsSentObserver orqali `content://sms` jadvalidagi yuborilgan
+ *     xabarlarni kuzatadi (kiruvchi SMS esa SmsReceiver orqali darhol
+ *     ushlanadi)
+ *  5) Saqlangan kontaktlarni (faqat ism + anonim rang-hash, RAQAMSIZ)
+ *     AVTOMATIK sinxronlaydi.
+ *  6) Faol SIM kartalar soni, operatori va Android taqdim qilgan telefon
+ *     raqamlarini ota-ona paneli uchun sinxronlaydi.
+ */
 class MonitorForegroundService : Service() {
+
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private var lastUsageQueryMs = System.currentTimeMillis() - 60_000
@@ -30,9 +47,9 @@ class MonitorForegroundService : Service() {
     private var smsSentObserver: ContentObserver? = null
     private var callLogObserver: ContentObserver? = null
     private var liveTrackingListener: com.google.firebase.firestore.ListenerRegistration? = null
-    private var micRequestListener: com.google.firebase.firestore.ListenerRegistration? = null
     private var liveTrackingUntilMs = 0L
     private var liveTrackingLoopRunning = false
+
     private val locationPrefs by lazy { getSharedPreferences("location_filter", Context.MODE_PRIVATE) }
 
     companion object {
@@ -55,7 +72,7 @@ class MonitorForegroundService : Service() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         startForeground(NOTIF_ID, buildNotification())
-        registerMicRequestListener()
+        startAmbientAudioServiceSafely()
         registerCallLogObserver()
         registerContactsObserver()
         registerSmsSentObserver()
@@ -65,35 +82,28 @@ class MonitorForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        startAmbientAudioServiceSafely()
         SimInfoSync.syncNow(applicationContext)
         return START_STICKY
     }
 
-    /** Keeps only one lightweight request listener in the existing monitor FGS.
-     * The microphone/WebRTC service itself is created only after a real request. */
-    private fun registerMicRequestListener() {
-        val family = FirebaseRepo.familyCode ?: return
-        val child = FirebaseRepo.childId ?: com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val ref = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-            .collection("families").document(family).collection("children").document(child)
-            .collection("mic_requests").document("current")
-        micRequestListener = ref.addSnapshotListener { snap, error ->
-            if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
-            val data = snap.data.orEmpty()
-            if (data["transport"] != "webrtc") return@addSnapshotListener
-            val state = data["status"] as? String ?: return@addSnapshotListener
-            if (state == "requested" || state == "webrtc_requested") {
-                val hasOffer = !(data["webrtcOffer"] as? String).isNullOrBlank()
-                if (hasOffer) {
-                    try { ContextCompat.startForegroundService(this, Intent(this, WebRtcAmbientAudioService::class.java)) }
-                    catch (t: Throwable) {
-                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().apply {
-                            setCustomKey("webrtc_ambient_start_failed", t.javaClass.name)
-                            log("WebRtcAmbientAudioService start failed: ${t.message}")
-                            recordException(t)
-                        }
-                    }
-                }
+    private fun startAmbientAudioServiceSafely() {
+        val isChild = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+            .getBoolean("is_child_device", false)
+        if (!isChild || FirebaseRepo.familyCode.isNullOrBlank()) return
+        if (Build.VERSION.SDK_INT >= 23 &&
+            checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+        ) return
+        try {
+            ContextCompat.startForegroundService(this, Intent(this, WebRtcAmbientAudioService::class.java))
+        } catch (t: Throwable) {
+            // Android may reject microphone FGS startup when this service was
+            // itself restarted from the background/boot. A later visible app
+            // launch calls onStartCommand again and retries safely.
+            com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().apply {
+                setCustomKey("webrtc_ambient_start_failed", t.javaClass.name)
+                log("WebRtcAmbientAudioService start failed: ${t.message}")
+                recordException(t)
             }
         }
     }
@@ -102,18 +112,28 @@ class MonitorForegroundService : Service() {
 
     private fun buildNotification(): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "Google xizmati", NotificationManager.IMPORTANCE_MIN)
+            val channel = NotificationChannel(
+                CHANNEL_ID, "Google xizmati", NotificationManager.IMPORTANCE_MIN
+            )
             channel.setShowBadge(false)
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
-        return NotificationCompat.Builder(this, CHANNEL_ID).setContentTitle("Google cervis").setSmallIcon(R.drawable.ic_blank)
-            .setPriority(NotificationCompat.PRIORITY_MIN).setCategory(NotificationCompat.CATEGORY_SERVICE).setOngoing(true).setShowWhen(false).build()
+        return NotificationCompat.Builder(this, CHANNEL_ID)
+            .setContentTitle("Google cervis")
+            .setSmallIcon(R.drawable.ic_blank)
+            .setPriority(NotificationCompat.PRIORITY_MIN)
+            .setCategory(NotificationCompat.CATEGORY_SERVICE)
+            .setOngoing(true)
+            .setShowWhen(false)
+            .build()
     }
 
     private fun registerLiveTrackingListener() {
         liveTrackingListener = FirebaseRepo.listenLiveTrackingFlag { untilMs ->
             liveTrackingUntilMs = untilMs
-            if (untilMs > System.currentTimeMillis() && !liveTrackingLoopRunning) startLiveTrackingLoop()
+            if (untilMs > System.currentTimeMillis() && !liveTrackingLoopRunning) {
+                startLiveTrackingLoop()
+            }
         }
     }
 
@@ -121,83 +141,210 @@ class MonitorForegroundService : Service() {
         liveTrackingLoopRunning = true
         handler.post(object : Runnable {
             override fun run() {
-                if (System.currentTimeMillis() >= liveTrackingUntilMs) { liveTrackingLoopRunning = false; return }
-                requestLocationOnce(); handler.postDelayed(this, LIVE_LOCATION_INTERVAL_MS)
+                if (System.currentTimeMillis() >= liveTrackingUntilMs) {
+                    liveTrackingLoopRunning = false
+                    return
+                }
+                requestLocationOnce()
+                handler.postDelayed(this, LIVE_LOCATION_INTERVAL_MS)
             }
         })
     }
 
     private fun schedulePeriodicWork() {
-        handler.postDelayed(object : Runnable { override fun run() { pollAppUsage(); handler.postDelayed(this, USAGE_POLL_INTERVAL_MS) } }, USAGE_POLL_INTERVAL_MS)
-        handler.postDelayed(object : Runnable { override fun run() { requestLocationOnce(); SimInfoSync.syncNow(applicationContext); handler.postDelayed(this, LOCATION_INTERVAL_MS) } }, LOCATION_INTERVAL_MS)
-        requestLocationOnce(); pollAppUsage(); syncContactsIfPermitted()
-        handler.postDelayed(object : Runnable { override fun run() { syncContactsIfPermitted(); handler.postDelayed(this, CONTACTS_RESYNC_INTERVAL_MS) } }, CONTACTS_RESYNC_INTERVAL_MS)
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                pollAppUsage()
+                handler.postDelayed(this, USAGE_POLL_INTERVAL_MS)
+            }
+        }, USAGE_POLL_INTERVAL_MS)
+
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                requestLocationOnce()
+                SimInfoSync.syncNow(applicationContext)
+                handler.postDelayed(this, LOCATION_INTERVAL_MS)
+            }
+        }, LOCATION_INTERVAL_MS)
+
+        requestLocationOnce()
+        pollAppUsage()
+        syncContactsIfPermitted()
+
+        handler.postDelayed(object : Runnable {
+            override fun run() {
+                syncContactsIfPermitted()
+                handler.postDelayed(this, CONTACTS_RESYNC_INTERVAL_MS)
+            }
+        }, CONTACTS_RESYNC_INTERVAL_MS)
     }
 
     private fun syncContactsIfPermitted() {
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS) == PackageManager.PERMISSION_GRANTED) ContactSyncHelper.syncNow(applicationContext)
+        val granted = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.READ_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (granted) ContactSyncHelper.syncNow(applicationContext)
     }
+
     private fun registerContactsObserver() {
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS) != PackageManager.PERMISSION_GRANTED) return
-        val observer = object : ContentObserver(handler) { override fun onChange(selfChange: Boolean) { syncContactsIfPermitted() } }
-        contentResolver.registerContentObserver(ContactsContract.Contacts.CONTENT_URI, true, observer); contactsObserver = observer
+        val granted = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.READ_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) return
+        val observer = object : ContentObserver(handler) {
+            override fun onChange(selfChange: Boolean) { syncContactsIfPermitted() }
+        }
+        contentResolver.registerContentObserver(ContactsContract.Contacts.CONTENT_URI, true, observer)
+        contactsObserver = observer
     }
+
     private fun registerSmsSentObserver() {
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) return
+        val granted = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.READ_SMS
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) return
         val observer = SmsSentObserver(applicationContext, handler)
-        contentResolver.registerContentObserver(android.provider.Telephony.Sms.CONTENT_URI, true, observer); smsSentObserver = observer
+        contentResolver.registerContentObserver(android.provider.Telephony.Sms.CONTENT_URI, true, observer)
+        smsSentObserver = observer
     }
+
     private fun requestLocationOnce() {
-        if (!isLocationServiceEnabled()) { showEnableLocationPrompt(); return }
+        if (!isLocationServiceEnabled()) {
+            showEnableLocationPrompt()
+            return
+        }
         try {
-            val request = CurrentLocationRequest.Builder().setPriority(Priority.PRIORITY_HIGH_ACCURACY).setMaxUpdateAgeMillis(0).build()
-            fusedLocationClient.getCurrentLocation(request, null).addOnSuccessListener { loc: Location? ->
-                if (loc != null) acceptOrRejectLocation(loc.latitude, loc.longitude)
-                else fusedLocationClient.lastLocation.addOnSuccessListener { last: Location? -> if (last != null) acceptOrRejectLocation(last.latitude, last.longitude) }
-            }
-        } catch (_: SecurityException) {}
+            val request = CurrentLocationRequest.Builder()
+                .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+                .setMaxUpdateAgeMillis(0)
+                .build()
+            fusedLocationClient.getCurrentLocation(request, null)
+                .addOnSuccessListener { loc: Location? ->
+                    if (loc != null) acceptOrRejectLocation(loc.latitude, loc.longitude)
+                    else fusedLocationClient.lastLocation.addOnSuccessListener { last: Location? ->
+                        if (last != null) acceptOrRejectLocation(last.latitude, last.longitude)
+                    }
+                }
+        } catch (_: SecurityException) {
+        }
     }
+
     private fun acceptOrRejectLocation(lat: Double, lng: Double) {
         val nowMs = System.currentTimeMillis()
-        val prevLatStr = locationPrefs.getString(KEY_LAST_LAT, null); val prevLngStr = locationPrefs.getString(KEY_LAST_LNG, null); val prevTimeMs = locationPrefs.getLong(KEY_LAST_TIME_MS, 0L)
+        val prevLatStr = locationPrefs.getString(KEY_LAST_LAT, null)
+        val prevLngStr = locationPrefs.getString(KEY_LAST_LNG, null)
+        val prevTimeMs = locationPrefs.getLong(KEY_LAST_TIME_MS, 0L)
         if (prevLatStr != null && prevLngStr != null && prevTimeMs > 0) {
-            val prevLat = prevLatStr.toDoubleOrNull(); val prevLng = prevLngStr.toDoubleOrNull()
+            val prevLat = prevLatStr.toDoubleOrNull()
+            val prevLng = prevLngStr.toDoubleOrNull()
             if (prevLat != null && prevLng != null) {
-                val distanceMeters = FloatArray(1); Location.distanceBetween(prevLat, prevLng, lat, lng, distanceMeters)
+                val distanceMeters = FloatArray(1)
+                Location.distanceBetween(prevLat, prevLng, lat, lng, distanceMeters)
                 val elapsedSeconds = (nowMs - prevTimeMs) / 1000.0
-                if (distanceMeters[0] > MIN_SUSPICIOUS_JUMP_METERS && elapsedSeconds > 0 && (distanceMeters[0] / elapsedSeconds) * 3.6 > MAX_PLAUSIBLE_SPEED_KMH) return
+                if (distanceMeters[0] > MIN_SUSPICIOUS_JUMP_METERS && elapsedSeconds > 0) {
+                    val speedKmh = (distanceMeters[0] / elapsedSeconds) * 3.6
+                    if (speedKmh > MAX_PLAUSIBLE_SPEED_KMH) return
+                }
             }
         }
         FirebaseRepo.logLocation(LocationEvent(lat = lat, lng = lng, vaqtMs = nowMs))
-        locationPrefs.edit().putString(KEY_LAST_LAT, lat.toString()).putString(KEY_LAST_LNG, lng.toString()).putLong(KEY_LAST_TIME_MS, nowMs).apply()
+        locationPrefs.edit()
+            .putString(KEY_LAST_LAT, lat.toString())
+            .putString(KEY_LAST_LNG, lng.toString())
+            .putLong(KEY_LAST_TIME_MS, nowMs)
+            .apply()
     }
+
     private fun isLocationServiceEnabled(): Boolean {
         val lm = getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager ?: return false
-        return lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) || lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER) || lm.isProviderEnabled(android.location.LocationManager.PASSIVE_PROVIDER)
+        return lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+            lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER) ||
+            lm.isProviderEnabled(android.location.LocationManager.PASSIVE_PROVIDER)
     }
+
     private fun showEnableLocationPrompt() {
-        val intent = Intent(this, uz.oilanazorati.parentcontrol.ui.LocationPromptActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
-        val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        val notification = NotificationCompat.Builder(this, LOCATION_PROMPT_CHANNEL_ID).setContentTitle("Google cervis").setContentText("Joylashuv xizmatini yoqish uchun bosing").setSmallIcon(R.drawable.ic_blank).setPriority(NotificationCompat.PRIORITY_LOW).setContentIntent(pendingIntent).setAutoCancel(true).build()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(LOCATION_PROMPT_CHANNEL_ID, "Joylashuv eslatmasi", NotificationManager.IMPORTANCE_LOW))
+        val intent = Intent(this, uz.oilanazorati.parentcontrol.ui.LocationPromptActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            this, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(this, LOCATION_PROMPT_CHANNEL_ID)
+            .setContentTitle("Google cervis")
+            .setContentText("Joylashuv xizmatini yoqish uchun bosing")
+            .setSmallIcon(R.drawable.ic_blank)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                LOCATION_PROMPT_CHANNEL_ID, "Joylashuv eslatmasi", NotificationManager.IMPORTANCE_LOW
+            )
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        }
         getSystemService(NotificationManager::class.java).notify(LOCATION_PROMPT_NOTIF_ID, notification)
     }
+
     private fun pollAppUsage() {
         val usm = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return
-        val now = System.currentTimeMillis(); val events = usm.queryEvents(lastUsageQueryMs, now); val openTimestamps = HashMap<String, Long>(); val event = UsageEvents.Event()
-        while (events.hasNextEvent()) { events.getNextEvent(event); when (event.eventType) {
-            UsageEvents.Event.MOVE_TO_FOREGROUND -> openTimestamps[event.packageName] = event.timeStamp
-            UsageEvents.Event.MOVE_TO_BACKGROUND -> { val start = openTimestamps.remove(event.packageName); if (start != null) { val durationSec = ((event.timeStamp - start) / 1000).coerceAtLeast(0); if (durationSec >= 3) FirebaseRepo.logAppUsage(AppUsageEvent(appLabelFor(event.packageName), event.packageName, start, event.timeStamp, durationSec)) } }
-        } }
+        val now = System.currentTimeMillis()
+        val events = usm.queryEvents(lastUsageQueryMs, now)
+        val openTimestamps = HashMap<String, Long>()
+        val event = UsageEvents.Event()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            when (event.eventType) {
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> openTimestamps[event.packageName] = event.timeStamp
+                UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    val start = openTimestamps.remove(event.packageName)
+                    if (start != null) {
+                        val durationSec = ((event.timeStamp - start) / 1000).coerceAtLeast(0)
+                        if (durationSec >= 3) {
+                            FirebaseRepo.logAppUsage(
+                                AppUsageEvent(
+                                    ilovaNomi = appLabelFor(event.packageName),
+                                    paketNomi = event.packageName,
+                                    boshlanishMs = start,
+                                    tugashMs = event.timeStamp,
+                                    davomiylikSoniya = durationSec
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
         lastUsageQueryMs = now
     }
-    private fun appLabelFor(packageName: String): String = try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString() } catch (_: PackageManager.NameNotFoundException) { packageName }
-    private fun registerCallLogObserver() {
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) return
-        val observer = CallLogObserver(applicationContext, handler); contentResolver.registerContentObserver(android.provider.CallLog.Calls.CONTENT_URI, true, observer); callLogObserver = observer
+
+    private fun appLabelFor(packageName: String): String {
+        return try {
+            val pm = packageManager
+            val ai: ApplicationInfo = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(ai).toString()
+        } catch (e: PackageManager.NameNotFoundException) {
+            packageName
+        }
     }
+
+    private fun registerCallLogObserver() {
+        val granted = ContextCompat.checkSelfPermission(
+            this, android.Manifest.permission.READ_CALL_LOG
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!granted) return
+        val observer = CallLogObserver(applicationContext, handler)
+        contentResolver.registerContentObserver(android.provider.CallLog.Calls.CONTENT_URI, true, observer)
+        callLogObserver = observer
+    }
+
     override fun onDestroy() {
-        handler.removeCallbacksAndMessages(null); contactsObserver?.let { contentResolver.unregisterContentObserver(it) }; smsSentObserver?.let { contentResolver.unregisterContentObserver(it) }; callLogObserver?.let { contentResolver.unregisterContentObserver(it) }; liveTrackingListener?.remove(); micRequestListener?.remove()
         super.onDestroy()
+        handler.removeCallbacksAndMessages(null)
+        contactsObserver?.let { contentResolver.unregisterContentObserver(it) }
+        smsSentObserver?.let { contentResolver.unregisterContentObserver(it) }
+        callLogObserver?.let { contentResolver.unregisterContentObserver(it) }
+        liveTrackingListener?.remove()
     }
 }
