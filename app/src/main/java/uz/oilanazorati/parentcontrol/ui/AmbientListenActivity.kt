@@ -39,6 +39,12 @@ class AmbientListenActivity : AppCompatActivity() {
     private var localCandCount = 0
     private var remoteCandCount = 0
     private var gotAnswer = false
+    private val localCandTypes = mutableSetOf<String>()
+    private val remoteCandTypes = mutableSetOf<String>()
+    private fun candTypeOf(sdp: String): String {
+        val m = Regex("typ (\\w+)").find(sdp)
+        return m?.groupValues?.get(1) ?: "?"
+    }
 
     private var factory: PeerConnectionFactory? = null
     private var peerConnection: PeerConnection? = null
@@ -140,6 +146,8 @@ class AmbientListenActivity : AppCompatActivity() {
         localCandCount = 0
         remoteCandCount = 0
         gotAnswer = false
+        localCandTypes.clear()
+        remoteCandTypes.clear()
         status.text = "⏳ Ulanmoqda..."
         startButton.isEnabled = false
         stopButton.isEnabled = true
@@ -210,6 +218,7 @@ class AmbientListenActivity : AppCompatActivity() {
                         try {
                             crashlytics.log("WebRTC parent ICE candidate generated")
                             localCandCount++
+                            localCandTypes.add(candTypeOf(candidate.sdp))
                             AmbientAudioRepository.sendParentIceCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
                         } catch (t: Throwable) { diag("on_ice_candidate_exception", t) }
                     }
@@ -314,6 +323,7 @@ class AmbientListenActivity : AppCompatActivity() {
                                 if (appliedChildCandidates.add(candidate)) {
                                     crashlytics.log("WebRTC child ICE candidate received")
                                     remoteCandCount++
+                                    remoteCandTypes.add(candTypeOf(candidate))
                                     peerConnection?.addIceCandidate(IceCandidate(mid, index, candidate))
                                 }
                             } catch (t: Throwable) { diag("add_child_ice_exception", t) }
@@ -338,7 +348,7 @@ class AmbientListenActivity : AppCompatActivity() {
     private fun fail(message: String?) {
         crashlytics.setCustomKey("webrtc_failure_message", message ?: "Ulanmadi")
         crashlytics.log("WebRTC failure: ${message ?: "Ulanmadi"}")
-        val diagSuffix = " [men:$localCandCount bola:$remoteCandCount javob:${if (gotAnswer) "bor" else "yo'q"}]"
+        val diagSuffix = " [men:$localCandCount(${localCandTypes.joinToString(",")}) bola:$remoteCandCount(${remoteCandTypes.joinToString(",")}) javob:${if (gotAnswer) "bor" else "yo'q"}]"
         val text = "❌ ${message ?: "Ulanmadi"}$diagSuffix"
         resetUi(text)
     }
