@@ -31,7 +31,7 @@ object ScreenshotRepository {
         child.collection("screenshot_requests").document("current").set(mapOf("requestId" to requestId, "status" to "requested", "requestedByUid" to uid, "createdAt" to now, "updatedAt" to now, "message" to ""))
             .addOnSuccessListener { onResult(true, requestId) }.addOnFailureListener { e -> onResult(false, e.message ?: "So'rov yuborilmadi") }
     }
-    fun listenScreenshotRequestStatus(onChange: (requestId: String, status: String) -> Unit): ListenerRegistration? = childDoc()?.collection("screenshot_requests")?.document("current")?.addSnapshotListener { snap, error -> if (error == null && snap?.exists() == true) { val id = snap.getString("requestId"); if (id != null) onChange(id, snap.getString("status") ?: "") } }
+    fun listenScreenshotRequestStatus(onChange: (requestId: String, status: String, message: String) -> Unit): ListenerRegistration? = childDoc()?.collection("screenshot_requests")?.document("current")?.addSnapshotListener { snap, error -> if (error == null && snap?.exists() == true) { val id = snap.getString("requestId"); if (id != null) onChange(id, snap.getString("status") ?: "", snap.getString("message") ?: "") } }
     fun failStaleScreenshotRequest() {
         val child = childDoc() ?: return; val ref = child.collection("screenshot_requests").document("current")
         ref.get().addOnSuccessListener { snap ->

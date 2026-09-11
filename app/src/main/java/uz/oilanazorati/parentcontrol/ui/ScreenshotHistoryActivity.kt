@@ -59,8 +59,8 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
         loadHistory()
         ScreenshotRepository.failStaleScreenshotRequest()
         staleRequestHandler.post(staleRequestWatchdog)
-        statusListener = ScreenshotRepository.listenScreenshotRequestStatus { requestId, status ->
-            runOnUiThread { handleRequestStatus(requestId, status) }
+        statusListener = ScreenshotRepository.listenScreenshotRequestStatus { requestId, status, message ->
+            runOnUiThread { handleRequestStatus(requestId, status, message) }
         }
         projectionStatusListener = ScreenshotRepository.listenProjectionStatus { active, updatedAt ->
             runOnUiThread { handleProjectionStatus(active, updatedAt) }
@@ -242,13 +242,13 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
         }
     }
 
-    private fun handleRequestStatus(requestId: String, status: String) {
+    private fun handleRequestStatus(requestId: String, status: String, message: String) {
         if (activeRequestId != null && requestId != activeRequestId) return
         when (status) {
             "requested" -> { activeRequestId = requestId; requestButton.isEnabled = false; requestButton.text = "Screenshot kutilmoqda..."; statusText.text = "So'rov yuborildi." }
             "processing" -> { activeRequestId = requestId; requestButton.isEnabled = false; requestButton.text = "Screenshot olinmoqda..."; statusText.text = "Bola qurilmasi screenshotni tayyorlamoqda..." }
             "completed" -> { activeRequestId = null; requestButton.isEnabled = true; requestButton.text = "Hozir screenshot olish"; statusText.text = "Screenshot tayyor. Tarix yangilandi."; loadHistory() }
-            "failed" -> { activeRequestId = null; requestButton.isEnabled = true; requestButton.text = "Hozir screenshot olish"; statusText.text = "Screenshot olish o'z vaqtida yakunlanmadi. Bola qurilmasida ekran ruxsati va internetni tekshiring."; loadHistory() }
+            "failed" -> { activeRequestId = null; requestButton.isEnabled = true; requestButton.text = "Hozir screenshot olish"; statusText.text = message.ifBlank { "Screenshot olish o'z vaqtida yakunlanmadi. Bola qurilmasida ekran ruxsati va internetni tekshiring." }; loadHistory() }
         }
     }
 

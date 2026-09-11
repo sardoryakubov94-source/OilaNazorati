@@ -38,6 +38,7 @@ class WebRtcAmbientAudioService : Service() {
     private var requestId: String? = null
     private var lastOffer: String? = null
     private val appliedParentCandidates = HashSet<String>()
+    private var micBusy = false
     private val idleHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val idleStopRunnable = Runnable { stopSelf() }
     private val IDLE_STOP_DELAY_MS = 30_000L
@@ -96,12 +97,21 @@ class WebRtcAmbientAudioService : Service() {
         stopPeerOnly()
         lastOffer = offer
         running.set(true)
+        micBusy = false
         appliedParentCandidates.clear()
         updateActiveNotification()
         updateRequest(requestRef, id, "active")
         try {
             PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(applicationContext).createInitializationOptions())
-            audioDeviceModule = JavaAudioDeviceModule.builder(applicationContext).setUseHardwareAcousticEchoCanceler(false).setUseHardwareNoiseSuppressor(false).createAudioDeviceModule()
+            audioDeviceModule = JavaAudioDeviceModule.builder(applicationContext)
+                .setUseHardwareAcousticEchoCanceler(false)
+                .setUseHardwareNoiseSuppressor(false)
+                .setAudioRecordErrorCallback(object : JavaAudioDeviceModule.AudioRecordErrorCallback {
+                    override fun onWebRtcAudioRecordInitError(errorMessage: String?) { micBusy = true }
+                    override fun onWebRtcAudioRecordStartError(errorCode: JavaAudioDeviceModule.AudioRecordStartErrorCode?, errorMessage: String?) { micBusy = true }
+                    override fun onWebRtcAudioRecordError(errorMessage: String?) { micBusy = true }
+                })
+                .createAudioDeviceModule()
             factory = PeerConnectionFactory.builder().setAudioDeviceModule(audioDeviceModule).createPeerConnectionFactory()
             val iceServers = listOf(
                 PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
@@ -184,7 +194,8 @@ class WebRtcAmbientAudioService : Service() {
     }
 
     private fun fail(ref: com.google.firebase.firestore.DocumentReference, id: String, error: String?) {
-        if (running.get()) updateRequest(ref, id, "failed", error ?: "WebRTC xatosi")
+        val message = if (micBusy) "Bola telefonining mikrofoni band (boshqa qo'ng'iroq yoki ilova ishlatmoqda)" else (error ?: "WebRTC xatosi")
+        if (running.get()) updateRequest(ref, id, "failed", message)
         running.set(false)
         stopPeerOnly()
         restoreIdleNotification()
