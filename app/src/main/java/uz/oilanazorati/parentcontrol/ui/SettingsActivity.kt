@@ -40,6 +40,37 @@ class SettingsActivity : AppCompatActivity() {
             findViewById<android.view.View>(R.id.adminSection).visibility = android.view.View.VISIBLE
             findViewById<android.view.View>(R.id.rowAdminPanel).setOnClickListener { startActivity(Intent(this, AdminPanelActivity::class.java)) }
         }
+
+        findViewById<android.view.View>(R.id.rowSignOut).setOnClickListener { confirmSignOut() }
+    }
+
+    private fun confirmSignOut() {
+        AlertDialog.Builder(this)
+            .setTitle("Hisobdan chiqish")
+            .setMessage("Joriy Google hisobidan chiqasiz. Keyingi safar kirganda istalgan Gmail hisobini tanlashingiz mumkin bo'ladi.")
+            .setPositiveButton("Chiqish") { _, _ -> performSignOut() }
+            .setNegativeButton("Bekor qilish", null)
+            .show()
+    }
+
+    private fun performSignOut() {
+        val gso = com.google.android.gms.auth.api.signin.GoogleSignInOptions
+            .Builder(com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id))
+            .requestEmail()
+            .build()
+        val googleClient = com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(this, gso)
+        com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+        googleClient.signOut().addOnCompleteListener {
+            getSharedPreferences(prefsName, Context.MODE_PRIVATE).edit()
+                .remove("family_code").remove("child_id").remove(familyCodesKey).apply()
+            FirebaseRepo.familyCode = null
+            FirebaseRepo.childId = null
+            val intent = Intent(this, MainActivity::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            startActivity(intent)
+            finish()
+        }
     }
 
     private fun getFamilyCodes(): MutableList<String> {

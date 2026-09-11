@@ -24,6 +24,14 @@ android {
         // (ru covers devices set to Russian, common in this market) drops
         // that dead weight with no visible effect on any feature.
         resourceConfigurations += ['en', 'ru']
+        ndk {
+            // Real Android phones are essentially all arm64-v8a or armeabi-v7a.
+            // x86/x86_64 only matter for PC emulators, not actual devices this
+            // app runs on. Dropping them removes duplicate native-library
+            // copies (WebRTC's .so is ~45MB across all 4 architectures) with
+            // no effect on any real user's phone.
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
     }
 
     // Release signing is supplied locally/through CI environment variables.
