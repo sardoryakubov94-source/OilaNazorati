@@ -55,6 +55,29 @@ object FirebaseRepo {
     }
 
     /**
+     * Google bilan birinchi marta kirgan ota-ona uchun chaqiriladi.
+     * Agar bu hisobga tegishli oila kodi Firestore'da allaqachon
+     * mavjud bo'lsa — o'shani qaytaradi (birinchisini, eng eski).
+     * Agar umuman yo'q bo'lsa — avtomatik yangi kod yaratadi.
+     * Shu orqali yangi foydalanuvchi bo'sh, kodsiz panelga tushib
+     * qolmaydi — har bir Gmail hisobiga kamida 1 ta bepul kod kafolatlanadi.
+     */
+    fun findOrCreateFamilyForCurrentUser(onResult: (String?) -> Unit) {
+        val uid = auth.currentUser?.uid ?: return onResult(null)
+        db.collection("families").whereEqualTo("ownerUid", uid).get()
+            .addOnSuccessListener { snap ->
+                val existing = snap.documents.firstOrNull()?.id
+                if (existing != null) {
+                    onResult(existing)
+                } else {
+                    val code = (1..6).map { "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".random() }.joinToString("")
+                    createFamily(code) { ok, _ -> onResult(if (ok) code else null) }
+                }
+            }
+            .addOnFailureListener { onResult(null) }
+    }
+
+    /**
      * familyCode/childId hali o'rnatilmagan bo'lsa (masalan, jarayon
      * qayta boshlangan-u, App.restoreSavedPairing hali ulgurmagan yoki
      * qurilma umuman ulanmagan bo'lsa) — bu yerda crash bo'lish o'rniga

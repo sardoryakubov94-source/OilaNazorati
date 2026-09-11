@@ -183,7 +183,21 @@ class MainActivity : AppCompatActivity() {
                     PendingDestination.SUPPORT -> SupportActivity::class.java
                     PendingDestination.PARENT_DASHBOARD -> ParentDashboardActivity::class.java
                 }
-                startActivity(Intent(this, destination))
+                if (pendingDestination == PendingDestination.PARENT_DASHBOARD && FirebaseRepo.familyCode.isNullOrBlank()) {
+                    binding.loginStatusText.text = "Oila kodi tayyorlanmoqda..."
+                    FirebaseRepo.findOrCreateFamilyForCurrentUser { code ->
+                        if (code != null) {
+                            FirebaseRepo.familyCode = code
+                            getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
+                                .putString("family_code", code).apply()
+                            startActivity(Intent(this, destination))
+                        } else {
+                            binding.loginStatusText.text = "Oila kodini tayyorlashda xato, qayta urinib ko'ring"
+                        }
+                    }
+                } else {
+                    startActivity(Intent(this, destination))
+                }
             }
             .addOnFailureListener {
                 binding.loginStatusText.text = "Kirishda xato yuz berdi, qayta urinib ko'ring"
