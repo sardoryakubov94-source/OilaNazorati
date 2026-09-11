@@ -182,7 +182,6 @@ class MonitorForegroundService : Service() {
         handler.postDelayed(object : Runnable {
             override fun run() {
                 requestLocationOnce()
-                SimInfoSync.syncNow(applicationContext)
                 handler.postDelayed(this, LOCATION_INTERVAL_MS)
             }
         }, LOCATION_INTERVAL_MS)
