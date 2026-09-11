@@ -16,6 +16,14 @@ android {
         versionCode 2
         versionName "1.0.1"
         buildConfigField "String", "BUILD_TAG", "\"${new Date().format('MM-dd HH:mm')}\""
+        // App UI itself has no i18n system (all strings are hardcoded Uzbek in
+        // code/layouts — no values-XX folders of our own). Everything else
+        // shipped for ~60 other languages comes from bundled dependencies
+        // (Play Services, Firebase, AndroidX, Material, WebRTC) and is never
+        // shown, since the app never switches locale. Keeping only en/ru
+        // (ru covers devices set to Russian, common in this market) drops
+        // that dead weight with no visible effect on any feature.
+        resourceConfigurations += ['en', 'ru']
     }
 
     // Release signing is supplied locally/through CI environment variables.
