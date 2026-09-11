@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 980" role="img" aria-label="Google Play himoyasi oynasi: Tekshiruvsiz o‘rnatish tugmasi">
+<rect width="720" height="980" rx="28" fill="#f2f3f7"/>
+<rect x="35" y="18" width="650" height="944" rx="45" fill="white" stroke="#d9dce3" stroke-width="2"/>
+<text x="360" y="92" text-anchor="middle" font-family="Arial,sans-serif" font-size="28" fill="#4b5563">◈ Google Play Защита</text>
+<text x="360" y="170" text-anchor="middle" font-family="Arial,sans-serif" font-size="32" fill="#111827">Рекомендуется</text>
+<text x="360" y="210" text-anchor="middle" font-family="Arial,sans-serif" font-size="32" fill="#111827">проверка приложения</text>
+<rect x="78" y="260" width="564" height="104" rx="52" fill="#eef2f8"/>
+<circle cx="132" cy="312" r="28" fill="#67c6e8"/><path d="M112 300h40v24h-40z" fill="#f4c542"/><text x="190" y="325" font-family="Arial,sans-serif" font-size="27" fill="#374151">Google servis</text>
+<text x="360" y="430" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#374151">Play Защита никогда не</text>
+<text x="360" y="466" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#374151">проверяла это приложение.</text>
+<text x="360" y="520" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" fill="#4b5563">Отправьте его в Google для</text>
+<text x="360" y="554" text-anchor="middle" font-family="Arial,sans-serif" font-size="22" fill="#4b5563">сканирования на угрозы.</text>
+<rect x="82" y="700" width="556" height="100" rx="50" fill="white" stroke="#f59e0b" stroke-width="12"/>
+<text x="360" y="760" text-anchor="middle" font-family="Arial,sans-serif" font-size="25" font-weight="700" fill="#111827">Установить без проверки</text>
+<rect x="82" y="825" width="556" height="75" rx="12" fill="#dbeafe"/><text x="360" y="872" text-anchor="middle" font-family="Arial,sans-serif" font-size="24" fill="#1f2937">Проверить</text>
+</svg>
