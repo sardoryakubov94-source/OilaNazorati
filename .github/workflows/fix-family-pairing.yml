@@ -1,0 +1,169 @@
+name: Repair Family Pairing
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch family pairing safely
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          repo = Path('.')
+          firebase = repo / 'app/src/main/java/uz/oilanazorati/parentcontrol/repo/FirebaseRepo.kt'
+          child = repo / 'app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt'
+
+          f = firebase.read_text()
+          marker = '''    fun fetchChildren(code: String, onResult: (List<Pair<String, String>>) -> Unit) {'''
+          join = '''    /**
+     * Bola qurilmasini oila kodiga haqiqiy Firestore yozuvi bilan ulaydi.
+     * Muvaffaqiyat faqat children/{uid} hujjati serverga yozilgandan keyin qaytariladi.
+     */
+    fun joinFamily(code: String, childName: String, onResult: (Boolean, String?) -> Unit) {
+        val uid = auth.currentUser?.uid
+        if (uid.isNullOrBlank()) {
+            onResult(false, "Firebase foydalanuvchisi yaratilmadi")
+            return
+        }
+
+        val normalized = code.trim().uppercase()
+        if (normalized.length != 6) {
+            onResult(false, "Oila kodi 6 belgidan iborat bo'lishi kerak")
+            return
+        }
+
+        val family = db.collection("families").document(normalized)
+        family.get()
+            .addOnSuccessListener { familySnapshot ->
+                if (!familySnapshot.exists()) {
+                    onResult(false, "Bunday oila kodi mavjud emas")
+                    return@addOnSuccessListener
+                }
+
+                family.collection("children").document(uid)
+                    .set(
+                        mapOf(
+                            "nomi" to childName,
+                            "childUid" to uid,
+                            "yaratilganMs" to System.currentTimeMillis()
+                        ),
+                        SetOptions.merge()
+                    )
+                    .addOnSuccessListener {
+                        familyCode = normalized
+                        childId = uid
+                        onResult(true, null)
+                    }
+                    .addOnFailureListener { e ->
+                        onResult(false, e.message ?: "Farzandni oila kodiga ulashda xato")
+                    }
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Oila kodini tekshirishda xato")
+            }
+    }
+
+'''
+          if 'fun joinFamily(code: String' not in f:
+              if marker not in f:
+                  raise SystemExit('FirebaseRepo.kt: fetchChildren marker topilmadi')
+              f = f.replace(marker, join + marker, 1)
+              firebase.write_text(f)
+              print('FirebaseRepo.kt patched')
+          else:
+              print('FirebaseRepo.kt already patched')
+
+          c = child.read_text()
+          start = c.find('    private fun pairWithFamilyCode() {')
+          end = c.find('    private fun restoreSavedPairingIntoUi() {', start)
+          if start < 0 or end < 0:
+              raise SystemExit('ChildSetupActivity.kt: pairing method boundaries topilmadi')
+
+          replacement = '''    private fun pairWithFamilyCode() {
+        val code = binding.inputFamilyCode.text?.toString()?.trim()?.uppercase()
+        if (code.isNullOrBlank() || code.length != 6) {
+            binding.inputFamilyCode.error = "6 xonali kodni kiriting (ota-ona ekranidan oling)"
+            return
+        }
+
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser != null && currentUser.isAnonymous) {
+            finishPairing(code, currentUser.uid)
+        } else {
+            binding.pairStatusText.text = "Ulanish tekshirilmoqda..."
+            FirebaseAuth.getInstance().signInAnonymously()
+                .addOnSuccessListener { result ->
+                    val uid = result.user?.uid
+                    if (uid.isNullOrBlank()) {
+                        binding.pairStatusText.text = "❌ Firebase foydalanuvchisi yaratilmadi"
+                    } else {
+                        finishPairing(code, uid)
+                    }
+                }
+                .addOnFailureListener { e ->
+                    binding.pairStatusText.text = "❌ Ulanishda xato: ${e.message ?: "qayta urinib ko'ring"}"
+                }
+        }
+    }
+
+    private fun finishPairing(code: String, uid: String) {
+        FirebaseRepo.familyCode = code
+        FirebaseRepo.childId = uid
+        val childName = binding.inputChildName.text?.toString()?.trim().orEmpty()
+        binding.pairStatusText.text = "Oila kodi tekshirilmoqda..."
+
+        FirebaseRepo.joinFamily(code, childName) { ok, error ->
+            runOnUiThread {
+                if (ok) {
+                    getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
+                        .putString("family_code", code)
+                        .putString("child_id", uid)
+                        .putString("child_name", childName)
+                        .apply()
+                    SimInfoSync.syncNow(this)
+                    binding.pairStatusText.text = "✅ Ulandi: $code" +
+                        if (childName.isNotBlank()) " ($childName sifatida)" else ""
+                } else {
+                    binding.pairStatusText.text = "❌ Ulanmadi: ${error ?: "noma'lum xato"}"
+                }
+            }
+        }
+    }
+
+'''
+          c = c[:start] + replacement + c[end:]
+          child.write_text(c)
+          print('ChildSetupActivity.kt patched')
+          PY
+
+      - name: Verify patch
+        run: |
+          grep -q 'fun joinFamily(code: String' app/src/main/java/uz/oilanazorati/parentcontrol/repo/FirebaseRepo.kt
+          grep -q 'FirebaseRepo.joinFamily(code, childName)' app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
+          grep -q '❌ Ulanmadi:' app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
+          echo 'Family pairing patch verified.'
+
+      - name: Commit repaired code
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo 'No changes needed.'
+            exit 0
+          fi
+          git add app/src/main/java/uz/oilanazorati/parentcontrol/repo/FirebaseRepo.kt app/src/main/java/uz/oilanazorati/parentcontrol/ui/ChildSetupActivity.kt
+          git commit -m "fix: make family code pairing await Firestore success"
+          git push origin HEAD:main
