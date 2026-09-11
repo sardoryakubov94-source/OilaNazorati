@@ -69,6 +69,26 @@ object FirebaseRepo {
             .collection(sub)
     }
 
+    private fun childDocument(): com.google.firebase.firestore.DocumentReference? {
+        val code = familyCode ?: return null
+        val cid = childId ?: return null
+        return db.collection("families").document(code).collection("children").document(cid)
+    }
+
+    /** SimInfoSync tomonidan yozilgan SIM/telefon raqami ma'lumotini
+     * jonli (real-time) tinglaydi — farzand qurilmasida SIM almashsa
+     * yoki birinchi marta aniqlansa, ota-ona ekrani darhol yangilanadi. */
+    fun listenSimInfo(onChange: (count: Int, cards: List<Map<String, Any?>>) -> Unit): com.google.firebase.firestore.ListenerRegistration? {
+        val doc = childDocument() ?: run { onChange(0, emptyList()); return null }
+        return doc.addSnapshotListener { snap, _ ->
+            val data = snap?.data
+            val count = (data?.get("simCount") as? Long)?.toInt() ?: 0
+            @Suppress("UNCHECKED_CAST")
+            val cards = (data?.get("simCards") as? List<Map<String, Any?>>) ?: emptyList()
+            onChange(count, cards)
+        }
+    }
+
     fun logCall(event: CallEvent) {
         childCollection("calls")?.add(event)
     }

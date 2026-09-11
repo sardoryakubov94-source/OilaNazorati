@@ -26,6 +26,8 @@ class ParentDashboardActivity : AppCompatActivity() {
     private val smsAdapter = SmsHistoryAdapter()
     private val contactSummaryAdapter = ContactSummaryAdapter()
     private var isPremiumUser = false
+    private var simInfoListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private lateinit var simCardText: TextView
     private val timeFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
     private var lastBackPressMs = 0L
     private val doubleBackWindowMs = 2000L
@@ -35,7 +37,7 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding = uz.oilanazorati.parentcontrol.databinding.ActivityParentDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
         if (!ensureAuth()) return
-        setupLists(); setupHeader(); setupBottomNav(); setupSectionButtons(); installAmbientAudioCard()
+        setupLists(); setupHeader(); setupBottomNav(); setupSectionButtons(); installAmbientAudioCard(); installSimInfoCard()
         FirebaseRepo.checkIsPremium { isPremium ->
             isPremiumUser = isPremium
             contactSummaryAdapter.setPremium(isPremium)
@@ -129,6 +131,61 @@ class ParentDashboardActivity : AppCompatActivity() {
         content.addView(card, if (premiumIndex >= 0) premiumIndex + 1 else 1)
     }
 
+    private fun installSimInfoCard() {
+        val scroll = binding.root.getChildAt(0) as? android.widget.ScrollView ?: return
+        val content = scroll.getChildAt(0) as? LinearLayout ?: return
+        if (content.findViewWithTag<View>("sim_info_card") != null) return
+
+        val density = resources.displayMetrics.density
+        val card = LinearLayout(this).apply {
+            tag = "sim_info_card"
+            orientation = LinearLayout.VERTICAL
+            setPadding(18, 16, 18, 16)
+            background = GradientDrawable().apply {
+                cornerRadius = 22f
+                setColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_surface))
+            }
+            elevation = 3f
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
+                topMargin = (4 * density).toInt()
+                bottomMargin = (12 * density).toInt()
+            }
+        }
+        val title = TextView(this).apply {
+            text = "📱 SIM / telefon raqamlari"
+            textSize = 15f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_text_primary))
+        }
+        simCardText = TextView(this).apply {
+            text = "Raqam aniqlanmadi. Farzand telefonidan SIM ma'lumoti kutilmoqda."
+            textSize = 12f
+            setPadding(0, 6, 0, 0)
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
+        }
+        card.addView(title); card.addView(simCardText)
+        val ambientCard = content.findViewWithTag<View>("ambient_audio_card")
+        val idx = content.indexOfChild(ambientCard)
+        content.addView(card, if (idx >= 0) idx + 1 else content.childCount)
+    }
+
+    private fun refreshSimInfo() {
+        simInfoListener?.remove()
+        simInfoListener = FirebaseRepo.listenSimInfo { count, cards ->
+            if (!::simCardText.isInitialized) return@listenSimInfo
+            if (count == 0 || cards.isEmpty()) {
+                simCardText.text = "Raqam aniqlanmadi. Farzand telefonidan SIM ma'lumoti kutilmoqda."
+                return@listenSimInfo
+            }
+            simCardText.text = cards.joinToString("\n") { sim ->
+                val number = (sim["phoneNumber"] as? String)?.trim().orEmpty().ifBlank { "Aniqlanmadi" }
+                val operator = (sim["operator"] as? String) ?: "Noma'lum operator"
+                val slotRaw = (sim["slot"] as? Long)?.toInt() ?: 0
+                "SIM ${slotRaw + 1}: $number ($operator)"
+            }
+        }
+    }
+
     private fun openIfChildSelected(activityClass: () -> Class<*>) {
         if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) { Toast.makeText(this, "Avval oila kodini yuklab, farzandni tanlang", Toast.LENGTH_SHORT).show(); return }
         startActivity(Intent(this, activityClass()))
@@ -203,6 +260,7 @@ class ParentDashboardActivity : AppCompatActivity() {
     }
 
     private fun loadTodayStats() {
+        refreshSimInfo()
         val cal = Calendar.getInstance(); cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
         val dayStart = cal.timeInMillis; val dayEnd = dayStart + 24 * 60 * 60 * 1000
         FirebaseRepo.listenSavedContacts { contacts -> val names = contacts.associate { it.kontaktHash to it.nomi }; contactSummaryAdapter.setNames(names); smsAdapter.setNames(names) }
@@ -223,6 +281,11 @@ class ParentDashboardActivity : AppCompatActivity() {
             binding.locationTimeAgo.text = "$time • $minutesAgo daqiqa oldin"; binding.locationCoords.text = "${"%.5f".format(Locale.US, loc.lat)}, ${"%.5f".format(Locale.US, loc.lng)}"; binding.headerStatus.text = if (minutesAgo <= 45) "● FAOL" else "● NOFAOL"
             binding.headerStatus.setTextColor(Color.parseColor(if (minutesAgo <= 45) "#2ECC71" else "#8B96A5"))
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        simInfoListener?.remove()
     }
 
     @Suppress("DEPRECATION")
