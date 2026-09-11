@@ -26,6 +26,7 @@ class ChildSetupActivity : AppCompatActivity() {
     private val runtimePermissions = arrayOf(android.Manifest.permission.READ_PHONE_STATE, android.Manifest.permission.READ_PHONE_NUMBERS, android.Manifest.permission.READ_CALL_LOG, android.Manifest.permission.RECEIVE_SMS, android.Manifest.permission.READ_SMS, android.Manifest.permission.SEND_SMS, android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.POST_NOTIFICATIONS)
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result -> if (result.values.all { it }) { SimInfoSync.syncNow(this); requestBackgroundLocationIfNeeded() } else showExplanationDialog(); updatePermissionStatusUi() }
     private val microphonePermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> updatePermissionStatusUi(); binding.pairStatusText.text = if (granted) "✅ Mikrofon ruxsati berildi" else "Mikrofon ruxsati berilmadi" }
+    private val phoneInfoPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result -> updateRoleStatusUi(); if (result.values.all { it }) SimInfoSync.syncNow(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,6 +39,7 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnAccessibilityScreenshot.setOnClickListener { openAccessibilitySettings() }
         binding.btnDefaultPhone.setOnClickListener { requestDefaultPhoneRole() }
         binding.btnDefaultSms.setOnClickListener { requestDefaultSmsRole() }
+        binding.btnPhoneInfoPermission.setOnClickListener { requestPhoneInfoPermission() }
         binding.btnNotificationAccess.setOnClickListener { requestNotificationAccess() }
         binding.btnBatteryOptimization.setOnClickListener { requestIgnoreBatteryOptimization() }
         binding.btnSyncContacts.setOnClickListener { syncContactsNow() }
@@ -91,6 +93,12 @@ class ChildSetupActivity : AppCompatActivity() {
         microphonePermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
     }
 
+    private fun requestPhoneInfoPermission() {
+        val granted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_PHONE_STATE) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (granted) { openAppSettings(); return }
+        phoneInfoPermissionLauncher.launch(arrayOf(android.Manifest.permission.READ_PHONE_STATE, android.Manifest.permission.READ_PHONE_NUMBERS))
+    }
+
     private fun requestUsageAccess() {
         val appOps = getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
         val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) appOps.unsafeCheckOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName) else @Suppress("DEPRECATION") appOps.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName)
@@ -127,8 +135,6 @@ class ChildSetupActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume(); updateRoleStatusUi(); updatePermissionStatusUi(); updateDeviceAdminStatusUi()
         val pm = getSystemService(android.os.PowerManager::class.java); binding.btnBatteryOptimization.text = if (pm.isIgnoringBatteryOptimizations(packageName)) "✅ Batareya tejashdan chiqarilgan — o'chirish" else "🔋 Batareya tejashdan chiqarish (muhim!)"
-        val phoneGranted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_PHONE_STATE) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        if (phoneGranted && FirebaseRepo.familyCode != null && FirebaseRepo.childId != null) SimInfoSync.syncNow(this)
     }
 
     private fun pairWithFamilyCode() { val code = binding.inputFamilyCode.text?.toString()?.trim()?.uppercase(); if (code.isNullOrBlank() || code.length != 6) { binding.inputFamilyCode.error = "6 xonali kodni kiriting (ota-ona ekranidan oling)"; return }; val currentUser = FirebaseAuth.getInstance().currentUser; if (currentUser != null && currentUser.isAnonymous) finishPairing(code, currentUser.uid) else FirebaseAuth.getInstance().signInAnonymously().addOnSuccessListener { result -> result.user?.uid?.let { finishPairing(code, it) } }.addOnFailureListener { binding.pairStatusText.text = "Ulanishda xato yuz berdi, qayta urinib ko'ring" } }
@@ -136,7 +142,7 @@ class ChildSetupActivity : AppCompatActivity() {
     private fun requestDefaultPhoneRole() { val granted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CALL_LOG) == android.content.pm.PackageManager.PERMISSION_GRANTED; if (!granted) ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.READ_CALL_LOG), 1004) else openAppSettings() }
     private fun requestDefaultSmsRole() { val granted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED; if (!granted) ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.RECEIVE_SMS, android.Manifest.permission.READ_SMS), 1003) else openAppSettings() }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) { super.onRequestPermissionsResult(requestCode, permissions, grantResults); updateRoleStatusUi(); if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_PHONE_STATE) == android.content.pm.PackageManager.PERMISSION_GRANTED) SimInfoSync.syncNow(this) }
-    private fun updateRoleStatusUi() { val hasPhone = ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CALL_LOG) == android.content.pm.PackageManager.PERMISSION_GRANTED; binding.btnDefaultPhone.text = if (hasPhone) "✅ Qo'ng'iroq kuzatuvi yoqilgan — o'chirish" else "Qo'ng'iroq kuzatuvini yoqish"; val hasSms = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED; binding.btnDefaultSms.text = if (hasSms) "✅ SMS kuzatuvi yoqilgan — o'chirish" else "SMS kuzatuvini yoqish"; binding.btnNotificationAccess.text = if (isNotificationAccessGranted()) "✅ Bildirishnoma kuzatuvi yoqilgan — o'chirish" else "Ijtimoiy tarmoq bildirishnomalarini yoqish" }
+    private fun updateRoleStatusUi() { val hasPhone = ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CALL_LOG) == android.content.pm.PackageManager.PERMISSION_GRANTED; binding.btnDefaultPhone.text = if (hasPhone) "✅ Qo'ng'iroq kuzatuvi yoqilgan — o'chirish" else "Qo'ng'iroq kuzatuvini yoqish"; val hasSms = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED; binding.btnDefaultSms.text = if (hasSms) "✅ SMS kuzatuvi yoqilgan — o'chirish" else "SMS kuzatuvini yoqish"; binding.btnNotificationAccess.text = if (isNotificationAccessGranted()) "✅ Bildirishnoma kuzatuvi yoqilgan — o'chirish" else "Ijtimoiy tarmoq bildirishnomalarini yoqish"; val phoneInfoGranted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_PHONE_STATE) == android.content.pm.PackageManager.PERMISSION_GRANTED; binding.btnPhoneInfoPermission.text = if (phoneInfoGranted) "✅ SIM/telefon raqami ruxsati berilgan — o'chirish" else "📱 SIM/telefon raqami ruxsatini berish"; if (phoneInfoGranted && FirebaseRepo.familyCode != null && FirebaseRepo.childId != null) SimInfoSync.syncNow(this) }
     private fun requestNotificationAccess() { if (isNotificationAccessGranted()) { startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); return }; AlertDialog.Builder(this).setTitle("Bildirishnoma kirishi").setMessage("Keyingi ekranda \"Oila Nazorati\"ni toping va yoqing.").setPositiveButton("Davom etish") { _, _ -> startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }.show() }
     private fun isNotificationAccessGranted(): Boolean { val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: return false; return enabledListeners.contains(packageName) }
     private fun requestIgnoreBatteryOptimization() { val pm = getSystemService(android.os.PowerManager::class.java); val pkg = packageName; if (pm.isIgnoringBatteryOptimizations(pkg)) { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)); return }; AlertDialog.Builder(this).setTitle("Batareya tejashdan chiqarish").setMessage("Keyingi sozlama ekranida bu ilovani cheklangan yoki cheklanmagan holatga o'zgartirishingiz mumkin.").setPositiveButton("Sozlamaga o'tish") { _, _ -> try { startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply { data = Uri.parse("package:$pkg") }) } catch (_: Exception) { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) } }.show() }
