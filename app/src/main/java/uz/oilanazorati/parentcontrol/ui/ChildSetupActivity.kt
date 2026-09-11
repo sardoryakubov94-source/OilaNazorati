@@ -8,6 +8,10 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
+import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -60,30 +64,70 @@ class ChildSetupActivity : AppCompatActivity() {
     }
 
     private fun openAccessibilitySettings() {
+        val density = resources.displayMetrics.density
+        val scroll = android.widget.ScrollView(this)
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding((20 * density).toInt(), (8 * density).toInt(), (20 * density).toInt(), 0)
+        }
+        val intro = TextView(this).apply {
+            text = "Skrinshot olish uchun quyidagi 3 qadamni bajaring. Rasmni kattalashtirib ko'rish uchun ustiga bosing:"
+            textSize = 14f
+            setPadding(0, 0, 0, (14 * density).toInt())
+        }
+        root.addView(intro)
+
+        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; weightSum = 3f }
+        val steps = listOf(
+            R.drawable.access_step1_installed_apps to "1. Accessibility → Installed apps",
+            R.drawable.access_step2_select_app to "2. Oila Nazorati'ni tanlang",
+            R.drawable.access_step3_toggle_on to "3. Yoqing (ON)"
+        )
+        steps.forEach { (resId, caption) ->
+            val col = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginEnd = (6 * density).toInt(); marginStart = (6 * density).toInt()
+                }
+            }
+            val img = ImageView(this).apply {
+                setImageResource(resId)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                adjustViewBounds = true
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (140 * density).toInt())
+                setOnClickListener { showFullScreenImage(resId) }
+            }
+            val cap = TextView(this).apply { text = caption; textSize = 10f; textAlignment = View.TEXT_ALIGNMENT_CENTER; setPadding(0, (4 * density).toInt(), 0, 0) }
+            col.addView(img); col.addView(cap)
+            row.addView(col)
+        }
+        root.addView(row)
+
+        val note = TextView(this).apply {
+            text = "\nEslatma: agar \"Oila Nazorati\" ro'yxatda xira (bosib bo'lmaydigan) ko'rinsa — ilova sahifasidagi ⋮ menyudan \"Cheklangan sozlamalarga ruxsat berish\"ni tanlang, so'ng shu ekranga qaytib qadamlarni takrorlang."
+            textSize = 12f
+            setTextColor(getColor(android.R.color.darker_gray))
+            setPadding(0, (16 * density).toInt(), 0, (8 * density).toInt())
+        }
+        root.addView(note)
+        scroll.addView(root)
+
         AlertDialog.Builder(this)
             .setTitle("♿ Ekran skrinshoti uchun Accessibility")
-            .setMessage("""
-                Accessibility ruxsati ekran skrinshotlarini olish uchun kerak.
-
-                Agar Accessibility bo'limida "Oila Nazorati" xira bo'lib, yoqilmasa, Android xavfsizlik sababli ilova uchun cheklangan sozlamalar hali ochilmagan bo'ladi.
-
-                1-qadam — ilova sozlamalarini oching
-                "Ilova sozlamalariga o'tish" tugmasini bosing. Ochilgan sahifada aynan "Oila Nazorati" ilovasi bo'ladi.
-
-                2-qadam — cheklangan imkoniyatlarni oching
-                Ilova sahifasining yuqori o'ng tomonidagi ⋮ uch nuqtani bosing va "Cheklangan sozlamalarga ruxsat berish"ni tanlang. Bu Accessibility xira bo'lib qolishining oldini oladi.
-
-                3-qadam — Accessibility'ga qayting
-                Orqaga qaytib Accessibility bo'limini oching. Endi "Oila Nazorati" xira bo'lmasligi kerak.
-
-                4-qadam — skrinshot ruxsatini yoqing
-                "Oila Nazorati" xizmatiga kiring va Accessibility ruxsatini yoqing.
-
-                Agar telefon uch nuqtani ko'rsatmasa, avval ilova sahifasida "Cheklangan sozlamalar" bilan bog'liq bandni qidiring. Android/telefon ishlab chiqaruvchisiga qarab nomi biroz farq qilishi mumkin.
-            """.trimIndent())
-            .setPositiveButton("📱 Ilova sozlamalariga o'tish") { _, _ -> openAppSettings() }
-            .setNeutralButton("♿ Accessibility'ni ochish") { _, _ -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
+            .setView(scroll)
+            .setPositiveButton("♿ Sozlamalarga o'tish") { _, _ -> startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
             .setNegativeButton("Yopish", null)
+            .show()
+    }
+
+    private fun showFullScreenImage(resId: Int) {
+        val img = ImageView(this).apply {
+            setImageResource(resId)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            setBackgroundColor(android.graphics.Color.BLACK)
+        }
+        AlertDialog.Builder(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+            .setView(img)
             .show()
     }
 
