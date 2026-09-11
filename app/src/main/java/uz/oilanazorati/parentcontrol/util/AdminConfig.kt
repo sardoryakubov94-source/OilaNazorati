@@ -3,20 +3,21 @@ package uz.oilanazorati.parentcontrol.util
 import com.google.firebase.auth.FirebaseAuth
 
 /**
- * Ilovaning yagona administratori. Faqat shu email bilan Google orqali
- * kirilganda admin panelga (Support xabarlari, Premium so'rovlari,
- * Kartalar) kirish imkoni ochiladi.
+ * Oila Nazorati administratorlari.
+ * Faqat ro'yxatdagi Google hisoblari bilan kirilganda admin panel ochiladi.
  *
- * MUHIM: bu shunchaki UI darajasidagi ko'rinish qoidasi — HAQIQIY
- * himoya Firestore qoidalarida (`isAdmin()` funksiyasi, `firestore.rules`
- * faylida) amalga oshirilgan. Bu yerdagi tekshiruv faqat admin
- * bo'lmagan foydalanuvchiga admin tugmasi/ekranini ko'rsatmaslik uchun.
+ * MUHIM: haqiqiy Firestore himoyasi `firestore.rules` ichidagi isAdmin()
+ * funksiyasi bilan ham tekshiriladi. Bu tekshiruv esa ilovada admin
+ * tugmasi/panelini ko'rsatish uchun ishlatiladi.
  */
 object AdminConfig {
-    const val ADMIN_EMAIL = "sardoryakubov94@gmail.com"
+    private val ADMIN_EMAILS = setOf(
+        "sardoryakubov94@gmail.com",
+        "marselovgayniddin4@gmail.com"
+    )
 
     fun isCurrentUserAdmin(): Boolean {
-        val user = FirebaseAuth.getInstance().currentUser ?: return false
-        return !user.isAnonymous && user.email == ADMIN_EMAIL
+        val email = FirebaseAuth.getInstance().currentUser?.email ?: return false
+        return email.trim().lowercase() in ADMIN_EMAILS
     }
 }
