@@ -162,20 +162,6 @@ object FirebaseRepo {
         childCollection("locations")?.add(event)
     }
 
-    fun saveChildProfile(name: String) {
-        val code = familyCode ?: return
-        val cid = childId ?: return
-        db.collection("families").document(code)
-            .collection("children").document(cid)
-            .set(
-                mapOf(
-                    "nomi" to name,
-                    "yaratilganMs" to System.currentTimeMillis()
-                ),
-                SetOptions.merge()
-            )
-    }
-
     fun fetchChildren(code: String, onResult: (List<Pair<String, String>>) -> Unit) {
         db.collection("families").document(code)
             .collection("children")
