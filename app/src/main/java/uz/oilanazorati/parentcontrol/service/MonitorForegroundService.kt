@@ -64,8 +64,14 @@ class MonitorForegroundService : Service() {
         private const val KEY_LAST_TIME_MS = "last_time_ms"
         const val LOCATION_INTERVAL_MS = 30 * 60 * 1000L
         const val LIVE_LOCATION_INTERVAL_MS = 8 * 1000L
-        const val USAGE_POLL_INTERVAL_MS = 2 * 60 * 1000L
-        const val CONTACTS_RESYNC_INTERVAL_MS = 6 * 60 * 60 * 1000L
+        // Ilova ishlatilishini kuzatish tarixi to'liq saqlanadi — faqat
+        // qanchalik tez-tez tekshirilishi kamaytirilgan (batareya tejash).
+        const val USAGE_POLL_INTERVAL_MS = 5 * 60 * 1000L
+        const val CONTACTS_RESYNC_INTERVAL_MS = 12 * 60 * 60 * 1000L
+        // Oddiy (jonli kuzatish bo'lmagan) joylashuv so'rovlari uchun: yaqinda
+        // olingan joylashuv keshi bo'lsa, GPS'ni qayta ishga tushirmay o'shani
+        // ishlatadi — quvvat ko'p sarflaydigan GPS so'rovlarini kamaytiradi.
+        private const val NORMAL_LOCATION_MAX_AGE_MS = 5 * 60 * 1000L
     }
 
     private var micRequestListener: com.google.firebase.firestore.ListenerRegistration? = null
@@ -84,7 +90,12 @@ class MonitorForegroundService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        SimInfoSync.syncNow(applicationContext)
+        // Har servis qayta ishga tushganda SIM/joylashuv/foydalanish ishini
+        // TAKRORLAMAYMIZ — SimInfoSync.start() (onCreate) allaqachon
+        // dastlabki sinxronlashni bajaradi va SIM o'zgarishini kuzatib
+        // turadi. Bu keraksiz Firestore yozuvlari va batareya sarfini
+        // oldini oladi (funksional o'zgarish yo'q — faqat takroriy chaqiruv
+        // olib tashlandi).
         return START_STICKY
     }
 
@@ -154,6 +165,7 @@ class MonitorForegroundService : Service() {
             if (untilMs > System.currentTimeMillis() && !liveTrackingLoopRunning) {
                 startLiveTrackingLoop()
             }
+            if (untilMs <= System.currentTimeMillis()) liveTrackingLoopRunning = false
         }
     }
 
@@ -165,7 +177,8 @@ class MonitorForegroundService : Service() {
                     liveTrackingLoopRunning = false
                     return
                 }
-                requestLocationOnce()
+                // Jonli kuzatish faqat ochiq turgan payt yuqori aniqlik ishlatadi.
+                requestLocationOnce(highAccuracy = true, maxAgeMs = 0L)
                 handler.postDelayed(this, LIVE_LOCATION_INTERVAL_MS)
             }
         })
@@ -181,12 +194,12 @@ class MonitorForegroundService : Service() {
 
         handler.postDelayed(object : Runnable {
             override fun run() {
-                requestLocationOnce()
+                requestLocationOnce(highAccuracy = false, maxAgeMs = NORMAL_LOCATION_MAX_AGE_MS)
                 handler.postDelayed(this, LOCATION_INTERVAL_MS)
             }
         }, LOCATION_INTERVAL_MS)
 
-        requestLocationOnce()
+        requestLocationOnce(highAccuracy = false, maxAgeMs = NORMAL_LOCATION_MAX_AGE_MS)
         pollAppUsage()
         syncContactsIfPermitted()
 
@@ -227,15 +240,16 @@ class MonitorForegroundService : Service() {
         smsSentObserver = observer
     }
 
-    private fun requestLocationOnce() {
+    private fun requestLocationOnce(highAccuracy: Boolean, maxAgeMs: Long) {
         if (!isLocationServiceEnabled()) {
             showEnableLocationPrompt()
             return
         }
         try {
+            val priority = if (highAccuracy) Priority.PRIORITY_HIGH_ACCURACY else Priority.PRIORITY_BALANCED_POWER_ACCURACY
             val request = CurrentLocationRequest.Builder()
-                .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
-                .setMaxUpdateAgeMillis(0)
+                .setPriority(priority)
+                .setMaxUpdateAgeMillis(maxAgeMs)
                 .build()
             fusedLocationClient.getCurrentLocation(request, null)
                 .addOnSuccessListener { loc: Location? ->

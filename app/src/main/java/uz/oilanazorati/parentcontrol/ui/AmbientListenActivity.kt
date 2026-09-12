@@ -52,6 +52,7 @@ class AmbientListenActivity : AppCompatActivity() {
     private val appliedChildCandidates = HashSet<String>()
 
     private lateinit var status: TextView
+    private lateinit var waveform: AudioWaveformView
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
 
@@ -104,9 +105,13 @@ class AmbientListenActivity : AppCompatActivity() {
                 topMargin = (16 * resources.displayMetrics.density).toInt()
             }
         }
+        waveform = AudioWaveformView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(-1, 0, 1f)
+        }
         root.addView(title)
         root.addView(buildTag)
         root.addView(status)
+        root.addView(waveform)
         root.addView(startButton)
         root.addView(stopButton)
         setContentView(root)
@@ -148,6 +153,7 @@ class AmbientListenActivity : AppCompatActivity() {
         gotAnswer = false
         localCandTypes.clear()
         remoteCandTypes.clear()
+        waveform.setActive(false)
         status.text = "⏳ Ulanmoqda..."
         startButton.isEnabled = false
         stopButton.isEnabled = true
@@ -209,7 +215,10 @@ class AmbientListenActivity : AppCompatActivity() {
                         runOnUiThread {
                             when (newState) {
                                 PeerConnection.IceConnectionState.CONNECTED,
-                                PeerConnection.IceConnectionState.COMPLETED -> status.text = "🔴 Jonli ovoz"
+                                PeerConnection.IceConnectionState.COMPLETED -> {
+                                    status.text = "🔴 Jonli ovoz"
+                                    waveform.setActive(true)
+                                }
                                 PeerConnection.IceConnectionState.FAILED -> fail("WebRTC tarmoq ulanishi muvaffaqiyatsiz")
                                 else -> Unit
                             }
@@ -232,7 +241,7 @@ class AmbientListenActivity : AppCompatActivity() {
                     override fun onRenegotiationNeeded() {}
                     override fun onAddTrack(receiver: RtpReceiver?, mediaStreams: Array<out org.webrtc.MediaStream>?) {
                         crashlytics.log("WebRTC remote audio track received via onAddTrack")
-                        runOnUiThread { status.text = "🔴 Jonli ovoz" }
+                        runOnUiThread { status.text = "🔴 Jonli ovoz"; waveform.setActive(true) }
                     }
                     override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {
                         crashlytics.setCustomKey("webrtc_connection_state", newState?.name ?: "null")
@@ -244,7 +253,7 @@ class AmbientListenActivity : AppCompatActivity() {
                     override fun onStandardizedIceConnectionChange(newState: PeerConnection.IceConnectionState?) {}
                     override fun onTrack(transceiver: RtpTransceiver?) {
                         crashlytics.log("WebRTC remote track received via onTrack")
-                        runOnUiThread { status.text = "🔴 Jonli ovoz" }
+                        runOnUiThread { status.text = "🔴 Jonli ovoz"; waveform.setActive(true) }
                     }
                 }
             )
@@ -314,7 +323,7 @@ class AmbientListenActivity : AppCompatActivity() {
                                     diag("set_remote_description")
                                     peerConnection?.setRemoteDescription(object : SdpObserver {
                                         override fun onCreateSuccess(desc: SessionDescription?) {}
-                                        override fun onSetSuccess() { runOnUiThread { status.text = "🔴 Jonli ovoz" } }
+                                        override fun onSetSuccess() { runOnUiThread { status.text = "🔴 Jonli ovoz"; waveform.setActive(true) } }
                                         override fun onCreateFailure(error: String?) { runOnUiThread { fail(error) } }
                                         override fun onSetFailure(error: String?) { runOnUiThread { fail(error) } }
                                     }, SessionDescription(SessionDescription.Type.ANSWER, answerSdp))
@@ -335,7 +344,10 @@ class AmbientListenActivity : AppCompatActivity() {
                             runOnUiThread {
                                 try {
                                     when (state) {
-                                        "active" -> status.text = "🔴 Jonli ovoz"
+                                        "active" -> {
+                                            status.text = "🔴 Jonli ovoz"
+                                            waveform.setActive(true)
+                                        }
                                         "failed" -> fail(error ?: "Ovoz ulanmadi")
                                         "stopped" -> if (!stopping) resetUi("To'xtatildi")
                                     }
@@ -368,6 +380,7 @@ class AmbientListenActivity : AppCompatActivity() {
 
     private fun resetUi(message: String = "Tayyor") {
         diag("resetUi")
+        waveform.setActive(false)
         sessionListener?.remove()
         sessionListener = null
         try { peerConnection?.close() } catch (t: Throwable) { diag("peer_close_exception", t) }
