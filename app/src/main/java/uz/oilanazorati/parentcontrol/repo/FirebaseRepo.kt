@@ -78,6 +78,40 @@ object FirebaseRepo {
     }
 
     /**
+     * Bola qurilmasini oila kodiga ulaydi. Kod mavjudligini oldindan
+     * alohida o'qish (get) bilan TEKSHIRMAYMIZ — bola anonim
+     * foydalanuvchi bo'lgani uchun Firestore qoidalari unga
+     * families/{code} hujjatini o'qishga ruxsat bermaydi (bu faqat
+     * ota-ona hisobiga tegishli). Shu sabab to'g'ridan-to'g'ri
+     * children/{uid} yozuviga urinamiz: agar kod noto'g'ri yoki
+     * mavjud bo'lmasa, xavfsizlik qoidasidagi exists() tekshiruvi
+     * yozishni PERMISSION_DENIED bilan rad etadi — shuni ushlab
+     * aniq xabar qaytaramiz. Muvaffaqiyat FAQAT server yozuvni
+     * tasdiqlagandan keyin qaytadi.
+     */
+    fun joinFamily(code: String, childName: String, onResult: (Boolean, String?) -> Unit) {
+        val uid = auth.currentUser?.uid
+        if (uid.isNullOrBlank()) { onResult(false, "Firebase foydalanuvchisi yaratilmadi"); return }
+        val normalized = code.trim().uppercase()
+        if (normalized.length != 6) { onResult(false, "Oila kodi 6 belgidan iborat bo'lishi kerak"); return }
+        db.collection("families").document(normalized)
+            .collection("children").document(uid)
+            .set(mapOf("nomi" to childName, "childUid" to uid, "yaratilganMs" to System.currentTimeMillis()), SetOptions.merge())
+            .addOnSuccessListener {
+                familyCode = normalized
+                childId = uid
+                onResult(true, null)
+            }
+            .addOnFailureListener { e ->
+                val msg = if (e is com.google.firebase.firestore.FirebaseFirestoreException &&
+                    e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.PERMISSION_DENIED)
+                    "Bunday oila kodi topilmadi. Kodni tekshirib qayta kiriting."
+                else e.message ?: "Oila kodiga ulashda xato"
+                onResult(false, msg)
+            }
+    }
+
+    /**
      * familyCode/childId hali o'rnatilmagan bo'lsa (masalan, jarayon
      * qayta boshlangan-u, App.restoreSavedPairing hali ulgurmagan yoki
      * qurilma umuman ulanmagan bo'lsa) — bu yerda crash bo'lish o'rniga

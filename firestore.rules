@@ -55,8 +55,20 @@ service cloud.firestore {
             request.auth.uid == childId;
         }
 
-        allow read, write:
+        // Bola (anonim foydalanuvchi) families/{familyCode} hujjatini
+        // to'g'ridan-to'g'ri o'qiy olmaydi (buni faqat isRealOwner()
+        // qila oladi). Shu sabab bola birinchi marta ulanayotganda
+        // (create) oila kodi HAQIQATAN mavjudligini shu yerda,
+        // exists() orqali tekshiramiz — bu ma'lumotni oshkor qilmaydi,
+        // faqat ruxsat/rad natijasini beradi.
+        function familyDocExists() {
+          return exists(/databases/$(database)/documents/families/$(familyCode));
+        }
+
+        allow read:
           if isRealOwner() || isThisChildsOwnSession();
+        allow write:
+          if isRealOwner() || (isThisChildsOwnSession() && familyDocExists());
 
         match /screenshot_settings/{docId} {
           allow read:

@@ -181,8 +181,40 @@ class ChildSetupActivity : AppCompatActivity() {
         val pm = getSystemService(android.os.PowerManager::class.java); binding.btnBatteryOptimization.text = if (pm.isIgnoringBatteryOptimizations(packageName)) "✅ Batareya tejashdan chiqarilgan — o'chirish" else "🔋 Batareya tejashdan chiqarish (muhim!)"
     }
 
-    private fun pairWithFamilyCode() { val code = binding.inputFamilyCode.text?.toString()?.trim()?.uppercase(); if (code.isNullOrBlank() || code.length != 6) { binding.inputFamilyCode.error = "6 xonali kodni kiriting (ota-ona ekranidan oling)"; return }; val currentUser = FirebaseAuth.getInstance().currentUser; if (currentUser != null && currentUser.isAnonymous) finishPairing(code, currentUser.uid) else FirebaseAuth.getInstance().signInAnonymously().addOnSuccessListener { result -> result.user?.uid?.let { finishPairing(code, it) } }.addOnFailureListener { binding.pairStatusText.text = "Ulanishda xato yuz berdi, qayta urinib ko'ring" } }
-    private fun finishPairing(code: String, uid: String) { FirebaseRepo.familyCode = code; FirebaseRepo.childId = uid; val childName = binding.inputChildName.text?.toString()?.trim().orEmpty(); getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit().putString("family_code", code).putString("child_id", uid).putString("child_name", childName).apply(); FirebaseRepo.saveChildProfile(childName); SimInfoSync.syncNow(this); binding.pairStatusText.text = "✅ Ulandi: $code" + if (childName.isNotBlank()) " ($childName sifatida)" else "" }
+    private fun pairWithFamilyCode() {
+        val code = binding.inputFamilyCode.text?.toString()?.trim()?.uppercase()
+        if (code.isNullOrBlank() || code.length != 6) { binding.inputFamilyCode.error = "6 xonali kodni kiriting (ota-ona ekranidan oling)"; return }
+        binding.btnPair.isEnabled = false
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser != null && currentUser.isAnonymous) finishPairing(code, currentUser.uid)
+        else {
+            binding.pairStatusText.text = "Ulanish tekshirilmoqda..."
+            FirebaseAuth.getInstance().signInAnonymously()
+                .addOnSuccessListener { result -> result.user?.uid?.let { finishPairing(code, it) } ?: run { binding.btnPair.isEnabled = true; binding.pairStatusText.text = "❌ Firebase foydalanuvchisi yaratilmadi" } }
+                .addOnFailureListener { binding.btnPair.isEnabled = true; binding.pairStatusText.text = "Ulanishda xato yuz berdi, qayta urinib ko'ring" }
+        }
+    }
+    private fun finishPairing(code: String, uid: String) {
+        val childName = binding.inputChildName.text?.toString()?.trim().orEmpty()
+        binding.pairStatusText.text = "Oila kodi tekshirilmoqda..."
+        // MUHIM: kod mavjudligini alohida o'qish (get) bilan tekshirmaymiz — bola
+        // anonim foydalanuvchi bo'lgani uchun Firestore qoidalari unga families/{code}
+        // hujjatini o'qishga ruxsat bermaydi (faqat ota-ona o'qiy oladi). Shu sabab
+        // to'g'ridan-to'g'ri yozishga urinamiz: agar kod noto'g'ri/mavjud bo'lmasa,
+        // qoidaning o'zi (exists() tekshiruvi) yozishni PERMISSION_DENIED bilan
+        // rad etadi va biz buni pastda ushlab, aniq xato ko'rsatamiz.
+        FirebaseRepo.joinFamily(code, childName) { ok, error ->
+            binding.btnPair.isEnabled = true
+            if (ok) {
+                getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
+                    .putString("family_code", code).putString("child_id", uid).putString("child_name", childName).apply()
+                SimInfoSync.syncNow(this)
+                binding.pairStatusText.text = "✅ Ulandi: $code" + if (childName.isNotBlank()) " ($childName sifatida)" else ""
+            } else {
+                binding.pairStatusText.text = "❌ Ulanmadi: ${error ?: "noma'lum xato"}"
+            }
+        }
+    }
     private fun requestDefaultPhoneRole() { val granted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CALL_LOG) == android.content.pm.PackageManager.PERMISSION_GRANTED; if (!granted) ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.READ_CALL_LOG), 1004) else openAppSettings() }
     private fun requestDefaultSmsRole() { val granted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECEIVE_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_SMS) == android.content.pm.PackageManager.PERMISSION_GRANTED; if (!granted) ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.RECEIVE_SMS, android.Manifest.permission.READ_SMS), 1003) else openAppSettings() }
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) { super.onRequestPermissionsResult(requestCode, permissions, grantResults); updateRoleStatusUi(); if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_PHONE_STATE) == android.content.pm.PackageManager.PERMISSION_GRANTED) SimInfoSync.syncNow(this) }
