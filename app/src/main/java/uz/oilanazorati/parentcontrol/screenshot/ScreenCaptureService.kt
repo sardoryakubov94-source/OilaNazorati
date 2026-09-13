@@ -122,8 +122,7 @@ class ScreenCaptureService : Service() {
     private fun evaluateAndQueue() {
         if (!settings.enabled || AccessibilityScreenshotService.isServiceEnabled(this) || projection == null || pending != null || captureInProgress) return
         val usm = getSystemService(USAGE_STATS_SERVICE) as? UsageStatsManager ?: return; val cal = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY,0);set(Calendar.MINUTE,0);set(Calendar.SECOND,0);set(Calendar.MILLISECOND,0) }; val now=System.currentTimeMillis(); val stats=usm.queryAndAggregateUsageStats(cal.timeInMillis,now)
-        val userStats=stats.filter { (pkg,s)->pkg!=packageName&&s.totalTimeInForeground>0&&(getApplicationInfoSafe(pkg)?.flags?.and(android.content.pm.ApplicationInfo.FLAG_SYSTEM)?:0)==0 }
-        val auto=if(settings.autoTop3Enabled) userStats.entries.sortedByDescending{it.value.totalTimeInForeground}.take(3).map{it.key}.toSet() else emptySet(); val targets=auto+settings.manualPackageNames.toSet(); val current=currentForegroundPackage(usm,now)?:return; if(current !in targets)return
+        val auto=if(settings.autoTop3Enabled) uz.oilanazorati.parentcontrol.util.TopUsedAppsHelper.computeTopApps(this,3) else emptySet(); val targets=auto+settings.manualPackageNames.toSet(); val current=currentForegroundPackage(usm,now)?:return; if(current !in targets)return
         val usageSec=(stats[current]?.totalTimeInForeground?:0L)/1000L; val frequency=settings.frequencyMinutes.coerceIn(15,60).toLong(); val minute=usageSec/60L; val base=(minute/frequency)*frequency; if(base<frequency)return
         val child=uz.oilanazorati.parentcontrol.repo.FirebaseRepo.childId?:return; val date=todayKey(); val threshold=listOf(base.toInt(),(base+1).toInt(),(base+2).toInt()).filter{minute>=it}.firstOrNull{!prefs.getBoolean(triggerKey(child,current,date,it),false)}?:return; val key=triggerKey(child,current,date,threshold)
         ScreenshotRepository.reserveTrigger(key){reserved->if(reserved){pending=PendingCapture(current,threshold,usageSec,key);schedulePendingCaptureWatch()}}
@@ -139,7 +138,6 @@ class ScreenCaptureService : Service() {
     private fun crashlyticsRecord(e:Throwable)=com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(e)
     private fun label(pkg:String)=try{packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg,0)).toString()}catch(_:Exception){pkg}
     private fun currentForegroundPackage(usm:UsageStatsManager,now:Long):String?{val ev=usm.queryEvents((now-10*60_000L).coerceAtLeast(0L),now);val e=android.app.usage.UsageEvents.Event();var p:String?=null;var t=0L;while(ev.hasNextEvent()){ev.getNextEvent(e);if(e.eventType==android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND&&e.timeStamp>=t){t=e.timeStamp;p=e.packageName}};return p}
-    private fun getApplicationInfoSafe(pkg:String)=try{packageManager.getApplicationInfo(pkg,0)}catch(_:Exception){null}
     private fun todayKey()=SimpleDateFormat("yyyy-MM-dd",Locale.US).format(Date())
     private fun triggerKey(child:String,pkg:String,date:String,threshold:Int)="${date}_${child.hashCode()}_${pkg.hashCode()}_$threshold"
     private fun cleanupProjection(){cancelPendingCaptureWatch();if(hasLiveProjection)ScreenshotRepository.updateProjectionStatus(false);hasLiveProjection=false;virtualDisplay?.release();virtualDisplay=null;imageReader?.close();imageReader=null;projection?.stop();projection=null;pending=null;captureInProgress=false}

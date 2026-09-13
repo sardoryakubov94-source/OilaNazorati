@@ -133,16 +133,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         if (continuousSec < frequency * 60L) return
 
         val auto: Set<String> = if (settings.autoTop3Enabled) {
-            val start: Long = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-            }.timeInMillis
-            usm.queryAndAggregateUsageStats(start, now)
-                .filter { (pkg, stat) ->
-                    pkg != packageName && stat.totalTimeInForeground > 0 &&
-                        (getApplicationInfoSafe(pkg)?.flags?.and(android.content.pm.ApplicationInfo.FLAG_SYSTEM) ?: 0) == 0
-                }
-                .entries.sortedByDescending { it.value.totalTimeInForeground }
-                .take(3).map { it.key }.toSet()
+            uz.oilanazorati.parentcontrol.util.TopUsedAppsHelper.computeTopApps(this, 3)
         } else emptySet()
 
         val targets = auto + settings.manualPackageNames.toSet()

@@ -43,6 +43,13 @@ class ParentDashboardActivity : AppCompatActivity() {
             contactSummaryAdapter.setPremium(isPremium)
             smsAdapter.setPremium(isPremium)
             binding.premiumBannerHome.visibility = if (isPremium) android.view.View.GONE else android.view.View.VISIBLE
+            // O'z-o'zini davolash: premium holati boshqa yo'l bilan (masalan
+            // to'g'ridan-to'g'ri Firebase konsolidan) o'zgargan bo'lsa ham,
+            // dashboard har ochilganda bola hujjatlariga aktual holat qayta
+            // yozib qo'yiladi — bildirishnoma filtri doim yangi ma'lumotga tayanadi.
+            FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+                FirebaseRepo.syncPremiumFlagToChildren(uid, isPremium) { }
+            }
         }
         val savedCode = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).getString("family_code", null)
         if (savedCode != null) { binding.headerFamilyCode.text = savedCode; loadFamily(savedCode) }

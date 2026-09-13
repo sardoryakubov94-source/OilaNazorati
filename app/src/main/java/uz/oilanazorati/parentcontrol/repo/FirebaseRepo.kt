@@ -508,7 +508,47 @@ object FirebaseRepo {
         val batch = db.batch()
         batch.update(db.collection("premium_requests").document(reqId), mapOf("holati" to "tolandi", "halQilinganMs" to System.currentTimeMillis()))
         batch.set(db.collection("parents").document(fromUid), mapOf("premium" to true), SetOptions.merge())
-        batch.commit().addOnSuccessListener { onResult(true) }.addOnFailureListener { onResult(false) }
+        batch.commit()
+            .addOnSuccessListener {
+                syncPremiumFlagToChildren(fromUid, true) { }
+                onResult(true)
+            }
+            .addOnFailureListener { onResult(false) }
+    }
+
+    /**
+     * Ko'rsatilgan ota-onaga tegishli BARCHA oila kodlaridagi BARCHA
+     * bolalar hujjatiga "ownerPremium" bayrog'ini nusxalab qo'yadi.
+     *
+     * MUHIM: bola (anonim foydalanuvchi) xavfsizlik qoidalariga ko'ra
+     * parents/{uid} hujjatini TO'G'RIDAN-TO'G'RI o'qiy olmaydi — faqat
+     * o'zi ulangan families/{code}/children/{childId} hujjatini o'qiy
+     * oladi. Shu sabab premium holatini bola qurilmasi (masalan
+     * bildirishnoma filtri uchun) bila olishi uchun, uni har safar
+     * o'zgarganda shu hujjatga ko'chirib qo'yamiz.
+     */
+    fun syncPremiumFlagToChildren(uid: String, premium: Boolean, onResult: (Boolean) -> Unit) {
+        db.collection("families").whereEqualTo("ownerUid", uid).get()
+            .addOnSuccessListener { familiesSnap ->
+                if (familiesSnap.isEmpty) { onResult(true); return@addOnSuccessListener }
+                val childFetches = familiesSnap.documents.map { it.reference.collection("children").get() }
+                com.google.android.gms.tasks.Tasks.whenAllSuccess<com.google.firebase.firestore.QuerySnapshot>(childFetches)
+                    .addOnSuccessListener { snaps ->
+                        val batch = db.batch()
+                        var any = false
+                        (snaps as List<*>).forEach { raw ->
+                            val childrenSnap = raw as? com.google.firebase.firestore.QuerySnapshot ?: return@forEach
+                            childrenSnap.documents.forEach { childDoc ->
+                                batch.set(childDoc.reference, mapOf("ownerPremium" to premium), SetOptions.merge())
+                                any = true
+                            }
+                        }
+                        if (any) batch.commit().addOnSuccessListener { onResult(true) }.addOnFailureListener { onResult(false) }
+                        else onResult(true)
+                    }
+                    .addOnFailureListener { onResult(false) }
+            }
+            .addOnFailureListener { onResult(false) }
     }
 
     fun rejectPremiumRequest(reqId: String, onResult: (Boolean) -> Unit) {
@@ -539,7 +579,10 @@ object FirebaseRepo {
     /** Ko'rsatilgan foydalanuvchidan premium huquqini olib tashlaydi. */
     fun revokePremium(uid: String, onResult: (Boolean) -> Unit) {
         db.collection("parents").document(uid).update("premium", false)
-            .addOnSuccessListener { onResult(true) }
+            .addOnSuccessListener {
+                syncPremiumFlagToChildren(uid, false) { }
+                onResult(true)
+            }
             .addOnFailureListener { onResult(false) }
     }
 
