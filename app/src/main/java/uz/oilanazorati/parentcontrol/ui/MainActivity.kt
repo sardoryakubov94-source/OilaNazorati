@@ -187,7 +187,19 @@ class MainActivity : AppCompatActivity() {
                 }
                 if (pendingDestination == PendingDestination.PARENT_DASHBOARD && FirebaseRepo.familyCode.isNullOrBlank()) {
                     binding.loginStatusText.text = "Oila kodi tayyorlanmoqda..."
+                    var answered = false
+                    val timeoutHandler = android.os.Handler(android.os.Looper.getMainLooper())
+                    val timeoutRunnable = Runnable {
+                        if (!answered) {
+                            answered = true
+                            binding.loginStatusText.text = "❌ Internet aloqasi yo'q yoki juda sekin. Qayta urinib ko'ring."
+                        }
+                    }
+                    timeoutHandler.postDelayed(timeoutRunnable, 15_000L)
                     FirebaseRepo.findOrCreateFamilyForCurrentUser { code ->
+                        if (answered) return@findOrCreateFamilyForCurrentUser
+                        answered = true
+                        timeoutHandler.removeCallbacks(timeoutRunnable)
                         if (code != null) {
                             FirebaseRepo.familyCode = code
                             getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()

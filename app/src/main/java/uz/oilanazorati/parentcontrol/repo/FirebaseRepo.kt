@@ -38,24 +38,172 @@ object FirebaseRepo {
     var familyCode: String? = null
     var childId: String? = null
 
+    /**
+     * MUHIM: Ota-ona tomonida ham oila kodini Firestore Android SDK
+     * (.set/.get) orqali emas, aynan REST API orqali yaratamiz.
+     *
+     * Sabab: FirebaseFirestore'da setPersistenceEnabled(true) + cheksiz
+     * kesh yoqilgan. Shu sabab .set() chaqiruvi ba'zi tarmoqlarda (server
+     * bilan gRPC ulanishi bloklangan/sekin bo'lganda) yozuv HALI SERVERGA
+     * yetib bormasdan turib ham, faqat mahalliy keshga tushgach
+     * "muvaffaqiyatli" deb signal berib yuborishi mumkin edi. Natijada
+     * ekranda "Oila kodingiz tayyor" degan kod chiqadi-yu, bola REST
+     * orqali (to'g'ridan-to'g'ri serverga) o'sha kodni qidirganda hali
+     * serverga sinxronlanmagani uchun topilmay, ulanish rad etilardi.
+     * REST API chaqiruvi esa faqat server chindan qabul qilgandagina
+     * muvaffaqiyat qaytaradi — xuddi joinFamily'dagi kabi.
+     */
     fun createFamily(code: String, onResult: (Boolean, String?) -> Unit) {
-        val uid = auth.currentUser?.uid ?: return onResult(false, "Tizimga kirilmagan")
-        db.collection("families").document(code)
-            .set(mapOf("ownerUid" to uid, "yaratilganMs" to System.currentTimeMillis()))
-            .addOnSuccessListener { onResult(true, null) }
-            .addOnFailureListener { e -> onResult(false, e.message) }
+        val user = auth.currentUser
+        val uid = user?.uid
+        if (uid.isNullOrBlank()) {
+            onResult(false, "Tizimga kirilmagan")
+            return
+        }
+        user.getIdToken(false)
+            .addOnSuccessListener { tokenResult ->
+                val idToken = tokenResult.token
+                if (idToken.isNullOrBlank()) {
+                    onResult(false, "Firebase avtorizatsiya tokeni olinmadi")
+                    return@addOnSuccessListener
+                }
+                pairingExecutor.execute {
+                    var connection: HttpURLConnection? = null
+                    try {
+                        val safeCode = URLEncoder.encode(code, "UTF-8").replace("+", "%20")
+                        val url = URL(
+                            "https://firestore.googleapis.com/v1/projects/oilanazorat-3c8de/databases/(default)/documents/families/$safeCode"
+                        )
+                        connection = (url.openConnection() as HttpURLConnection).apply {
+                            requestMethod = "PATCH"
+                            connectTimeout = 10_000
+                            readTimeout = 10_000
+                            doOutput = true
+                            setRequestProperty("Authorization", "Bearer $idToken")
+                            setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                        }
+
+                        val body = JSONObject().apply {
+                            put("fields", JSONObject().apply {
+                                put("ownerUid", JSONObject().put("stringValue", uid))
+                                put("yaratilganMs", JSONObject().put("integerValue", System.currentTimeMillis().toString()))
+                            })
+                        }.toString()
+
+                        connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                        val status = connection.responseCode
+                        val responseText = try {
+                            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                            stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        } catch (_: Exception) { "" }
+
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            if (status in 200..299) {
+                                onResult(true, null)
+                            } else {
+                                onResult(false, "Oila kodi yaratishda xato ($status)" + if (responseText.isNotBlank()) ": $responseText" else "")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            onResult(false, e.message ?: "Internet aloqasida xato")
+                        }
+                    } finally {
+                        connection?.disconnect()
+                    }
+                }
+            }
+            .addOnFailureListener { e ->
+                onResult(false, e.message ?: "Firebase avtorizatsiyasida xato")
+            }
     }
 
+    /**
+     * Joriy (Gmail bilan kirgan) foydalanuvchiga tegishli mavjud oila
+     * kodini REST orqali qidiradi; topilmasa, createFamily() (REST)
+     * orqali yangisini yaratadi. Firestore SDK'ning whereEqualTo().get()
+     * so'rovi o'rniga runQuery REST endpointi ishlatiladi — shu bilan
+     * natija ham to'g'ridan-to'g'ri serverdan, keshdan emas, olinadi.
+     */
     fun findOrCreateFamilyForCurrentUser(onResult: (String?) -> Unit) {
-        val uid = auth.currentUser?.uid ?: return onResult(null)
-        db.collection("families").whereEqualTo("ownerUid", uid).get()
-            .addOnSuccessListener { snap ->
-                val existing = snap.documents.firstOrNull()?.id
-                if (existing != null) {
-                    onResult(existing)
-                } else {
-                    val code = (1..6).map { "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".random() }.joinToString("")
-                    createFamily(code) { ok, _ -> onResult(if (ok) code else null) }
+        val user = auth.currentUser
+        val uid = user?.uid
+        if (uid.isNullOrBlank()) {
+            onResult(null)
+            return
+        }
+        user.getIdToken(false)
+            .addOnSuccessListener { tokenResult ->
+                val idToken = tokenResult.token
+                if (idToken.isNullOrBlank()) {
+                    onResult(null)
+                    return@addOnSuccessListener
+                }
+                pairingExecutor.execute {
+                    var connection: HttpURLConnection? = null
+                    try {
+                        val url = URL(
+                            "https://firestore.googleapis.com/v1/projects/oilanazorat-3c8de/databases/(default)/documents:runQuery"
+                        )
+                        connection = (url.openConnection() as HttpURLConnection).apply {
+                            requestMethod = "POST"
+                            connectTimeout = 10_000
+                            readTimeout = 10_000
+                            doOutput = true
+                            setRequestProperty("Authorization", "Bearer $idToken")
+                            setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                        }
+
+                        val body = JSONObject().apply {
+                            put("structuredQuery", JSONObject().apply {
+                                put("from", org.json.JSONArray().put(JSONObject().put("collectionId", "families")))
+                                put("where", JSONObject().apply {
+                                    put("fieldFilter", JSONObject().apply {
+                                        put("field", JSONObject().put("fieldPath", "ownerUid"))
+                                        put("op", "EQUAL")
+                                        put("value", JSONObject().put("stringValue", uid))
+                                    })
+                                })
+                                put("limit", 1)
+                            })
+                        }.toString()
+
+                        connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                        val status = connection.responseCode
+                        val responseText = try {
+                            val stream = if (status in 200..299) connection.inputStream else connection.errorStream
+                            stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                        } catch (_: Exception) { "" }
+
+                        var existingCode: String? = null
+                        if (status in 200..299 && responseText.isNotBlank()) {
+                            try {
+                                val arr = org.json.JSONArray(responseText)
+                                for (i in 0 until arr.length()) {
+                                    val doc = arr.optJSONObject(i)?.optJSONObject("document") ?: continue
+                                    val name = doc.optString("name")
+                                    if (name.isNotBlank()) {
+                                        existingCode = name.substringAfterLast("/")
+                                        break
+                                    }
+                                }
+                            } catch (_: Exception) { /* javobni tahlil qilib bo'lmadi — yangi kod yaratamiz */ }
+                        }
+
+                        if (existingCode != null) {
+                            val found = existingCode
+                            android.os.Handler(android.os.Looper.getMainLooper()).post { onResult(found) }
+                        } else {
+                            val newCode = (1..6).map { "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".random() }.joinToString("")
+                            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                                createFamily(newCode) { ok, _ -> onResult(if (ok) newCode else null) }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        android.os.Handler(android.os.Looper.getMainLooper()).post { onResult(null) }
+                    } finally {
+                        connection?.disconnect()
+                    }
                 }
             }
             .addOnFailureListener { onResult(null) }
