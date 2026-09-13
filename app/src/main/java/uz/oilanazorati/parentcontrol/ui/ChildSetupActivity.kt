@@ -7,6 +7,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import android.view.View
 import android.widget.ImageView
@@ -204,7 +206,25 @@ class ChildSetupActivity : AppCompatActivity() {
         // to'g'ridan-to'g'ri yozishga urinamiz: agar kod noto'g'ri/mavjud bo'lmasa,
         // qoidaning o'zi (exists() tekshiruvi) yozishni PERMISSION_DENIED bilan
         // rad etadi va biz buni pastda ushlab, aniq xato ko'rsatamiz.
+        //
+        // TIMEOUT: internet yo'q yoki juda sekin bo'lsa, Firestore'ning o'zi
+        // hech qachon (na muvaffaqiyat, na xato) javob bermay, cheksiz
+        // "tekshirilmoqda..." holatida qolib ketishi mumkin edi. Shu sabab
+        // 15 soniyadan keyin javob kelmasa, aniq xato ko'rsatamiz.
+        var answered = false
+        val timeoutHandler = Handler(Looper.getMainLooper())
+        val timeoutRunnable = Runnable {
+            if (!answered) {
+                answered = true
+                binding.btnPair.isEnabled = true
+                binding.pairStatusText.text = "❌ Internet aloqasi yo'q yoki juda sekin. Qurilmani internetga ulab, qayta urinib ko'ring."
+            }
+        }
+        timeoutHandler.postDelayed(timeoutRunnable, 15_000L)
         FirebaseRepo.joinFamily(code, childName) { ok, error ->
+            if (answered) return@joinFamily
+            answered = true
+            timeoutHandler.removeCallbacks(timeoutRunnable)
             binding.btnPair.isEnabled = true
             if (ok) {
                 getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
