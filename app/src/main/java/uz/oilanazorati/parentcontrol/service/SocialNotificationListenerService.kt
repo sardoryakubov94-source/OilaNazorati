@@ -43,6 +43,27 @@ class SocialNotificationListenerService : NotificationListenerService() {
             "com.discord" to "Discord",
             "com.twitter.android" to "X (Twitter)"
         )
+
+        // Ba'zi ilovalar (masalan Instagram) BITTA xabar uchun bildirishnomani
+        // bir necha marta "yangilaydi" (media yuklanish holati, o'qilgan belgisi
+        // va h.k.) — har safar onNotificationPosted() qayta chaqiriladi. Bunday
+        // aniq TAKRORLARNI Firestore'ga qayta-qayta yozib, kvotani bekorga
+        // sarflamaslik uchun, bir xil (ilova+sarlavha+matn) shu oyna ichida
+        // qayta kelsa o'tkazib yuboriladi.
+        private const val DEDUPE_WINDOW_MS = 60_000L
+    }
+
+    // Xotirada saqlanadigan oxirgi ko'rilgan bildirishnomalar keshi. Servis
+    // qayta ishga tushganda tozalanadi — bu qabul qilinadi, chunki bu holat
+    // kamdan-kam va zararsiz (eng ko'pi bilan bitta takror o'tib ketishi mumkin).
+    private val recentlySeen = LinkedHashMap<String, Long>()
+
+    private fun isDuplicate(key: String, nowMs: Long): Boolean {
+        // Eskirgan yozuvlarni tozalab boramiz — xotira cheksiz o'smasin.
+        recentlySeen.entries.removeAll { nowMs - it.value > DEDUPE_WINDOW_MS }
+        val lastSeen = recentlySeen[key]
+        recentlySeen[key] = nowMs
+        return lastSeen != null && nowMs - lastSeen <= DEDUPE_WINDOW_MS
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -60,6 +81,9 @@ class SocialNotificationListenerService : NotificationListenerService() {
 
         // Ikkalasi ham bo'sh bo'lsa (masalan faqat rasm/media bildirishnomasi) — o'tkazib yuboramiz.
         if (title.isBlank() && text.isBlank()) return
+
+        val dedupeKey = "${sbn.packageName}|$title|$text"
+        if (isDuplicate(dedupeKey, System.currentTimeMillis())) return
 
         FirebaseRepo.logNotification(
             NotificationEvent(
