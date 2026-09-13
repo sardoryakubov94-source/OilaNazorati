@@ -28,6 +28,14 @@ object FirebaseRepo {
                 firestore.firestoreSettings = com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
                     .setPersistenceEnabled(true)
                     .setCacheSizeBytes(com.google.firebase.firestore.FirebaseFirestoreSettings.CACHE_SIZE_UNLIMITED)
+                    // Ba'zi mobil operator tarmoqlari (ayniqsa O'zbekistonda)
+                    // Firestore'ning standart gRPC ulanishini jimgina
+                    // bloklaydi — natijada yozuv/o'qish so'rovlari na
+                    // muvaffaqiyat, na xato bermay ABADIY osilib qoladi
+                    // (internet o'zi ishlab tursa ham). Bu — shunday
+                    // tarmoqlarni avtomatik aniqlab, "long polling"
+                    // rejimiga o'tkazadi (Google'ning rasmiy tavsiyasi).
+                    .setForceAutoDetectLongPolling(true)
                     .build()
             } catch (_: Exception) {
                 // Agar allaqachon yoqilgan bo'lsa — jim o'tkazib yuboramiz
