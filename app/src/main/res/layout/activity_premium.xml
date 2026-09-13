@@ -77,6 +77,14 @@
             android:textColor="#DCE9E0"
             android:textSize="13sp"/>
 
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="6. 🎙️ Jonli ovoz — bitta tugmani bosish bilan farzandingiz atrofida nima bo'layotganini shu zahoti eshiting. U qayerda, kim bilan, qanday muhitda ekanini bilish uchun ortiq savol berish shart emas — faqat tinglang."
+            android:textColor="#DCE9E0"
+            android:textSize="13sp"/>
+
     </LinearLayout>
 
     <!-- Premium faol - katta belgi -->

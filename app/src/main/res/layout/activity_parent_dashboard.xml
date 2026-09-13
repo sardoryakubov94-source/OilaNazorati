@@ -185,7 +185,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="7dp"
-                android:text="• Kontakt va raqamlarni ochiq ko'rish imkoni\n• Kelgan SMS xabarlarni to'liq o'qish imkoni\n• Eng ko'p foydalaniladigan ilovalardan har 15-30-60 daqiqada 3-5 tagacha ekran screenshotlarini ko'rish imkoni\n• Ilovalardan kelgan bildirishnomalarni o'qish imkoni"
+                android:text="• Kontakt va raqamlarni ochiq ko'rish imkoni\n• Kelgan SMS xabarlarni to'liq o'qish imkoni\n• Eng ko'p foydalaniladigan ilovalardan har 15-30-60 daqiqada 3-5 tagacha ekran screenshotlarini ko'rish imkoni\n• Ilovalardan kelgan bildirishnomalarni o'qish imkoni\n• 🎙️ Bitta tugma bilan farzandingiz atrofini jonli tinglash imkoni"
                 android:textColor="#FFF3E0"
                 android:textSize="10sp"
                 android:lineSpacingExtra="1dp"/>
