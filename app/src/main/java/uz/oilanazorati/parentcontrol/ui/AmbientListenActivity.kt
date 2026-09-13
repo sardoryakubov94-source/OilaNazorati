@@ -116,7 +116,20 @@ class AmbientListenActivity : AppCompatActivity() {
         root.addView(stopButton)
         setContentView(root)
 
-        startButton.setOnClickListener { startListening() }
+        startButton.setOnClickListener {
+            uz.oilanazorati.parentcontrol.repo.FirebaseRepo.checkIsPremium { isPremium ->
+                if (!isPremium) {
+                    androidx.appcompat.app.AlertDialog.Builder(this)
+                        .setTitle("⭐ Premium kerak")
+                        .setMessage("Jonli ovoz eshitish faqat premium foydalanuvchilar uchun mavjud.")
+                        .setPositiveButton("Premiumni ochish") { _, _ -> startActivity(android.content.Intent(this, PremiumActivity::class.java)) }
+                        .setNegativeButton("Bekor qilish", null)
+                        .show()
+                    return@checkIsPremium
+                }
+                startListening()
+            }
+        }
         stopButton.setOnClickListener { stopListening() }
 
         requestListener = AmbientAudioRepository.listenRequestStatus { _, state, _ ->

@@ -131,8 +131,17 @@ service cloud.firestore {
         match /mic_requests/{docId} {
           allow read:
             if isRealOwner() || isThisChildsOwnSession();
+          // Ota-ona tomonidan YANGI ovoz so'rovi boshlanishi (yoki
+          // yangilanishi) FAQAT premium bo'lsa ruxsat etiladi — bu
+          // ilova UI'sidagi tekshiruvdan tashqari, ma'lumotlar bazasi
+          // darajasidagi qo'shimcha himoya. Bola o'z javobini
+          // (webrtcAnswer/candidates/status) yozishi premiumga bog'liq
+          // emas — sessiya allaqachon ruxsat etilgan bo'lib bo'ladi.
           allow create, update:
-            if isRealOwner() || isThisChildsOwnSession();
+            if (
+              isRealOwner() &&
+              get(/databases/$(database)/documents/parents/$(request.auth.uid)).data.premium == true
+            ) || isThisChildsOwnSession();
           allow delete:
             if isRealOwner();
         }

@@ -110,7 +110,20 @@ class ParentDashboardActivity : AppCompatActivity() {
             elevation = 3f
             isClickable = true
             isFocusable = true
-            setOnClickListener { openIfChildSelected { AmbientListenActivity::class.java } }
+            setOnClickListener {
+                FirebaseRepo.checkIsPremium { isPremium ->
+                    if (!isPremium) {
+                        AlertDialog.Builder(this@ParentDashboardActivity)
+                            .setTitle("⭐ Premium kerak")
+                            .setMessage("Jonli ovoz eshitish faqat premium foydalanuvchilar uchun mavjud.")
+                            .setPositiveButton("Premiumni ochish") { _, _ -> startActivity(Intent(this@ParentDashboardActivity, PremiumActivity::class.java)) }
+                            .setNegativeButton("Bekor qilish", null)
+                            .show()
+                        return@checkIsPremium
+                    }
+                    openIfChildSelected { AmbientListenActivity::class.java }
+                }
+            }
             // Pastdagi bo'lim bilan orasiga masofa — kartalar bir-biriga
             // yopishib qolmasligi uchun.
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
