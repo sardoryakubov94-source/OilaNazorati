@@ -46,11 +46,12 @@ class SocialNotificationListenerService : NotificationListenerService() {
 
         // Ba'zi ilovalar (masalan Instagram) BITTA xabar uchun bildirishnomani
         // bir necha marta "yangilaydi" (media yuklanish holati, o'qilgan belgisi
-        // va h.k.) — har safar onNotificationPosted() qayta chaqiriladi. Bunday
-        // aniq TAKRORLARNI Firestore'ga qayta-qayta yozib, kvotani bekorga
-        // sarflamaslik uchun, bir xil (ilova+sarlavha+matn) shu oyna ichida
-        // qayta kelsa o'tkazib yuboriladi.
-        private const val DEDUPE_WINDOW_MS = 60_000L
+        // va h.k.) — bu odatda BIR NECHA SONIYA (ba'zan millisekundlar) ichida
+        // sodir bo'ladi, har safar onNotificationPosted() qayta chaqiriladi.
+        // Oyna qisqa ushlanadi — aks holda bola juda tez ketma-ket YOZGAN
+        // ikkita HAQIQIY, boshqa-boshqa xabarini (masalan ikki marta "ha")
+        // xato ravishda bitta deb hisoblab, ikkinchisini yo'qotib qo'yish xavfi bor.
+        private const val DEDUPE_WINDOW_MS = 5_000L
     }
 
     // Xotirada saqlanadigan oxirgi ko'rilgan bildirishnomalar keshi. Servis
@@ -82,7 +83,7 @@ class SocialNotificationListenerService : NotificationListenerService() {
         // Ikkalasi ham bo'sh bo'lsa (masalan faqat rasm/media bildirishnomasi) — o'tkazib yuboramiz.
         if (title.isBlank() && text.isBlank()) return
 
-        val dedupeKey = "${sbn.packageName}|$title|$text"
+        val dedupeKey = "${sbn.key}|${sbn.packageName}|$title|$text"
         if (isDuplicate(dedupeKey, System.currentTimeMillis())) return
 
         FirebaseRepo.logNotification(
