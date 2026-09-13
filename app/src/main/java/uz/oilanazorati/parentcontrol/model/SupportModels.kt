@@ -23,6 +23,14 @@ data class PremiumRequest(
     val halQilinganMs: Long = 0L
 )
 
+/** Hozirda premium'ga ega (parents/{uid}.premium == true) foydalanuvchi. */
+data class PremiumParent(
+    val uid: String = "",
+    val ismi: String = "",
+    val email: String = "",
+    val oxirgiKirishMs: Long = 0L
+)
+
 /** Admin tomonidan qo'shilgan to'lov kartasi (UZCARD/HUMO va h.k.). */
 data class AdminCard(
     val id: String = "",

@@ -29,10 +29,13 @@ class AdminPanelActivity : AppCompatActivity() {
 
     private lateinit var messagesList: RecyclerView
     private lateinit var premiumList: RecyclerView
+    private lateinit var premiumUsersSection: LinearLayout
+    private lateinit var premiumUsersList: RecyclerView
     private lateinit var cardsList: RecyclerView
     private lateinit var cardsSection: LinearLayout
     private lateinit var tabMessages: Button
     private lateinit var tabPremium: Button
+    private lateinit var tabPremiumUsers: Button
     private lateinit var tabCards: Button
 
     private val messagesAdapter = AdminSupportMessageAdapter { docId, msg -> showReplyDialog(docId, msg.adminJavobi) }
@@ -47,6 +50,20 @@ class AdminPanelActivity : AppCompatActivity() {
             FirebaseRepo.rejectPremiumRequest(docId) { }
         }
     )
+    private val premiumUsersAdapter = AdminPremiumUserAdapter { user ->
+        val nomi = user.ismi.ifBlank { user.email.ifBlank { user.uid } }
+        AlertDialog.Builder(this)
+            .setTitle("Premiumni bekor qilish")
+            .setMessage("\"$nomi\" uchun premium huquqi bekor qilinsinmi?")
+            .setPositiveButton("Ha, bekor qilish") { _, _ ->
+                FirebaseRepo.revokePremium(user.uid) { success ->
+                    val msg = if (success) "Premium bekor qilindi" else "Xato yuz berdi"
+                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Yo'q", null)
+            .show()
+    }
     private val cardsAdapter = AdminCardAdapter { card ->
         AlertDialog.Builder(this)
             .setTitle("Kartani o'chirish")
@@ -69,27 +86,34 @@ class AdminPanelActivity : AppCompatActivity() {
 
         messagesList = findViewById(R.id.messagesList)
         premiumList = findViewById(R.id.premiumList)
+        premiumUsersSection = findViewById(R.id.premiumUsersSection)
+        premiumUsersList = findViewById(R.id.premiumUsersList)
         cardsList = findViewById(R.id.cardsList)
         cardsSection = findViewById(R.id.cardsSection)
         tabMessages = findViewById(R.id.tabMessages)
         tabPremium = findViewById(R.id.tabPremium)
+        tabPremiumUsers = findViewById(R.id.tabPremiumUsers)
         tabCards = findViewById(R.id.tabCards)
 
         messagesList.layoutManager = LinearLayoutManager(this)
         messagesList.adapter = messagesAdapter
         premiumList.layoutManager = LinearLayoutManager(this)
         premiumList.adapter = premiumAdapter
+        premiumUsersList.layoutManager = LinearLayoutManager(this)
+        premiumUsersList.adapter = premiumUsersAdapter
         cardsList.layoutManager = LinearLayoutManager(this)
         cardsList.adapter = cardsAdapter
 
         tabMessages.setOnClickListener { showTab(0) }
         tabPremium.setOnClickListener { showTab(1) }
-        tabCards.setOnClickListener { showTab(2) }
+        tabPremiumUsers.setOnClickListener { showTab(2) }
+        tabCards.setOnClickListener { showTab(3) }
 
         findViewById<View>(R.id.btnAddCard).setOnClickListener { showAddCardDialog() }
 
         FirebaseRepo.listenAllSupportMessages { list -> messagesAdapter.setData(list) }
         FirebaseRepo.listenAllPremiumRequests { list -> premiumAdapter.setData(list) }
+        FirebaseRepo.listenPremiumParents { list -> premiumUsersAdapter.setData(list) }
         FirebaseRepo.listenAdminCards { list -> cardsAdapter.setData(list) }
 
         showTab(0)
@@ -98,16 +122,19 @@ class AdminPanelActivity : AppCompatActivity() {
     private fun showTab(index: Int) {
         messagesList.visibility = if (index == 0) View.VISIBLE else View.GONE
         premiumList.visibility = if (index == 1) View.VISIBLE else View.GONE
-        cardsSection.visibility = if (index == 2) View.VISIBLE else View.GONE
+        premiumUsersSection.visibility = if (index == 2) View.VISIBLE else View.GONE
+        cardsSection.visibility = if (index == 3) View.VISIBLE else View.GONE
 
         val activeBg = R.drawable.bg_button_primary
         val inactiveBg = R.drawable.bg_card_clickable
         tabMessages.setBackgroundResource(if (index == 0) activeBg else inactiveBg)
         tabPremium.setBackgroundResource(if (index == 1) activeBg else inactiveBg)
-        tabCards.setBackgroundResource(if (index == 2) activeBg else inactiveBg)
+        tabPremiumUsers.setBackgroundResource(if (index == 2) activeBg else inactiveBg)
+        tabCards.setBackgroundResource(if (index == 3) activeBg else inactiveBg)
         tabMessages.setTextColor(if (index == 0) 0xFF0D1117.toInt() else 0xFFE6E9EF.toInt())
         tabPremium.setTextColor(if (index == 1) 0xFF0D1117.toInt() else 0xFFE6E9EF.toInt())
-        tabCards.setTextColor(if (index == 2) 0xFF0D1117.toInt() else 0xFFE6E9EF.toInt())
+        tabPremiumUsers.setTextColor(if (index == 2) 0xFF0D1117.toInt() else 0xFFE6E9EF.toInt())
+        tabCards.setTextColor(if (index == 3) 0xFF0D1117.toInt() else 0xFFE6E9EF.toInt())
     }
 
     private fun showReplyDialog(docId: String, existingReply: String) {

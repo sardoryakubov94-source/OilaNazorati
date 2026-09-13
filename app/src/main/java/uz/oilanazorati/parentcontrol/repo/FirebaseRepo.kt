@@ -13,6 +13,7 @@ import uz.oilanazorati.parentcontrol.model.NotificationEvent
 import uz.oilanazorati.parentcontrol.model.SmsEvent
 import uz.oilanazorati.parentcontrol.model.SupportMessage
 import uz.oilanazorati.parentcontrol.model.PremiumRequest
+import uz.oilanazorati.parentcontrol.model.PremiumParent
 import uz.oilanazorati.parentcontrol.model.AdminCard
 import java.net.HttpURLConnection
 import java.net.URLEncoder
@@ -513,6 +514,33 @@ object FirebaseRepo {
     fun rejectPremiumRequest(reqId: String, onResult: (Boolean) -> Unit) {
         db.collection("premium_requests").document(reqId).update(mapOf("holati" to "rad_etildi", "halQilinganMs" to System.currentTimeMillis()))
             .addOnSuccessListener { onResult(true) }.addOnFailureListener { onResult(false) }
+    }
+
+    /**
+     * Hozirda premium'ga ega BARCHA foydalanuvchilarni tinglaydi — so'rov
+     * orqali (to'lab) ham, admin tomonidan qo'lda (Firestore konsolidan
+     * yoki [approvePremiumRequest]dan tashqari) berilganlar ham shu
+     * ro'yxatda ko'rinadi, chunki tekshiruv faqat parents/{uid}.premium
+     * maydoniga qaraydi.
+     */
+    fun listenPremiumParents(onChange: (List<PremiumParent>) -> Unit) {
+        db.collection("parents").whereEqualTo("premium", true).addSnapshotListener { snap, _ ->
+            onChange(snap?.documents?.map { doc ->
+                PremiumParent(
+                    uid = doc.id,
+                    ismi = doc.getString("ismi").orEmpty(),
+                    email = doc.getString("email").orEmpty(),
+                    oxirgiKirishMs = doc.getLong("oxirgiKirishMs") ?: 0L
+                )
+            }?.sortedByDescending { it.oxirgiKirishMs } ?: emptyList())
+        }
+    }
+
+    /** Ko'rsatilgan foydalanuvchidan premium huquqini olib tashlaydi. */
+    fun revokePremium(uid: String, onResult: (Boolean) -> Unit) {
+        db.collection("parents").document(uid).update("premium", false)
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
     }
 
     fun listenAdminCards(onChange: (List<AdminCard>) -> Unit) {
