@@ -309,7 +309,13 @@ object FirebaseRepo {
 
     fun sendSupportMessage(matn: String, aloqaRaqami: String, onResult: (Boolean) -> Unit) {
         val user = auth.currentUser ?: return onResult(false)
-        val msg = SupportMessage(user.uid, user.email.orEmpty(), matn, aloqaRaqami, System.currentTimeMillis())
+        val msg = SupportMessage(
+            fromUid = user.uid,
+            fromEmail = user.email.orEmpty(),
+            matn = matn,
+            aloqaRaqami = aloqaRaqami,
+            createdAtMs = System.currentTimeMillis()
+        )
         db.collection("support_messages").add(msg).addOnSuccessListener { onResult(true) }.addOnFailureListener { onResult(false) }
     }
 
@@ -333,7 +339,13 @@ object FirebaseRepo {
 
     fun sendPremiumRequest(izoh: String, skrinshotBase64: String, onResult: (Boolean) -> Unit) {
         val user = auth.currentUser ?: return onResult(false)
-        val req = PremiumRequest(user.uid, user.email.orEmpty(), izoh, skrinshotBase64, System.currentTimeMillis())
+        val req = PremiumRequest(
+            fromUid = user.uid,
+            fromEmail = user.email.orEmpty(),
+            tolovIzohi = izoh,
+            tolovSkrinshotiBase64 = skrinshotBase64,
+            createdAtMs = System.currentTimeMillis()
+        )
         db.collection("premium_requests").add(req).addOnSuccessListener { onResult(true) }.addOnFailureListener { onResult(false) }
     }
 
