@@ -28,3 +28,6 @@
     line-height:1.5;
   }
 }
+
+/* Replace only the installation warning image on the public website. */
+.guide-step-img{content:url('icons/play-protect-warning-new.svg');object-fit:contain;width:100%;height:auto;max-height:none;}
