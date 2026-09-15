@@ -344,13 +344,45 @@ object FirebaseRepo {
             .addOnSuccessListener { onResult(true) }.addOnFailureListener { onResult(false) }
     }
 
+    /**
+     * MUHIM TUZATISH: avval bu funksiya har safar chaqirilganda BARCHA
+     * kontaktlarni o'chirib, qaytadan yozardi (masalan 150 ta kontakt =
+     * 300 ta yozuv), HATTO hech narsa o'zgarmagan bo'lsa ham. Bu funksiya
+     * esa Android tomonidan HAR BIR qo'ng'iroq/SMSdan keyin avtomatik
+     * chaqirilib turadi (chunki qo'ng'iroq/SMS kontaktning "oxirgi aloqa"
+     * metama'lumotini yangilaydi) — natijada kontakt ro'yxati o'zgarmagan
+     * holda ham kuniga minglab keraksiz Firestore yozuvi sarflanardi.
+     *
+     * Endi faqat HAQIQATAN o'zgargan narsa yoziladi: yangi qo'shilgan yoki
+     * nomi o'zgargan kontaktlar uchun yozuv, endi mavjud bo'lmaganlar
+     * uchun o'chirish. Hech narsa o'zgarmagan bo'lsa — bitta ham yozuv
+     * ketmaydi (faqat bitta arzon o'qish, u ham reads kvotasidan).
+     */
     fun syncSavedContacts(contacts: List<ContactMapping>) {
         val col = childCollection("contacts") ?: return
         col.get().addOnSuccessListener { snap ->
+            val existing = snap.documents.associateBy({ it.id }, { it.getString("nomi").orEmpty() })
+            val incoming = contacts.associateBy({ it.kontaktHash }, { it.nomi })
+
             val batch = db.batch()
-            snap.documents.forEach { batch.delete(it.reference) }
-            contacts.forEach { c -> batch.set(col.document(c.kontaktHash), c) }
-            batch.commit()
+            var any = false
+
+            // Yangi yoki nomi o'zgargan kontaktlar — faqat shulargina yoziladi.
+            incoming.forEach { (hash, nomi) ->
+                if (existing[hash] != nomi) {
+                    batch.set(col.document(hash), ContactMapping(nomi = nomi, kontaktHash = hash))
+                    any = true
+                }
+            }
+            // Endi qurilmada mavjud bo'lmagan (o'chirilgan) kontaktlar — o'chiriladi.
+            existing.keys.forEach { hash ->
+                if (hash !in incoming) {
+                    batch.delete(col.document(hash))
+                    any = true
+                }
+            }
+
+            if (any) batch.commit()
         }
     }
 

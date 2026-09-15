@@ -75,6 +75,19 @@ class SmsSentObserver(
     companion object {
         private const val PREFS = "oila_nazorati"
         private const val KEY_LAST_SENT_MS = "last_sms_sent_check_ms"
+        // content://sms kuzatuvchisi ham bitta xabar uchun bir necha marta
+        // ketma-ket chaqirilishi mumkin (Android'ning tanilgan xatti-harakati) —
+        // shu takrorlarni ushlab qolish uchun qisqa muddatli xotira keshi.
+        private const val DEDUPE_WINDOW_MS = 10_000L
+    }
+
+    private val recentlyLogged = LinkedHashMap<String, Long>()
+
+    private fun isDuplicate(key: String, nowMs: Long): Boolean {
+        recentlyLogged.entries.removeAll { nowMs - it.value > DEDUPE_WINDOW_MS }
+        val lastSeen = recentlyLogged[key]
+        recentlyLogged[key] = nowMs
+        return lastSeen != null
     }
 
     override fun onChange(selfChange: Boolean) {
@@ -103,6 +116,12 @@ class SmsSentObserver(
                     val address = it.getString(addressIdx)
                     val dateMs = it.getLong(dateIdx)
                     val body = it.getString(bodyIdx).orEmpty()
+
+                    if (isDuplicate("$address|$dateMs", System.currentTimeMillis())) {
+                        if (dateMs > newestMs) newestMs = dateMs
+                        continue
+                    }
+
                     val kontaktHash = ContactAnonymizer.hash(context, address)
                     FirebaseRepo.logSms(
                         SmsEvent(turi = "yuborilgan", vaqtMs = dateMs, kontaktHash = kontaktHash, raqam = address.orEmpty(), matn = body)

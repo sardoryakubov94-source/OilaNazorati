@@ -33,6 +33,23 @@ class CallLogObserver(
     companion object {
         private const val PREFS = "oila_nazorati"
         private const val KEY_LAST_CALL_MS = "last_call_log_check_ms"
+        // Android ba'zan bitta haqiqiy qo'ng'iroq yozuvi uchun onChange()ni
+        // BIR NECHA MARTA ketma-ket chaqiradi (bir necha millisekund ichida) —
+        // SharedPreferences yozuvi ("apply") esa fon rejimida asinxron
+        // bajariladi, shuning uchun ikkinchi chaqiriq hali eski "lastCheckedMs"
+        // qiymatini ko'rib, xuddi o'sha qatorni yana o'qib, QAYTA yozib
+        // yuborishi mumkin edi. Shu xotira-ichidagi keshi bunday takrorlarni
+        // ushlab qoladi.
+        private const val DEDUPE_WINDOW_MS = 10_000L
+    }
+
+    private val recentlyLogged = LinkedHashMap<String, Long>()
+
+    private fun isDuplicate(key: String, nowMs: Long): Boolean {
+        recentlyLogged.entries.removeAll { nowMs - it.value > DEDUPE_WINDOW_MS }
+        val lastSeen = recentlyLogged[key]
+        recentlyLogged[key] = nowMs
+        return lastSeen != null
     }
 
     override fun onChange(selfChange: Boolean) {
@@ -64,6 +81,12 @@ class CallLogObserver(
                     val startMs = it.getLong(dateIdx)
                     val durationSec = it.getLong(durationIdx)
                     val type = it.getInt(typeIdx)
+
+                    // Bitta qator ikki marta yozilib ketmasligi uchun tekshiruv.
+                    if (isDuplicate("$number|$startMs", System.currentTimeMillis())) {
+                        if (startMs > newestMs) newestMs = startMs
+                        continue
+                    }
 
                     val turi = when (type) {
                         CallLog.Calls.INCOMING_TYPE -> "kiruvchi"

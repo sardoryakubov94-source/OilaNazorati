@@ -223,8 +223,20 @@ class MonitorForegroundService : Service() {
             this, android.Manifest.permission.READ_CONTACTS
         ) == PackageManager.PERMISSION_GRANTED
         if (!granted) return
+        // Debounce: Android "Kontaktlar" jadvalini HAR BIR qo'ng'iroq/SMSdan
+        // keyin ham o'zgargan deb hisoblab, kuzatuvchini chaqirib turishi
+        // mumkin (kontaktning "oxirgi aloqa" metama'lumoti yangilangani
+        // uchun). Shu sabab, tezkor ketma-ket kelgan chaqiriqlarni bittaga
+        // birlashtiramiz — real kontakt o'zgarishi 2 daqiqadan kechroq
+        // sinxronlansa ham hech qanday muammo emas.
+        var pendingSync: Runnable? = null
         val observer = object : ContentObserver(handler) {
-            override fun onChange(selfChange: Boolean) { syncContactsIfPermitted() }
+            override fun onChange(selfChange: Boolean) {
+                pendingSync?.let { handler.removeCallbacks(it) }
+                val r = Runnable { syncContactsIfPermitted() }
+                pendingSync = r
+                handler.postDelayed(r, 2 * 60_000L)
+            }
         }
         contentResolver.registerContentObserver(ContactsContract.Contacts.CONTENT_URI, true, observer)
         contactsObserver = observer
