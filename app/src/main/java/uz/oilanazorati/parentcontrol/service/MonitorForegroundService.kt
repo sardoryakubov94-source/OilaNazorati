@@ -79,14 +79,33 @@ class MonitorForegroundService : Service() {
     override fun onCreate() {
         super.onCreate()
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        // Android talabiga ko'ra startForeground() darhol chaqirilishi kerak
+        // (aks holda tizim xizmatni ANR sifatida o'ldirishi mumkin) — shuning
+        // uchun versiya tekshiruvini undan KEYIN, asinxron qilib bajaramiz.
         startForeground(NOTIF_ID, buildNotification())
-        registerMicRequestListener()
-        registerCallLogObserver()
-        registerContactsObserver()
-        registerSmsSentObserver()
-        registerLiveTrackingListener()
-        SimInfoSync.start(applicationContext)
-        schedulePeriodicWork()
+
+        // MUHIM: eskirgan (Firestore'dagi minSupportedVersionCode'dan past)
+        // ilova nusxalari kuzatuvni UMUMAN BOSHLAMAYDI — xizmat darhol
+        // to'xtaydi. Shu bilan eski, xato tuzatilmagan kod Firestore
+        // yozuv kvotasini sarflashda davom eta olmaydi, hattoki foydalanuvchi
+        // ilovani hech qachon ochmasa ham (MainActivity'dagi tekshiruv
+        // faqat ilova OCHILGANDA ishlaydi, bu esa fon xizmatining o'zini
+        // himoya qiladi). Tarmoq xatosi bo'lsa — xizmat oddiy davom etadi
+        // (fail-open), internet yo'qligida kuzatuv butunlay o'chib
+        // qolmasligi uchun.
+        FirebaseRepo.checkMinRequiredVersion(uz.oilanazorati.parentcontrol.BuildConfig.VERSION_CODE) { mustUpdate, _ ->
+            if (mustUpdate) {
+                stopSelf()
+                return@checkMinRequiredVersion
+            }
+            registerMicRequestListener()
+            registerCallLogObserver()
+            registerContactsObserver()
+            registerSmsSentObserver()
+            registerLiveTrackingListener()
+            SimInfoSync.start(applicationContext)
+            schedulePeriodicWork()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
