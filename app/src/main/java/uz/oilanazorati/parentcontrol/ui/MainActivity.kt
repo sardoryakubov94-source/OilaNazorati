@@ -61,6 +61,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        FirebaseRepo.checkMinRequiredVersion(uz.oilanazorati.parentcontrol.BuildConfig.VERSION_CODE) { mustUpdate, _ ->
+            if (mustUpdate) {
+                startActivity(Intent(this, UpdateRequiredActivity::class.java))
+                finish()
+            }
+        }
+
         val onboardingPrefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
         if (!onboardingPrefs.getBoolean("onboarding_shown", false)) {
             startActivity(Intent(this, OnboardingActivity::class.java))

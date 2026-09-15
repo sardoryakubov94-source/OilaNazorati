@@ -481,6 +481,26 @@ object FirebaseRepo {
             .addOnFailureListener { onResult(emptyList()) }
     }
 
+    /**
+     * Ilova ochilganda eng kam qo'llab-quvvatlanadigan versiya bilan
+     * solishtirish uchun. Firestore'dagi `app_config/version` hujjatida
+     * `minSupportedVersionCode` maydonini oshirib, "Publish" qilinsa —
+     * shu raqamdan past versiyadagi barcha o'rnatilgan nusxalar ochilganda
+     * to'liq bloklanadi va yangilashga yo'naltiriladi.
+     *
+     * Tarmoq yo'q yoki hujjat topilmasa — ILOVA BLOKLANMAYDI (fail-open),
+     * chunki internetsiz holatda ham asosiy funksiyalar (bola paroli va
+     * h.k.) ishlashi kerak.
+     */
+    fun checkMinRequiredVersion(currentVersionCode: Int, onResult: (Boolean, Int) -> Unit) {
+        db.collection("app_config").document("version").get()
+            .addOnSuccessListener { doc ->
+                val minRequired = doc.getLong("minSupportedVersionCode")?.toInt() ?: 0
+                onResult(currentVersionCode < minRequired, minRequired)
+            }
+            .addOnFailureListener { onResult(false, 0) }
+    }
+
     fun checkIsPremium(onResult: (Boolean) -> Unit) {
         val uid = auth.currentUser?.uid ?: return onResult(false)
         db.collection("parents").document(uid).get()

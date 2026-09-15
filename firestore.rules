@@ -26,6 +26,18 @@ service cloud.firestore {
     }
 
     // =========================
+    // APP CONFIG (versiya tekshiruvi)
+    // =========================
+    // Hech qanday tizimga kirilmagan holatda ham (ilova ilk marta
+    // ochilganda, hali anonim sessiya ham yaratilmagan bo'lishi mumkin)
+    // o'qilishi kerak — shuning uchun ochiq. Sezgir ma'lumot emas
+    // (faqat eng kam qo'llab-quvvatlanadigan versiya raqami).
+    match /app_config/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // =========================
     // FAMILIES
     // =========================
 

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="28dp"
+    android:background="@drawable/bg_app_gradient">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="⬆️"
+        android:textSize="56sp"
+        android:layout_marginBottom="18dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Yangi versiya chiqdi"
+        android:textColor="#FFFFFF"
+        android:textStyle="bold"
+        android:textSize="20sp"
+        android:layout_marginBottom="10dp"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Ilovaning bu versiyasi endi qo'llab-quvvatlanmaydi. Davom etish uchun eng so'nggi versiyani yuklab, o'rnating."
+        android:textColor="#DCE9E0"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:layout_marginBottom="28dp"/>
+
+    <Button
+        android:id="@+id/btnUpdateNow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Yangilash"
+        android:textStyle="bold"
+        android:background="@drawable/bg_button_primary"/>
+
+</LinearLayout>

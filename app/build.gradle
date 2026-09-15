@@ -13,8 +13,8 @@ android {
         applicationId "uz.oilanazorati.parentcontrol"
         minSdk 26
         targetSdk 34
-        versionCode 2
-        versionName "1.0.1"
+        versionCode 3
+        versionName "1.0.2"
         buildConfigField "String", "BUILD_TAG", "\"${new Date().format('MM-dd HH:mm')}\""
         // App UI itself has no i18n system (all strings are hardcoded Uzbek in
         // code/layouts — no values-XX folders of our own). Everything else
