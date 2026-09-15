@@ -20,6 +20,19 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class ParentDashboardActivity : AppCompatActivity() {
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // MUHIM: bu ekran "singleTask" rejimida ochiladi. Agar u allaqachon
+        // ochiq bo'lsa-yu, "Mening oilalarim"dan BOSHQA oila kodi tanlansa,
+        // Android yangi nusxa yaratish o'rniga shu ekranni oldinga
+        // chiqaradi — lekin hech narsa qayta yuklanmaydi, eski oilaning
+        // ma'lumotlari ko'rinaveradi. setIntent(intent) + recreate() bilan
+        // ekranni yangi FirebaseRepo.familyCode uchun to'liq qayta yuklaymiz.
+        setIntent(intent)
+        recreate()
+    }
+
     private lateinit var binding: uz.oilanazorati.parentcontrol.databinding.ActivityParentDashboardBinding
     private val appUsageAdapter = AppUsageAdapter()
     private val timelineAdapter = TimelineAdapter()
