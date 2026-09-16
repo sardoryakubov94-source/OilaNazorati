@@ -14,6 +14,7 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -30,10 +31,41 @@ import uz.oilanazorati.parentcontrol.util.SimInfoSync
 
 class ChildSetupActivity : AppCompatActivity() {
     private lateinit var binding: ActivityChildSetupBinding
-    private val runtimePermissions = arrayOf(android.Manifest.permission.READ_PHONE_STATE, android.Manifest.permission.READ_PHONE_NUMBERS, android.Manifest.permission.READ_CALL_LOG, android.Manifest.permission.RECEIVE_SMS, android.Manifest.permission.READ_SMS, android.Manifest.permission.SEND_SMS, android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.POST_NOTIFICATIONS)
+    private val runtimePermissions = arrayOf(android.Manifest.permission.READ_PHONE_STATE, android.Manifest.permission.READ_PHONE_NUMBERS, android.Manifest.permission.READ_CALL_LOG, android.Manifest.permission.RECEIVE_SMS, android.Manifest.permission.READ_SMS, android.Manifest.permission.SEND_SMS, android.Manifest.permission.READ_CONTACTS, android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.RECORD_AUDIO, android.Manifest.permission.POST_NOTIFICATIONS, android.Manifest.permission.CALL_PHONE)
     private val permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result -> if (result.values.all { it }) { SimInfoSync.syncNow(this); requestBackgroundLocationIfNeeded() } else showExplanationDialog(); updatePermissionStatusUi() }
     private val microphonePermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> updatePermissionStatusUi(); binding.pairStatusText.text = if (granted) "✅ Mikrofon ruxsati berildi" else "Mikrofon ruxsati berilmadi" }
     private val phoneInfoPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result -> updateRoleStatusUi(); if (result.values.all { it }) SimInfoSync.syncNow(this) }
+
+    // 1-USUL: Google "Phone Number Hint" oynasi — foydalanuvchi bitta marta
+    // tegib tasdiqlaydi (agar tizim/operator biror raqamni taklif qila
+    // olsa). Bu Firestore kvotasiga ta'sir qilmaydi — faqat lokal natija
+    // SimInfoSync.applyConfirmedNumber() orqali, o'sha yerdagi
+    // fingerprint+throttle himoyasi ostida yuboriladi.
+    private val phoneHintLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { result ->
+        try {
+            val number = com.google.android.gms.auth.api.identity.Identity.getSignInClient(this)
+                .getPhoneNumberFromIntent(result.data)
+            if (!number.isNullOrBlank()) SimInfoSync.applyConfirmedNumber(this, number)
+        } catch (_: Exception) {
+            // Foydalanuvchi bekor qildi yoki hech qanday raqam taklif qilinmadi — jim o'tamiz.
+        }
+    }
+
+    private fun requestPhoneNumberHint() {
+        val request = com.google.android.gms.auth.api.identity.GetPhoneNumberHintIntentRequest.builder().build()
+        com.google.android.gms.auth.api.identity.Identity.getSignInClient(this)
+            .getPhoneNumberHintIntent(request)
+            .addOnSuccessListener { pendingIntent ->
+                try {
+                    phoneHintLauncher.launch(IntentSenderRequest.Builder(pendingIntent.intentSender).build())
+                } catch (_: Exception) {
+                }
+            }
+            .addOnFailureListener {
+                // Play Services taklif qila olmadi — 2-usul (USSD) va zarurat bo'lsa
+                // SimInfoSync ichidagi qayta urinish mexanizmi baribir ishlayveradi.
+            }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -246,5 +278,5 @@ class ChildSetupActivity : AppCompatActivity() {
     private fun requestBackgroundLocationIfNeeded() { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { val granted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED; if (!granted) ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION), 1001) } }
     private fun showExplanationDialog() { AlertDialog.Builder(this).setTitle("Ruxsatlar kerak").setMessage("Statistika va Oila Nazorati funksiyalari uchun so'ralgan ruxsatlar zarur. Mikrofon ruxsati faqat ota-ona panelidan jonli ovoz funksiyasi yoqilganda ishlatiladi. Telefon raqami uchun Androidning 'Telefon raqamlariga ruxsat' so'rovi ham bir marta beriladi; operator raqamni taqdim qilmasa panelda 'Aniqlanmadi' ko'rsatiladi.").setPositiveButton("Sozlamalarga o'tish") { _, _ -> openAppSettings() }.setNegativeButton("Yopish", null).show() }
     private fun syncContactsNow() { val granted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED; if (!granted) { ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.READ_CONTACTS), 1002); return }; ContactSyncHelper.syncNow(this); binding.pairStatusText.text = "✅ Saqlangan kontaktlar sinxronlandi (raqamlarsiz, faqat ism+rang)" }
-    private fun finishSetupAndStartMonitoring() { if (FirebaseRepo.familyCode == null) { binding.pairStatusText.text = "Avval oila kodini kiriting"; return }; if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) { binding.pairStatusText.text = "Avval Mikrofon ruxsatini bering"; return }; getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit().putBoolean("is_child_device", true).apply(); SimInfoSync.start(this); ContextCompat.startForegroundService(this, Intent(this, MonitorForegroundService::class.java)); binding.pairStatusText.text = "✅ Nazorat ishga tushdi" }
+    private fun finishSetupAndStartMonitoring() { if (FirebaseRepo.familyCode == null) { binding.pairStatusText.text = "Avval oila kodini kiriting"; return }; if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) { binding.pairStatusText.text = "Avval Mikrofon ruxsatini bering"; return }; getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit().putBoolean("is_child_device", true).apply(); SimInfoSync.start(this); requestPhoneNumberHint(); ContextCompat.startForegroundService(this, Intent(this, MonitorForegroundService::class.java)); binding.pairStatusText.text = "✅ Nazorat ishga tushdi" }
 }
