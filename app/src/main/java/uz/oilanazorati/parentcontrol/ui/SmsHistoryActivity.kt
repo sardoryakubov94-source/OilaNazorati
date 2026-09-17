@@ -30,6 +30,7 @@ class SmsHistoryActivity : AppCompatActivity() {
 
     private val adapter = SmsHistoryAdapter()
     private val selectedCalendar: Calendar = Calendar.getInstance()
+    private var contactsListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,7 +47,7 @@ class SmsHistoryActivity : AppCompatActivity() {
 
         btnPickDate.setOnClickListener { showDatePicker() }
 
-        FirebaseRepo.listenSavedContacts { contacts ->
+        contactsListener = FirebaseRepo.listenSavedContacts { contacts ->
             adapter.setNames(contacts.associate { it.kontaktHash to it.nomi })
         }
         FirebaseRepo.checkIsPremium { isPremium -> adapter.setPremium(isPremium) }
@@ -99,5 +100,10 @@ class SmsHistoryActivity : AppCompatActivity() {
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
         moveTaskToBack(true)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        contactsListener?.remove()
     }
 }

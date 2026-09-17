@@ -51,6 +51,13 @@ class TrendsActivity : AppCompatActivity() {
     private val topContactsAdapter = ContactSummaryAdapter()
     private val topSmsContactsAdapter = SmsContactSummaryAdapter()
     private var savedContactNames: Map<String, String> = emptyMap() // kontaktHash -> nomi
+    // Bu 4 tasi ilgari hech qayerda saqlanmagan va onDestroy'da o'chirilmagan —
+    // ekran yopilgandan keyin ham Firestore'da ishlab, kvota isrof qilardi.
+    private var contactsListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var callsDonutListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var smsDonutListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var appUsageDonutListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var contactsDonutListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     companion object {
         const val TREND_DAYS = 30
@@ -99,7 +106,7 @@ class TrendsActivity : AppCompatActivity() {
 
         // Ismlarni oldindan yuklab olamiz — reytingda "raqamsiz, lekin
         // saqlangan bo'lsa ismi bilan" ko'rsatish uchun.
-        FirebaseRepo.listenSavedContacts { contacts ->
+        contactsListener = FirebaseRepo.listenSavedContacts { contacts ->
             savedContactNames = contacts.associate { it.kontaktHash to it.nomi }
             topContactsAdapter.setNames(savedContactNames)
             topSmsContactsAdapter.setNames(savedContactNames)
@@ -118,10 +125,10 @@ class TrendsActivity : AppCompatActivity() {
         val dayStart = cal.timeInMillis
         val dayEnd = dayStart + 24 * 60 * 60 * 1000
 
-        FirebaseRepo.listenCallsForDay(dayStart, dayEnd) { calls -> drawCallsDonut(calls) }
-        FirebaseRepo.listenSmsForDay(dayStart, dayEnd) { smsList -> drawSmsDonut(smsList) }
-        FirebaseRepo.listenAppUsageForDay(dayStart, dayEnd) { usage -> drawAppsDonut(usage) }
-        FirebaseRepo.listenSavedContacts { contacts -> drawContactsDonut(contacts.size) }
+        callsDonutListener = FirebaseRepo.listenCallsForDay(dayStart, dayEnd) { calls -> drawCallsDonut(calls) }
+        smsDonutListener = FirebaseRepo.listenSmsForDay(dayStart, dayEnd) { smsList -> drawSmsDonut(smsList) }
+        appUsageDonutListener = FirebaseRepo.listenAppUsageForDay(dayStart, dayEnd) { usage -> drawAppsDonut(usage) }
+        contactsDonutListener = FirebaseRepo.listenSavedContacts { contacts -> drawContactsDonut(contacts.size) }
     }
 
     /** Umumiy donut (pie, teshikli) sozlamalarini bitta joyda ushlab turadi. */
@@ -600,5 +607,11 @@ class TrendsActivity : AppCompatActivity() {
     @Suppress("DEPRECATION")
     override fun onBackPressed() {
         moveTaskToBack(true)
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        contactsListener?.remove(); callsDonutListener?.remove(); smsDonutListener?.remove()
+        appUsageDonutListener?.remove(); contactsDonutListener?.remove()
     }
 }

@@ -40,6 +40,14 @@ class ParentDashboardActivity : AppCompatActivity() {
     private val contactSummaryAdapter = ContactSummaryAdapter()
     private var isPremiumUser = false
     private var simInfoListener: com.google.firebase.firestore.ListenerRegistration? = null
+    // MUHIM: bular ilgari saqlanmagani uchun har safar loadTodayStats() chaqirilganda
+    // (masalan bola almashtirilganda) ESKI listenerlar o'chirilmay, ustiga yangisi
+    // qo'shilib borardi — Firestore o'qish kvotasini keraksiz ko'paytirar edi.
+    private var contactsListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var callsListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var smsListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var appUsageListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var locationListener: com.google.firebase.firestore.ListenerRegistration? = null
     private lateinit var simCardText: TextView
     private val timeFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
     private var lastBackPressMs = 0L
@@ -294,21 +302,27 @@ class ParentDashboardActivity : AppCompatActivity() {
 
     private fun loadTodayStats() {
         refreshSimInfo()
+        // Bola almashtirilganda shu funksiya qayta chaqiriladi — eski
+        // listenerlarni o'chirmasdan turib yangisini ulasak, ikkalasi ham
+        // ishlab qolib, har o'zgarishda 2x, 3x... o'qish sarflanardi.
+        contactsListener?.remove(); callsListener?.remove(); smsListener?.remove()
+        appUsageListener?.remove(); locationListener?.remove()
+
         val cal = Calendar.getInstance(); cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
         val dayStart = cal.timeInMillis; val dayEnd = dayStart + 24 * 60 * 60 * 1000
-        FirebaseRepo.listenSavedContacts { contacts -> val names = contacts.associate { it.kontaktHash to it.nomi }; contactSummaryAdapter.setNames(names); smsAdapter.setNames(names) }
-        FirebaseRepo.listenCallsForDay(dayStart, dayEnd) { calls ->
+        contactsListener = FirebaseRepo.listenSavedContacts { contacts -> val names = contacts.associate { it.kontaktHash to it.nomi }; contactSummaryAdapter.setNames(names); smsAdapter.setNames(names) }
+        callsListener = FirebaseRepo.listenCallsForDay(dayStart, dayEnd) { calls ->
             val incoming = calls.count { it.turi == "kiruvchi" }; val outgoing = calls.count { it.turi == "chiquvchi" }
             binding.statCallCount.text = "${calls.size} ta"; binding.statCallDetail.text = "$incoming kiruvchi\n$outgoing chiquvchi"; timelineAdapter.setCalls(calls, timeFmt)
             val stats = buildContactStats(calls); binding.statContactCount.text = "${stats.count { it.kontaktHash != "noma_lum" }} ta"; contactSummaryAdapter.setStats(stats)
         }
-        FirebaseRepo.listenSmsForDay(dayStart, dayEnd) { sms ->
+        smsListener = FirebaseRepo.listenSmsForDay(dayStart, dayEnd) { sms ->
             val sent = sms.count { it.turi == "yuborilgan" }; val received = sms.count { it.turi == "qabul_qilingan" }
             binding.statSmsCount.text = "${sms.size} ta"; binding.statSmsDetail.text = "$sent yuborilgan\n$received qabul"; smsAdapter.setData(sms)
             binding.smsTimelineList.visibility = if (sms.isEmpty()) View.GONE else View.VISIBLE; binding.smsSectionEmpty.visibility = if (sms.isEmpty()) View.VISIBLE else View.GONE
         }
-        FirebaseRepo.listenAppUsageForDay(dayStart, dayEnd) { usage -> appUsageAdapter.setData(usage.groupBy { it.ilovaNomi }.mapValues { (_, list) -> list.sumOf { it.davomiylikSoniya } }.toList().sortedByDescending { it.second }) }
-        FirebaseRepo.listenLatestLocation { loc ->
+        appUsageListener = FirebaseRepo.listenAppUsageForDay(dayStart, dayEnd) { usage -> appUsageAdapter.setData(usage.groupBy { it.ilovaNomi }.mapValues { (_, list) -> list.sumOf { it.davomiylikSoniya } }.toList().sortedByDescending { it.second }) }
+        locationListener = FirebaseRepo.listenLatestLocation { loc ->
             if (loc == null) return@listenLatestLocation
             val time = timeFmt.format(Date(loc.vaqtMs)); val minutesAgo = ((System.currentTimeMillis() - loc.vaqtMs) / 60000).coerceAtLeast(0)
             binding.locationTimeAgo.text = "$time • $minutesAgo daqiqa oldin"; binding.locationCoords.text = "${"%.5f".format(Locale.US, loc.lat)}, ${"%.5f".format(Locale.US, loc.lng)}"; binding.headerStatus.text = if (minutesAgo <= 45) "● FAOL" else "● NOFAOL"
@@ -319,6 +333,8 @@ class ParentDashboardActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         simInfoListener?.remove()
+        contactsListener?.remove(); callsListener?.remove(); smsListener?.remove()
+        appUsageListener?.remove(); locationListener?.remove()
     }
 
     @Suppress("DEPRECATION")

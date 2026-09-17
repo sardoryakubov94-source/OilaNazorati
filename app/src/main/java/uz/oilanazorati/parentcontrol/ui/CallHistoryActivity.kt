@@ -23,6 +23,7 @@ class CallHistoryActivity : AppCompatActivity() {
     private lateinit var historyList: RecyclerView
     private val adapter = CallHistoryAdapter()
     private val selectedCalendar: Calendar = Calendar.getInstance()
+    private var contactsListener: com.google.firebase.firestore.ListenerRegistration? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_call_history)
@@ -34,7 +35,7 @@ class CallHistoryActivity : AppCompatActivity() {
         historyList.layoutManager = LinearLayoutManager(this)
         historyList.adapter = adapter
         btnPickDate.setOnClickListener { showDatePicker() }
-        FirebaseRepo.listenSavedContacts { contacts -> adapter.setNames(contacts.associate { it.kontaktHash to it.nomi }) }
+        contactsListener = FirebaseRepo.listenSavedContacts { contacts -> adapter.setNames(contacts.associate { it.kontaktHash to it.nomi }) }
         FirebaseRepo.checkIsPremium { isPremium -> adapter.setPremium(isPremium) }
         updateDateLabel(); loadDataForSelectedDay(); bindBottomNav(NavTab.CALLS)
     }
@@ -57,5 +58,10 @@ class CallHistoryActivity : AppCompatActivity() {
     override fun onBackPressed() {
         startActivity(Intent(this, ParentDashboardActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP })
         finish()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        contactsListener?.remove()
     }
 }
