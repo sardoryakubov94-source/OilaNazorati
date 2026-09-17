@@ -76,12 +76,17 @@ class AdminPanelActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (!AdminConfig.isCurrentUserAdmin()) {
-            Toast.makeText(this, "Sizda admin huquqi yo'q", Toast.LENGTH_SHORT).show()
-            finish()
-            return
+        AdminConfig.checkCurrentUserAdmin { isAdmin ->
+            if (!isAdmin) {
+                Toast.makeText(this, "Sizda admin huquqi yo'q", Toast.LENGTH_SHORT).show()
+                finish()
+            } else {
+                initAdminPanel()
+            }
         }
+    }
 
+    private fun initAdminPanel() {
         setContentView(R.layout.activity_admin_panel)
 
         messagesList = findViewById(R.id.messagesList)

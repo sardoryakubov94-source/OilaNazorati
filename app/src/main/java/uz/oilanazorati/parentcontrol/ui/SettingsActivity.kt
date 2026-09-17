@@ -36,9 +36,11 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<android.view.View>(R.id.premiumBanner).setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
         findViewById<android.view.View>(R.id.btnPremiumCta).setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
 
-        if (AdminConfig.isCurrentUserAdmin()) {
-            findViewById<android.view.View>(R.id.adminSection).visibility = android.view.View.VISIBLE
-            findViewById<android.view.View>(R.id.rowAdminPanel).setOnClickListener { startActivity(Intent(this, AdminPanelActivity::class.java)) }
+        AdminConfig.checkCurrentUserAdmin { isAdmin ->
+            if (isAdmin) {
+                findViewById<android.view.View>(R.id.adminSection).visibility = android.view.View.VISIBLE
+                findViewById<android.view.View>(R.id.rowAdminPanel).setOnClickListener { startActivity(Intent(this, AdminPanelActivity::class.java)) }
+            }
         }
 
         findViewById<android.view.View>(R.id.rowSignOut).setOnClickListener { confirmSignOut() }

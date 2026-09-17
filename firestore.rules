@@ -8,12 +8,28 @@ service cloud.firestore {
     // =========================
 
     function isAdmin() {
+      // MUHIM (xavfsizlik/maxfiylik): ilgari bu yerda ikkita shaxsiy Gmail
+      // manzili ochiq (plain-text) holda yozilgan edi. Bu fayl PUBLIC
+      // GitHub repo'da yotgani uchun HAR KIM uni ochib, admin sifatida
+      // tan olinadigan aniq email manzillarini ko'ra olardi (bu email
+      // egalarini nishonlab fishing/hacking urinishi uchun qulay
+      // ma'lumot). Endi email o'rniga UID ro'yxati "admin_uids"
+      // kolleksiyasida saqlanadi — bu email manzillarini oshkor qilmaydi.
+      //
+      // KO'CHIRISH UCHUN QILISH KERAK (Firebase konsolida, qo'lda):
+      //  1) Firestore'da "admin_uids" nomli yangi kolleksiya oching.
+      //  2) Har bir admin uchun bitta hujjat qo'shing — hujjat ID'si
+      //     o'sha odamning Firebase Auth UID'i bo'lishi kerak (buni
+      //     Firebase Console -> Authentication -> Users bo'limidan,
+      //     tegishli email qatoridagi "User UID" ustunidan olasiz).
+      //     Hujjat matni bo'sh {} bo'lsa ham yetarli.
+      //  3) Shu faylni Firebase Console -> Firestore -> Rules bo'limiga
+      //     joylab, "Publish" bosing (bu commit avtomatik deploy
+      //     qilinmaydi — men bu yerdan Firebase loyihasiga ulana
+      //     olmayman, faqat kodni tayyorlab qo'ydim).
       return request.auth != null &&
         request.auth.token.firebase.sign_in_provider != 'anonymous' &&
-        request.auth.token.email in [
-          'sardoryakubov94@gmail.com',
-          'marselovgayniddin4@gmail.com'
-        ];
+        exists(/databases/$(database)/documents/admin_uids/$(request.auth.uid));
     }
 
     // =========================
