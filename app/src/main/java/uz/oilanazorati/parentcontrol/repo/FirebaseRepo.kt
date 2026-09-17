@@ -386,25 +386,25 @@ object FirebaseRepo {
         }
     }
 
-    fun listenCallsForDay(dayStartMs: Long, dayEndMs: Long, onChange: (List<CallEvent>) -> Unit) {
-        val col = childCollection("calls") ?: return onChange(emptyList())
-        col.whereGreaterThanOrEqualTo("boshlanishMs", dayStartMs).whereLessThan("boshlanishMs", dayEndMs)
+    fun listenCallsForDay(dayStartMs: Long, dayEndMs: Long, onChange: (List<CallEvent>) -> Unit): com.google.firebase.firestore.ListenerRegistration? {
+        val col = childCollection("calls") ?: run { onChange(emptyList()); return null }
+        return col.whereGreaterThanOrEqualTo("boshlanishMs", dayStartMs).whereLessThan("boshlanishMs", dayEndMs)
             .orderBy("boshlanishMs", Query.Direction.DESCENDING).addSnapshotListener { snap, _ ->
                 onChange(snap?.documents?.mapNotNull { it.toObject(CallEvent::class.java) } ?: emptyList())
             }
     }
 
-    fun listenSmsForDay(dayStartMs: Long, dayEndMs: Long, onChange: (List<SmsEvent>) -> Unit) {
-        val col = childCollection("sms") ?: return onChange(emptyList())
-        col.whereGreaterThanOrEqualTo("vaqtMs", dayStartMs).whereLessThan("vaqtMs", dayEndMs)
+    fun listenSmsForDay(dayStartMs: Long, dayEndMs: Long, onChange: (List<SmsEvent>) -> Unit): com.google.firebase.firestore.ListenerRegistration? {
+        val col = childCollection("sms") ?: run { onChange(emptyList()); return null }
+        return col.whereGreaterThanOrEqualTo("vaqtMs", dayStartMs).whereLessThan("vaqtMs", dayEndMs)
             .orderBy("vaqtMs", Query.Direction.DESCENDING).addSnapshotListener { snap, _ ->
                 onChange(snap?.documents?.mapNotNull { it.toObject(SmsEvent::class.java) } ?: emptyList())
             }
     }
 
-    fun listenAppUsageForDay(dayStartMs: Long, dayEndMs: Long, onChange: (List<AppUsageEvent>) -> Unit) {
-        val col = childCollection("app_usage") ?: return onChange(emptyList())
-        col.whereGreaterThanOrEqualTo("boshlanishMs", dayStartMs).whereLessThan("boshlanishMs", dayEndMs)
+    fun listenAppUsageForDay(dayStartMs: Long, dayEndMs: Long, onChange: (List<AppUsageEvent>) -> Unit): com.google.firebase.firestore.ListenerRegistration? {
+        val col = childCollection("app_usage") ?: run { onChange(emptyList()); return null }
+        return col.whereGreaterThanOrEqualTo("boshlanishMs", dayStartMs).whereLessThan("boshlanishMs", dayEndMs)
             .orderBy("boshlanishMs", Query.Direction.DESCENDING).addSnapshotListener { snap, _ ->
                 onChange(snap?.documents?.mapNotNull { it.toObject(AppUsageEvent::class.java) } ?: emptyList())
             }
@@ -446,9 +446,9 @@ object FirebaseRepo {
             .addOnFailureListener { onResult(emptyList()) }
     }
 
-    fun listenSavedContacts(onChange: (List<ContactMapping>) -> Unit) {
-        val col = childCollection("contacts") ?: return onChange(emptyList())
-        col.addSnapshotListener { snap, _ -> onChange(snap?.documents?.mapNotNull { it.toObject(ContactMapping::class.java) } ?: emptyList()) }
+    fun listenSavedContacts(onChange: (List<ContactMapping>) -> Unit): com.google.firebase.firestore.ListenerRegistration? {
+        val col = childCollection("contacts") ?: run { onChange(emptyList()); return null }
+        return col.addSnapshotListener { snap, _ -> onChange(snap?.documents?.mapNotNull { it.toObject(ContactMapping::class.java) } ?: emptyList()) }
     }
 
     fun fetchCallsInRange(rangeStartMs: Long, rangeEndMs: Long, onResult: (List<CallEvent>) -> Unit) {

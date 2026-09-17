@@ -16,6 +16,7 @@ class SavedContactsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySavedContactsBinding
     private val adapter = SavedContactsAdapter()
+    private var contactsListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -27,8 +28,13 @@ class SavedContactsActivity : AppCompatActivity() {
 
         bindBottomNav(NavTab.CALLS)
 
-        FirebaseRepo.listenSavedContacts { contacts ->
+        contactsListener = FirebaseRepo.listenSavedContacts { contacts ->
             adapter.setContacts(contacts)
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        contactsListener?.remove()
     }
 }
