@@ -22,6 +22,17 @@ on:
       - 'icons/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
+  # MUHIM: "Build Release APK" workflow yangi APK'ni downloads/ papkasiga
+  # avtomatik commit qilib push qiladi, LEKIN buni GITHUB_TOKEN orqali
+  # qiladi — GitHub xavfsizlik siyosati bo'yicha shu turdagi push'lar
+  # boshqa workflow'larni (jumladan shu "push" trigger'ini) ISHGA
+  # TUSHIRMAYDI (cheksiz tsiklning oldini olish uchun). Natijada sayt
+  # yangi APK bilan avtomatik yangilanmay qolardi. Shu sabab bu yerga
+  # alohida workflow_run trigger qo'shildi — build tugashi bilanoq sayt
+  # ham qayta deploy qilinadi.
+  workflow_run:
+    workflows: ["Build Release APK"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -34,6 +45,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -41,6 +53,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # MUHIM: workflow_run orqali kelganda github.event.workflow_run.head_sha
+          # "Build Release APK"ni ISHGA TUSHIRGAN commit (masalan merge commit),
+          # lekin APK downloads/ ga o'sha run ICHIDA, UNDAN KEYIN alohida commit
+          # sifatida push qilinadi. Shu sabab bu yerda aynan "main" ko'rsatiladi —
+          # bu paytda yangi APK commit'i allaqachon main'ga tushib bo'lgan bo'ladi.
+          ref: main
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
