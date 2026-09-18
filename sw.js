@@ -3,6 +3,16 @@ const STYLE_VERSION='20260908g';
 self.addEventListener('install',e=>{self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});
 self.addEventListener('fetch',e=>{
+  const reqUrl=new URL(e.request.url);
+  // MUHIM: APK yuklab olish tugmasi (<a download>) shu service worker
+  // orqali o'tganda, Chrome'da katta fayllar (bizniki ~24MB) ko'pincha
+  // HECH QANDAY XATOSIZ, sezilmasdan yuklanmay qoladi — foydalanuvchiga
+  // xuddi tugma bosilmagandek tuyuladi. Shu sabab .apk va .sha256
+  // fayllariga service worker umuman aralashmaydi — brauzer to'g'ridan
+  // to'g'ri, o'zining odatiy tarzida yuklaydi.
+  if(reqUrl.pathname.endsWith('.apk')||reqUrl.pathname.endsWith('.apk.sha256')){
+    return;
+  }
   if(e.request.destination!=='document'){
     e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));
     return;
