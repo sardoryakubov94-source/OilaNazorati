@@ -54,7 +54,22 @@ service cloud.firestore {
     }
 
     // =========================
+    // ADMIN_UIDS (kim admin ekanini bilish uchun)
+    // =========================
+    // MUHIM: bu bloksiz ilova o'zining admin ekanini TEKSHIRA OLMAYDI —
+    // isAdmin() ichidagi exists() faqat QOIDALARNI baholashda ishlaydi,
+    // lekin ilova client tarafdan bevosita admin_uids/{uid}ni o'qimoqchi
+    // bo'lganda, bu yo'l uchun alohida ruxsat yozilmasa, Firestore uni
+    // RAD ETADI. Har bir odam FAQAT o'zining UID'iga mos hujjatni o'qiy
+    // oladi (boshqa adminlar ro'yxatini ko'ra olmaydi), yoza olmaydi.
+    match /admin_uids/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    // =========================
     // FAMILIES
+
     // =========================
 
     match /families/{familyCode} {
