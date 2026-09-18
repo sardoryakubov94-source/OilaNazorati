@@ -168,7 +168,10 @@ service cloud.firestore {
           allow create, update:
             if (
               isRealOwner() &&
-              get(/databases/$(database)/documents/parents/$(request.auth.uid)).data.premium == true
+              (
+                get(/databases/$(database)/documents/parents/$(request.auth.uid)).data.premium == true ||
+                isAdmin()
+              )
             ) || isThisChildsOwnSession();
           allow delete:
             if isRealOwner();

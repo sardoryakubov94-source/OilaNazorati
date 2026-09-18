@@ -503,9 +503,22 @@ object FirebaseRepo {
 
     fun checkIsPremium(onResult: (Boolean) -> Unit) {
         val uid = auth.currentUser?.uid ?: return onResult(false)
-        db.collection("parents").document(uid).get()
-            .addOnSuccessListener { doc -> onResult(doc.getBoolean("premium") == true) }
-            .addOnFailureListener { onResult(false) }
+        // Admin hisoblar (admin_uids) uchun premium avtomatik ochiq —
+        // buni ham email emas, xuddi isAdmin() kabi UID orqali tekshiramiz,
+        // shuning uchun bu yerda ham hech qanday email hardcode qilinmaydi.
+        db.collection("admin_uids").document(uid).get().addOnSuccessListener { adminDoc ->
+            if (adminDoc.exists()) {
+                onResult(true)
+            } else {
+                db.collection("parents").document(uid).get()
+                    .addOnSuccessListener { doc -> onResult(doc.getBoolean("premium") == true) }
+                    .addOnFailureListener { onResult(false) }
+            }
+        }.addOnFailureListener {
+            db.collection("parents").document(uid).get()
+                .addOnSuccessListener { doc -> onResult(doc.getBoolean("premium") == true) }
+                .addOnFailureListener { onResult(false) }
+        }
     }
 
     fun sendSupportMessage(matn: String, aloqaRaqami: String, onResult: (Boolean) -> Unit) {
