@@ -54,7 +54,14 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false
+            // MUHIM: ilgari "false" edi — APK hajmining katta qismi
+            // (Firebase/Play Services/WebRTC kutubxonalaridan) hech
+            // qachon qisqartirilmagan edi. Endi R8 kodni, shrinkResources
+            // esa ishlatilmagan rasm/matnlarni olib tashlaydi. Xavfsizlik
+            // uchun kerakli barcha keep-qoidalar proguard-rules.pro'da.
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (keystorePath && keystorePassword && keyAliasValue && keyPasswordValue) {
                 signingConfig signingConfigs.release
             }
