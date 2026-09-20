@@ -241,9 +241,18 @@ class ParentDashboardActivity : AppCompatActivity() {
         FirebaseRepo.familyCode = code; binding.headerFamilyCode.text = code
         getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit().putString("family_code", code).apply()
         FirebaseRepo.fetchChildren(code) { children ->
+            // MUHIM: oldin allaqachon farzand tanlangan bo'lsa (child_id saqlangan
+            // va u hali shu oilada mavjud), "Qaysi farzand?" oynasi HAR safar bosh
+            // sahifaga qaytilganda avtomatik ochilmasligi kerak — faqat shu
+            // saqlangan farzand yuklanadi. Tanlov oynasi endi faqat: (1) hali
+            // birorta ham farzand tanlanmagan bo'lsa, yoki (2) tanlangan farzand
+            // oiladan chiqarib yuborilgan bo'lsa, yoki (3) foydalanuvchi
+            // sarlavhadagi "farzand tanlash" tugmasini bossa ochiladi.
+            val savedChildId = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).getString("child_id", null)
             when {
                 children.isEmpty() -> Toast.makeText(this, "Bu kodga hali birorta farzand ulanmagan", Toast.LENGTH_SHORT).show()
                 children.size == 1 -> { setChildId(children.first().first); loadTodayStats() }
+                savedChildId != null && children.any { it.first == savedChildId } -> { setChildId(savedChildId); loadTodayStats() }
                 else -> showChildPickerDialog(code, children)
             }
         }
