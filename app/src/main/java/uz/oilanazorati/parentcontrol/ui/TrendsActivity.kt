@@ -3,6 +3,9 @@ package uz.oilanazorati.parentcontrol.ui
 import android.graphics.Color
 import android.content.Intent
 import android.os.Bundle
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.github.mikephil.charting.components.XAxis
@@ -16,6 +19,8 @@ import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.highlight.Highlight
+import com.github.mikephil.charting.listener.OnChartValueSelectedListener
 import uz.oilanazorati.parentcontrol.databinding.ActivityTrendsBinding
 import uz.oilanazorati.parentcontrol.model.CallEvent
 import uz.oilanazorati.parentcontrol.model.SmsEvent
@@ -57,7 +62,19 @@ class TrendsActivity : AppCompatActivity() {
     private var callsDonutListener: com.google.firebase.firestore.ListenerRegistration? = null
     private var smsDonutListener: com.google.firebase.firestore.ListenerRegistration? = null
     private var appUsageDonutListener: com.google.firebase.firestore.ListenerRegistration? = null
-    private var contactsDonutListener: com.google.firebase.firestore.ListenerRegistration? = null
+
+    // Donut bosilganda markazda ko'rsatiladigan matn (raqam/nomi) -> shu bo'lakning rangi.
+    private val contactsSliceReveal = mutableMapOf<String, Int>() // label(ko'rinadigan, masalan "Kontakt 2") -> rang
+    private val contactsSliceNumber = mutableMapOf<String, String>() // label -> bosilganda chiqadigan raqam/ismi
+    private val smsSliceReveal = mutableMapOf<String, Int>()
+    private val smsSliceNumber = mutableMapOf<String, String>()
+    private val appsSliceReveal = mutableMapOf<String, Int>()
+    private val appsSliceDetail = mutableMapOf<String, String>()
+
+    // Ismlar keyinroq kelishi mumkin (Firestore listener), shuning uchun oxirgi
+    // qo'ng'iroq/SMS ro'yxatini saqlab qo'yamiz — ism kelganda donutni qayta chizish uchun.
+    private var lastCallsForDonut: List<CallEvent> = emptyList()
+    private var lastSmsForDonut: List<SmsEvent> = emptyList()
 
     companion object {
         const val TREND_DAYS = 30
@@ -110,6 +127,10 @@ class TrendsActivity : AppCompatActivity() {
             savedContactNames = contacts.associate { it.kontaktHash to it.nomi }
             topContactsAdapter.setNames(savedContactNames)
             topSmsContactsAdapter.setNames(savedContactNames)
+            // Ismlar yangilanganda bugungi donutlarni ham qayta chizamiz — shunda
+            // saqlangan kontaktlar ismi bilan chiqadi.
+            drawContactsDonut(lastCallsForDonut)
+            drawSmsDonut(lastSmsForDonut)
         }
 
         loadContactTrends(monthRangeStart, rangeEnd)
@@ -125,10 +146,57 @@ class TrendsActivity : AppCompatActivity() {
         val dayStart = cal.timeInMillis
         val dayEnd = dayStart + 24 * 60 * 60 * 1000
 
-        callsDonutListener = FirebaseRepo.listenCallsForDay(dayStart, dayEnd) { calls -> drawCallsDonut(calls) }
-        smsDonutListener = FirebaseRepo.listenSmsForDay(dayStart, dayEnd) { smsList -> drawSmsDonut(smsList) }
+        callsDonutListener = FirebaseRepo.listenCallsForDay(dayStart, dayEnd) { calls ->
+            lastCallsForDonut = calls
+            drawCallsDonut(calls)
+            drawContactsDonut(calls)
+        }
+        smsDonutListener = FirebaseRepo.listenSmsForDay(dayStart, dayEnd) { smsList ->
+            lastSmsForDonut = smsList
+            drawSmsDonut(smsList)
+        }
         appUsageDonutListener = FirebaseRepo.listenAppUsageForDay(dayStart, dayEnd) { usage -> drawAppsDonut(usage) }
-        contactsDonutListener = FirebaseRepo.listenSavedContacts { contacts -> drawContactsDonut(contacts.size) }
+    }
+
+    /** N ta bo'lak uchun bir-biridan aniq farqlanadigan ranglar to'plami. */
+    private fun distinctColorPalette(n: Int): List<Int> {
+        if (n <= 0) return emptyList()
+        return (0 until n).map { i ->
+            val hue = 360f * i / n
+            Color.HSVToColor(floatArrayOf(hue, 0.55f, 0.88f))
+        }
+    }
+
+    /** Rangli doiracha + matn qatorini legend (SpannableStringBuilder)ga qo'shadi. */
+    private fun appendColoredLegendLine(sb: SpannableStringBuilder, text: String, color: Int) {
+        if (sb.isNotEmpty()) sb.append("\n")
+        val start = sb.length
+        sb.append("\u2b24 ")
+        sb.setSpan(ForegroundColorSpan(color), start, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        sb.append(text)
+    }
+
+    /** Bosilganda donut markazida raqam/nomi kattalashib chiqishi uchun umumiy listener. */
+    private fun revealOnTapListener(
+        chart: com.github.mikephil.charting.charts.PieChart,
+        revealColors: Map<String, Int>,
+        revealTexts: Map<String, String>,
+        defaultCenterText: String
+    ) = object : OnChartValueSelectedListener {
+        override fun onValueSelected(e: Entry?, h: Highlight?) {
+            val label = (e as? PieEntry)?.label ?: return
+            val color = revealColors[label] ?: Color.WHITE
+            val text = revealTexts[label] ?: label
+            chart.setCenterTextColor(color)
+            chart.setCenterTextSize(19f)
+            chart.setCenterText(text)
+            chart.invalidate()
+        }
+
+        override fun onNothingSelected() {
+            styleDonut(chart, defaultCenterText)
+            chart.invalidate()
+        }
     }
 
     /** Umumiy donut (pie, teshikli) sozlamalarini bitta joyda ushlab turadi. */
@@ -151,11 +219,12 @@ class TrendsActivity : AppCompatActivity() {
         }
     }
 
-    private fun donutDataSet(entries: List<PieEntry>, colors: List<Int>): PieDataSet {
+    private fun donutDataSet(entries: List<PieEntry>, colors: List<Int>, selectionShift: Float = 8f): PieDataSet {
         return PieDataSet(entries, "").apply {
             this.colors = colors
             setDrawValues(false)
             sliceSpace = 2f
+            this.selectionShift = selectionShift
         }
     }
 
@@ -187,43 +256,104 @@ class TrendsActivity : AppCompatActivity() {
         binding.legendCalls.text = legendParts.joinToString("\n")
     }
 
+    /** Bugungi SMS'lar bo'yicha har bir kontakt — alohida rang, bosilganda raqami chiqadi. */
     private fun drawSmsDonut(smsList: List<SmsEvent>) {
-        val sent = smsList.count { it.turi == "yuborilgan" }
-        val received = smsList.size - sent
-        val total = smsList.size
-
-        styleDonut(binding.donutSms, "$total ta")
-        if (total == 0) {
+        val byContact = smsList.groupBy { it.kontaktHash.ifBlank { "noma_lum" } }
+        styleDonut(binding.donutSms, "${smsList.size} ta")
+        binding.donutSms.setOnChartValueSelectedListener(null)
+        if (byContact.isEmpty()) {
             binding.donutSms.data = null
             binding.donutSms.invalidate()
             binding.legendSms.text = "Bugun SMS yo'q"
             return
         }
-        val entries = mutableListOf<PieEntry>()
-        val colors = mutableListOf<Int>()
-        if (sent > 0) { entries.add(PieEntry(sent.toFloat())); colors.add(Color.parseColor("#3498DB")) }
-        if (received > 0) { entries.add(PieEntry(received.toFloat())); colors.add(Color.parseColor("#2ECC71")) }
 
-        binding.donutSms.data = PieData(donutDataSet(entries, colors))
+        val sorted = byContact.entries.sortedByDescending { it.value.size }
+        val total = smsList.size
+        val palette = distinctColorPalette(sorted.size)
+        val entries = mutableListOf<PieEntry>()
+        val legend = SpannableStringBuilder()
+        smsSliceReveal.clear(); smsSliceNumber.clear()
+
+        sorted.forEachIndexed { i, (hash, smsForContact) ->
+            val color = palette[i]
+            val savedName = savedContactNames[hash]
+            val raqam = smsForContact.firstOrNull { it.raqam.isNotBlank() }?.raqam.orEmpty()
+            val label = "slice_$i"
+            val legendText = when {
+                hash == "noma_lum" -> "Noma'lum"
+                !savedName.isNullOrBlank() -> savedName
+                else -> "Kontakt ${i + 1}"
+            }
+            val revealText = when {
+                raqam.isNotBlank() -> raqam
+                !savedName.isNullOrBlank() -> savedName
+                else -> "Noma'lum"
+            }
+            entries.add(PieEntry(smsForContact.size.toFloat(), label))
+            smsSliceReveal[label] = color
+            smsSliceNumber[label] = revealText
+            appendColoredLegendLine(legend, "$legendText ${percent(smsForContact.size, total)}%", color)
+        }
+
+        binding.donutSms.data = PieData(donutDataSet(entries, palette, selectionShift = 12f))
+        binding.donutSms.setOnChartValueSelectedListener(
+            revealOnTapListener(binding.donutSms, smsSliceReveal, smsSliceNumber, "${smsList.size} ta")
+        )
         binding.donutSms.invalidate()
-        binding.legendSms.text = "🔵 Yuborilgan ${percent(sent, total)}%\n🟢 Qabul qilingan ${percent(received, total)}%"
+        binding.legendSms.text = legend
     }
 
-    private fun drawContactsDonut(totalContacts: Int) {
-        styleDonut(binding.donutContacts, "$totalContacts ta")
-        if (totalContacts == 0) {
+    /** Bugungi qo'ng'iroqlar bo'yicha har bir kontakt — alohida rang, bosilganda raqami chiqadi. */
+    private fun drawContactsDonut(calls: List<CallEvent>) {
+        val byContact = calls.groupBy { it.kontaktHash.ifBlank { "noma_lum" } }
+        val distinctCount = byContact.size
+        styleDonut(binding.donutContacts, "$distinctCount ta")
+        binding.donutContacts.setOnChartValueSelectedListener(null)
+        if (byContact.isEmpty()) {
             binding.donutContacts.data = null
             binding.donutContacts.invalidate()
-            binding.legendContacts.text = "Hali kontakt saqlanmagan"
+            binding.legendContacts.text = "Bugun qo'ng'iroq yo'q"
             return
         }
-        val entries = listOf(PieEntry(totalContacts.toFloat()))
-        val colors = listOf(Color.parseColor("#2ECC71"))
-        binding.donutContacts.data = PieData(donutDataSet(entries, colors))
+
+        val sorted = byContact.entries.sortedByDescending { it.value.size }
+        val total = calls.size
+        val palette = distinctColorPalette(sorted.size)
+        val entries = mutableListOf<PieEntry>()
+        val legend = SpannableStringBuilder()
+        contactsSliceReveal.clear(); contactsSliceNumber.clear()
+
+        sorted.forEachIndexed { i, (hash, callsForContact) ->
+            val color = palette[i]
+            val savedName = savedContactNames[hash]
+            val raqam = callsForContact.firstOrNull { it.raqam.isNotBlank() }?.raqam.orEmpty()
+            val label = "slice_$i" // ichki, ko'zga ko'rinmas kalit
+            val legendText = when {
+                hash == "noma_lum" -> "Noma'lum"
+                !savedName.isNullOrBlank() -> savedName
+                else -> "Kontakt ${i + 1}"
+            }
+            val revealText = when {
+                raqam.isNotBlank() -> raqam
+                !savedName.isNullOrBlank() -> savedName
+                else -> "Noma'lum"
+            }
+            entries.add(PieEntry(callsForContact.size.toFloat(), label))
+            contactsSliceReveal[label] = color
+            contactsSliceNumber[label] = revealText
+            appendColoredLegendLine(legend, "$legendText ${percent(callsForContact.size, total)}%", color)
+        }
+
+        binding.donutContacts.data = PieData(donutDataSet(entries, palette, selectionShift = 12f))
+        binding.donutContacts.setOnChartValueSelectedListener(
+            revealOnTapListener(binding.donutContacts, contactsSliceReveal, contactsSliceNumber, "$distinctCount ta")
+        )
         binding.donutContacts.invalidate()
-        binding.legendContacts.text = "🟢 Bugun faol 100%"
+        binding.legendContacts.text = legend
     }
 
+    /** Bugun eng ko'p ishlatilgan ilovalar — har biri o'z nomi va rangi bilan, bosilganda daqiqasi kattalashib chiqadi. */
     private fun drawAppsDonut(usage: List<uz.oilanazorati.parentcontrol.model.AppUsageEvent>) {
         val totals = usage.groupBy { it.ilovaNomi }
             .mapValues { (_, list) -> list.sumOf { it.davomiylikSoniya } }
@@ -231,6 +361,7 @@ class TrendsActivity : AppCompatActivity() {
             .sortedByDescending { it.second }
 
         styleDonut(binding.donutApps, "${totals.size} ta")
+        binding.donutApps.setOnChartValueSelectedListener(null)
         val totalSeconds = totals.sumOf { it.second }
         if (totals.isEmpty() || totalSeconds == 0L) {
             binding.donutApps.data = null
@@ -239,22 +370,33 @@ class TrendsActivity : AppCompatActivity() {
             return
         }
 
-        // Ilovalarni ishlatilish vaqti bo'yicha 3ta darajaga bo'lamiz: Faol / O'rta / Kam.
-        val third = (totals.size + 2) / 3
-        val faol = totals.take(third).sumOf { it.second }
-        val orta = totals.drop(third).take(third).sumOf { it.second }
-        val kam = totals.drop(third * 2).sumOf { it.second }
+        // Eng ko'p ishlatilgan 6 ta ilova alohida chiqadi, qolganlari "Boshqalar"ga jamlanadi.
+        val topN = 6
+        val top = totals.take(topN)
+        val rest = totals.drop(topN)
+        val finalList = if (rest.isNotEmpty()) top + ("Boshqalar" to rest.sumOf { it.second }) else top
 
+        val palette = distinctColorPalette(finalList.size)
         val entries = mutableListOf<PieEntry>()
-        val colors = mutableListOf<Int>()
-        val legendParts = mutableListOf<String>()
-        if (faol > 0) { entries.add(PieEntry(faol.toFloat())); colors.add(Color.parseColor("#2ECC71")); legendParts.add("🟢 Faol ${percent(faol, totalSeconds)}%") }
-        if (orta > 0) { entries.add(PieEntry(orta.toFloat())); colors.add(Color.parseColor("#F39C12")); legendParts.add("🟠 O'rta ${percent(orta, totalSeconds)}%") }
-        if (kam > 0) { entries.add(PieEntry(kam.toFloat())); colors.add(Color.parseColor("#E74C3C")); legendParts.add("🔴 Kam ${percent(kam, totalSeconds)}%") }
+        val legend = SpannableStringBuilder()
+        appsSliceReveal.clear(); appsSliceDetail.clear()
 
-        binding.donutApps.data = PieData(donutDataSet(entries, colors))
+        finalList.forEachIndexed { i, (appName, seconds) ->
+            val color = palette[i]
+            val minutes = seconds / 60
+            val label = "slice_$i"
+            entries.add(PieEntry(seconds.toFloat(), label))
+            appsSliceReveal[label] = color
+            appsSliceDetail[label] = "$appName\n$minutes daq"
+            appendColoredLegendLine(legend, "$appName ${percent(seconds, totalSeconds)}%", color)
+        }
+
+        binding.donutApps.data = PieData(donutDataSet(entries, palette, selectionShift = 12f))
+        binding.donutApps.setOnChartValueSelectedListener(
+            revealOnTapListener(binding.donutApps, appsSliceReveal, appsSliceDetail, "${totals.size} ta")
+        )
         binding.donutApps.invalidate()
-        binding.legendApps.text = legendParts.joinToString("\n")
+        binding.legendApps.text = legend
     }
 
     private fun percent(part: Int, total: Int): Int = if (total == 0) 0 else (part * 100) / total
@@ -612,6 +754,6 @@ class TrendsActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         contactsListener?.remove(); callsDonutListener?.remove(); smsDonutListener?.remove()
-        appUsageDonutListener?.remove(); contactsDonutListener?.remove()
+        appUsageDonutListener?.remove()
     }
 }
