@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.SpannableStringBuilder
 import android.text.Spanned
+import android.text.TextUtils
 import android.text.style.ForegroundColorSpan
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -197,6 +198,63 @@ class TrendsActivity : AppCompatActivity() {
             styleDonut(chart, defaultCenterText)
             chart.invalidate()
         }
+    }
+
+    /** Berilgan kunning qo'ng'iroqlarini kontakt bo'yicha, rangli va nomi bilan tavsiflaydi. */
+    private fun callsWhoText(calls: List<CallEvent>): CharSequence {
+        if (calls.isEmpty()) return "Bu kuni qo'ng'iroq bo'lmagan"
+        val sorted = calls.groupBy { it.kontaktHash.ifBlank { "noma_lum" } }
+            .entries.sortedByDescending { it.value.size }
+        val palette = distinctColorPalette(sorted.size)
+        val sb = SpannableStringBuilder()
+        sorted.forEachIndexed { i, (hash, list) ->
+            val name = savedContactNames[hash]
+            val who = when {
+                hash == "noma_lum" -> "Noma'lum"
+                !name.isNullOrBlank() -> name
+                else -> "Kontakt ${i + 1}"
+            }
+            val minutes = list.sumOf { it.davomiylikSoniya } / 60
+            appendColoredLegendLine(sb, "$who — ${list.size} marta, $minutes daq", palette[i])
+        }
+        return sb
+    }
+
+    /** Berilgan kunning SMS'larini kontakt bo'yicha, rangli va nomi bilan tavsiflaydi. */
+    private fun smsWhoText(smsList: List<SmsEvent>): CharSequence {
+        if (smsList.isEmpty()) return "Bu kuni SMS bo'lmagan"
+        val sorted = smsList.groupBy { it.kontaktHash.ifBlank { "noma_lum" } }
+            .entries.sortedByDescending { it.value.size }
+        val palette = distinctColorPalette(sorted.size)
+        val sb = SpannableStringBuilder()
+        sorted.forEachIndexed { i, (hash, list) ->
+            val name = savedContactNames[hash]
+            val who = when {
+                hash == "noma_lum" -> "Noma'lum"
+                !name.isNullOrBlank() -> name
+                else -> "Kontakt ${i + 1}"
+            }
+            appendColoredLegendLine(sb, "$who — ${list.size} ta SMS", palette[i])
+        }
+        return sb
+    }
+
+    /** Chiziqli (30 kunlik) grafikda kun nuqtasi bosilganda, o'sha kun "kim bilan" ekanini pastdagi matnda ko'rsatadi. */
+    private fun <T> dayTapListener(
+        detailView: android.widget.TextView,
+        byDay: Map<Int, List<T>>,
+        rangeStart: Long,
+        buildWhoText: (List<T>) -> CharSequence
+    ) = object : OnChartValueSelectedListener {
+        override fun onValueSelected(e: Entry?, h: Highlight?) {
+            val dayIdx = (e?.x?.toInt() ?: return).coerceIn(0, TREND_DAYS - 1)
+            val dateLabel = SimpleDateFormat("dd/MM", Locale.getDefault())
+                .format(Date(rangeStart + dayIdx * 24 * 60 * 60 * 1000L))
+            val dayList = byDay[dayIdx] ?: emptyList()
+            detailView.text = TextUtils.concat("$dateLabel — kim bilan:\n", buildWhoText(dayList))
+        }
+
+        override fun onNothingSelected() {}
     }
 
     /** Umumiy donut (pie, teshikli) sozlamalarini bitta joyda ushlab turadi. */
@@ -488,6 +546,10 @@ class TrendsActivity : AppCompatActivity() {
                 .sortedByDescending { it.second }
                 .take(5)
 
+            val shortLabels = totals.map { (name, _) ->
+                if (name.length > 10) name.take(9) + "…" else name
+            }
+
             val entries = totals.mapIndexed { i, (_, minutes) -> BarEntry(i.toFloat(), minutes.toFloat()) }
             val dataSet = BarDataSet(entries, "Daqiqa (7 kunlik jami)")
             dataSet.color = Color.parseColor("#1565C0")
@@ -502,8 +564,12 @@ class TrendsActivity : AppCompatActivity() {
                 axisLeft.textColor = Color.parseColor("#B8B8B8")
                 xAxis.granularity = 1f
                 xAxis.position = XAxis.XAxisPosition.BOTTOM
-                xAxis.valueFormatter = IndexAxisValueFormatter(totals.map { it.first })
-                xAxis.labelRotationAngle = -30f
+                xAxis.valueFormatter = IndexAxisValueFormatter(shortLabels)
+                xAxis.labelRotationAngle = -45f
+                xAxis.textSize = 9f
+                xAxis.setAvoidFirstLastClipping(true)
+                extraBottomOffset = 36f
+                setExtraOffsets(4f, 4f, 4f, 0f)
                 axisRight.isEnabled = false
                 animateY(600)
                 invalidate()
@@ -552,6 +618,7 @@ class TrendsActivity : AppCompatActivity() {
             axisRight.isEnabled = false
             axisLeft.axisMinimum = 0f
             animateX(600)
+            setOnChartValueSelectedListener(dayTapListener(binding.dailyContactCountDetail, byDay, rangeStart, ::callsWhoText))
             invalidate()
         }
     }
@@ -587,6 +654,7 @@ class TrendsActivity : AppCompatActivity() {
             axisRight.isEnabled = false
             axisLeft.axisMinimum = 0f
             animateX(600)
+            setOnChartValueSelectedListener(dayTapListener(binding.dailyCallMinutesDetail, byDay, rangeStart, ::callsWhoText))
             invalidate()
         }
     }
@@ -656,6 +724,7 @@ class TrendsActivity : AppCompatActivity() {
             axisRight.isEnabled = false
             axisLeft.axisMinimum = 0f
             animateX(600)
+            setOnChartValueSelectedListener(dayTapListener(binding.dailySmsContactCountDetail, byDay, rangeStart, ::smsWhoText))
             invalidate()
         }
     }
@@ -690,6 +759,7 @@ class TrendsActivity : AppCompatActivity() {
             axisRight.isEnabled = false
             axisLeft.axisMinimum = 0f
             animateX(600)
+            setOnChartValueSelectedListener(dayTapListener(binding.dailySmsCountDetail, byDay, rangeStart, ::smsWhoText))
             invalidate()
         }
     }

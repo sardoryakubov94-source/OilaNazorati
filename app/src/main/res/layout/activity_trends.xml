@@ -230,7 +230,15 @@
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/dailyContactCountChart"
         android:layout_width="match_parent"
-        android:layout_height="220dp"
+        android:layout_height="220dp"/>
+
+    <TextView
+        android:id="@+id/dailyContactCountDetail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nuqtani bosing — o'sha kuni kim bilan bo'lganini ko'rish uchun"
+        android:textSize="11sp"
+        android:layout_marginTop="6dp"
         android:layout_marginBottom="24dp"/>
 
     <TextView
@@ -243,7 +251,15 @@
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/dailyCallMinutesChart"
         android:layout_width="match_parent"
-        android:layout_height="220dp"
+        android:layout_height="220dp"/>
+
+    <TextView
+        android:id="@+id/dailyCallMinutesDetail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nuqtani bosing — o'sha kuni kim bilan bo'lganini ko'rish uchun"
+        android:textSize="11sp"
+        android:layout_marginTop="6dp"
         android:layout_marginBottom="24dp"/>
 
     <TextView
@@ -281,7 +297,15 @@
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/dailySmsContactCountChart"
         android:layout_width="match_parent"
-        android:layout_height="220dp"
+        android:layout_height="220dp"/>
+
+    <TextView
+        android:id="@+id/dailySmsContactCountDetail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nuqtani bosing — o'sha kuni kim bilan SMS bo'lganini ko'rish uchun"
+        android:textSize="11sp"
+        android:layout_marginTop="6dp"
         android:layout_marginBottom="24dp"/>
 
     <TextView
@@ -294,7 +318,15 @@
     <com.github.mikephil.charting.charts.LineChart
         android:id="@+id/dailySmsCountChart"
         android:layout_width="match_parent"
-        android:layout_height="220dp"
+        android:layout_height="220dp"/>
+
+    <TextView
+        android:id="@+id/dailySmsCountDetail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nuqtani bosing — o'sha kuni kim bilan SMS bo'lganini ko'rish uchun"
+        android:textSize="11sp"
+        android:layout_marginTop="6dp"
         android:layout_marginBottom="24dp"/>
 
     <TextView
