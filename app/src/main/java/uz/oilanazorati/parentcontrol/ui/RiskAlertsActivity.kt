@@ -1,5 +1,6 @@
 package uz.oilanazorati.parentcontrol.ui
 
+import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
@@ -27,8 +28,17 @@ class RiskAlertsActivity : AppCompatActivity() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
+        header.addView(android.widget.FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply { marginEnd = dp(8) }
+            background = getDrawable(uz.oilanazorati.parentcontrol.R.drawable.bg_badge_orange)
+            addView(ImageView(this@RiskAlertsActivity).apply {
+                setImageResource(uz.oilanazorati.parentcontrol.R.drawable.ic_shield)
+                layoutParams = android.widget.FrameLayout.LayoutParams(dp(16), dp(16)).apply { gravity = Gravity.CENTER }
+                setColorFilter(Color.WHITE)
+            })
+        })
         header.addView(TextView(this).apply {
-            text = "⚠️ Xavfsizlik signallari"
+            text = "Xavfsizlik signallari"
             textSize = 20f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary))
@@ -41,7 +51,7 @@ class RiskAlertsActivity : AppCompatActivity() {
         })
         root.addView(header)
         root.addView(TextView(this).apply {
-            text = "Faqat muhim xavf signallari ko'rsatiladi. Oddiy faoliyat bu bo'limga yozilmaydi."
+            text = "Faqat muhim xavf signallari ko'rsatiladi: 18+ video yoki rasmlar bola tomonidan izlansa yoki ko'rilsa, intim suhbatlar olib borilsa, intim video yoki rasmlar yuborilsa yoki qabul qilinsa, o'z joniga qasd qilish yoki giyohvand moddalari bo'yicha bola telefonida aktiv qidiruv yoki suhbat olib borilganda — ushbu bo'limda barchasi qayd etiladi. Skrinshotlar va suhbatlarni ota-onalar shu yerda ko'rishlari mumkin."
             textSize = 12f
             setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
             setPadding(0, dp(6), 0, dp(12))
