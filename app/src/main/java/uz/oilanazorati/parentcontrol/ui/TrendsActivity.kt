@@ -189,15 +189,34 @@ class TrendsActivity : AppCompatActivity() {
             val color = revealColors[label] ?: Color.WHITE
             val text = revealTexts[label] ?: label
             chart.setCenterTextColor(color)
-            chart.setCenterTextSize(19f)
-            chart.setCenterText(text)
+            // Raqam/ism bo'sh joysiz uzun bo'lishi mumkin (masalan telefon
+            // raqami) — StaticLayout so'z orasidagi bo'shliqqa qarab qator
+            // ko'chiradi, bo'shliq bo'lmasa aylanadan tashqariga chiqib
+            // ketadi. Shu sabab: shriftni kichraytiramiz va uzun matnni
+            // qo'lda 2 qatorga bo'lib, aylana ichiga to'liq sig'diramiz.
+            chart.setCenterTextSize(if (text.length > 9) 12f else 14f)
+            chart.setCenterText(wrapForCenter(text))
             chart.invalidate()
         }
 
         override fun onNothingSelected() {
-            styleDonut(chart, defaultCenterText)
+            // Faqat markaz matnini asl holiga qaytaramiz — butun styleDonut()ni
+            // qayta chaqirmaymiz, aks holda Ilovalar donutidagi doim ko'rinib
+            // turishi kerak bo'lgan nomlar (setDrawEntryLabels) ham o'chib qolardi.
+            val nightMode = chart.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            val isNight = nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            chart.setCenterTextColor(if (isNight) Color.parseColor("#FFFFFF") else Color.parseColor("#1A1F26"))
+            chart.setCenterTextSize(14f)
+            chart.setCenterText(defaultCenterText)
             chart.invalidate()
         }
+    }
+
+    /** Bo'shliqsiz uzun matnni (masalan raqam) donut markaziga sig'dirish uchun 2 qatorga bo'ladi. */
+    private fun wrapForCenter(text: String): String {
+        if (text.length <= 9 || text.contains(" ") || text.contains("\n")) return text
+        val mid = (text.length + 1) / 2
+        return text.substring(0, mid) + "\n" + text.substring(mid)
     }
 
     /** Berilgan kunning qo'ng'iroqlarini kontakt bo'yicha, rangli va nomi bilan tavsiflaydi. */
@@ -411,7 +430,7 @@ class TrendsActivity : AppCompatActivity() {
         binding.legendContacts.text = legend
     }
 
-    /** Bugun eng ko'p ishlatilgan ilovalar — har biri o'z nomi va rangi bilan, bosilganda daqiqasi kattalashib chiqadi. */
+    /** Bugun eng ko'p ishlatilgan ilovalar — nomi aylananing o'zida (bo'lak ustida) chiqadi, pastda ro'yxat bo'lmaydi. */
     private fun drawAppsDonut(usage: List<uz.oilanazorati.parentcontrol.model.AppUsageEvent>) {
         val totals = usage.groupBy { it.ilovaNomi }
             .mapValues { (_, list) -> list.sumOf { it.davomiylikSoniya } }
@@ -420,11 +439,12 @@ class TrendsActivity : AppCompatActivity() {
 
         styleDonut(binding.donutApps, "${totals.size} ta")
         binding.donutApps.setOnChartValueSelectedListener(null)
+        binding.legendApps.visibility = android.view.View.GONE
         val totalSeconds = totals.sumOf { it.second }
         if (totals.isEmpty() || totalSeconds == 0L) {
+            binding.donutApps.setDrawEntryLabels(false)
             binding.donutApps.data = null
             binding.donutApps.invalidate()
-            binding.legendApps.text = "Bugun faoliyat yo'q"
             return
         }
 
@@ -436,25 +456,29 @@ class TrendsActivity : AppCompatActivity() {
 
         val palette = distinctColorPalette(finalList.size)
         val entries = mutableListOf<PieEntry>()
-        val legend = SpannableStringBuilder()
         appsSliceReveal.clear(); appsSliceDetail.clear()
 
         finalList.forEachIndexed { i, (appName, seconds) ->
             val color = palette[i]
             val minutes = seconds / 60
-            val label = "slice_$i"
-            entries.add(PieEntry(seconds.toFloat(), label))
-            appsSliceReveal[label] = color
-            appsSliceDetail[label] = "$appName\n$minutes daq"
-            appendColoredLegendLine(legend, "$appName ${percent(seconds, totalSeconds)}%", color)
+            // Nom aylana bo'lagi ustiga to'g'ridan-to'g'ri yoziladi — shu sabab
+            // uzun nomlar joyga sig'ishi uchun qisqartiriladi.
+            val shortName = if (appName.length > 9) appName.take(8) + "…" else appName
+            entries.add(PieEntry(seconds.toFloat(), shortName))
+            appsSliceReveal[shortName] = color
+            appsSliceDetail[shortName] = "$appName\n$minutes daq"
         }
 
-        binding.donutApps.data = PieData(donutDataSet(entries, palette, selectionShift = 12f))
-        binding.donutApps.setOnChartValueSelectedListener(
-            revealOnTapListener(binding.donutApps, appsSliceReveal, appsSliceDetail, "${totals.size} ta")
-        )
-        binding.donutApps.invalidate()
-        binding.legendApps.text = legend
+        binding.donutApps.apply {
+            data = PieData(donutDataSet(entries, palette, selectionShift = 12f))
+            setDrawEntryLabels(true)
+            setEntryLabelColor(Color.WHITE)
+            setEntryLabelTextSize(8.5f)
+            setOnChartValueSelectedListener(
+                revealOnTapListener(this, appsSliceReveal, appsSliceDetail, "${totals.size} ta")
+            )
+            invalidate()
+        }
     }
 
     private fun percent(part: Int, total: Int): Int = if (total == 0) 0 else (part * 100) / total
