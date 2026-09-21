@@ -133,7 +133,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: OilaNazorati-working-release
-          path: |
-            OilaNazorati-v1.0.1-release.apk
-            OilaNazorati-v1.0.1-release.apk.sha256
+          path: OilaNazorati-v1.0.1-release.apk
           retention-days: 30

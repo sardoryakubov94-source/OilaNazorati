@@ -129,10 +129,15 @@ jobs:
       - name: Release APK artifact
         uses: actions/upload-artifact@v4
         with:
+          # MUHIM: faqat .apk yuklanadi. Avval .sha256 fayli ham shu bilan
+          # birga ZIP ichiga tushardi — GitHub Actions'dan ZIP'ni yuklab olib
+          # ochganda, odam bilmasdan ".sha256" faylini o'rnatishga urinib
+          # qolardi (u APK emas, Android buni tanimaydi va o'rnatolmaydi).
+          # Tekshiruv-kod (.sha256) faqat saytning downloads/ papkasida,
+          # apk bilan yonma-yon qoladi — u yerda chalkashish yo'q, chunki
+          # sayt to'g'ridan-to'g'ri haqiqiy .apk faylga link beradi.
           name: OilaNazorati-release-v1.0.1
-          path: |
-            OilaNazorati-v1.0.1-release.apk
-            OilaNazorati-v1.0.1-release.apk.sha256
+          path: OilaNazorati-v1.0.1-release.apk
           retention-days: 30
 
 # Trigger release build after the latest audio/screenshot fixes.
