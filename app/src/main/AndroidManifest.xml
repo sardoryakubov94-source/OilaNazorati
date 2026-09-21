@@ -42,6 +42,7 @@
         <activity android:name=".ui.SmsHistoryActivity" android:exported="false" />
         <activity android:name=".ui.NotificationHistoryActivity" android:exported="false" />
         <activity android:name=".ui.SupportActivity" android:exported="false" />
+        <activity android:name=".ui.RiskAlertsActivity" android:exported="false" />
         <activity android:name=".ui.PremiumActivity" android:exported="false" />
         <activity android:name=".ui.AdminPanelActivity" android:exported="false" />
         <activity android:name=".ui.ComposeSmsActivity" android:exported="false" android:label="SMS yozish" />
