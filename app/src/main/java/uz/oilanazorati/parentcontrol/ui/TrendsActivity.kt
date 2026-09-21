@@ -478,7 +478,7 @@ class TrendsActivity : AppCompatActivity() {
 
             entries.add(PieEntry(seconds.toFloat(), label))
             appsSliceReveal[label] = color
-            appsSliceDetail[label] = "$appName\n$minutes daq"
+            // Ilova nomi faqat rangli bo'lak bosilganda donut markazida ko'rinadi.\n            appsSliceDetail[label] = appName
 
             appendColoredLegendLine(
                 legend,
