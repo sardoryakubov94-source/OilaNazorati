@@ -15,6 +15,7 @@ import uz.oilanazorati.parentcontrol.model.SupportMessage
 import uz.oilanazorati.parentcontrol.model.PremiumRequest
 import uz.oilanazorati.parentcontrol.model.PremiumParent
 import uz.oilanazorati.parentcontrol.model.AdminCard
+import uz.oilanazorati.parentcontrol.model.RiskEvent
 import java.net.HttpURLConnection
 import java.net.URLEncoder
 import java.net.URL
@@ -470,6 +471,26 @@ object FirebaseRepo {
         col.whereGreaterThanOrEqualTo("boshlanishMs", rangeStartMs).whereLessThan("boshlanishMs", rangeEndMs).get()
             .addOnSuccessListener { snap -> onResult(snap.documents.mapNotNull { it.toObject(AppUsageEvent::class.java) }) }
             .addOnFailureListener { onResult(emptyList()) }
+    }
+
+    fun logRiskEvent(event: RiskEvent) {
+        // Faqat mazmunli xavf signallari yoziladi. Oddiy faoliyat Firestore'ga tushmaydi.
+        if (event.severity == "LOW") return
+        childCollection("risk_events")?.document(event.id)?.set(event)
+    }
+
+    fun listenRiskEvents(onChange: (List<RiskEvent>) -> Unit): com.google.firebase.firestore.ListenerRegistration? {
+        val col = childCollection("risk_events") ?: run { onChange(emptyList()); return null }
+        return col.orderBy("capturedAt", Query.Direction.DESCENDING).limit(100)
+            .addSnapshotListener { snap, _ ->
+                onChange(snap?.documents?.mapNotNull { it.toObject(RiskEvent::class.java) } ?: emptyList())
+            }
+    }
+
+    fun markRiskEventReviewed(id: String, onResult: (Boolean) -> Unit = {}) {
+        childCollection("risk_events")?.document(id)?.update("reviewed", true)
+            ?.addOnSuccessListener { onResult(true) }?.addOnFailureListener { onResult(false) }
+            ?: onResult(false)
     }
 
     fun logNotification(event: NotificationEvent) { childCollection("notifications")?.add(event) }

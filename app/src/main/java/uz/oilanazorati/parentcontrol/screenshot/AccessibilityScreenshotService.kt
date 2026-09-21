@@ -20,6 +20,8 @@ import android.widget.Toast
 import com.google.firebase.firestore.ListenerRegistration
 import uz.oilanazorati.parentcontrol.model.ScreenshotMetadata
 import uz.oilanazorati.parentcontrol.model.ScreenshotSettings
+import uz.oilanazorati.parentcontrol.model.RiskEvent
+import uz.oilanazorati.parentcontrol.risk.RiskAnalysisEngine
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import java.io.File
 import java.io.FileOutputStream
@@ -42,6 +44,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private var burstThreshold: Int = 0
     private var burstCount: Int = 0
     private var burstScheduledRunnable: Runnable? = null
+    private val recentRiskEvents = LinkedHashMap<String, Long>()
 
     private val autoCaptureActive: Boolean
         get() = settings.autoTop3Enabled || settings.manualPackageNames.isNotEmpty()
@@ -187,7 +190,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         }
     }
 
-    private fun captureAndUpload(packageName: String, threshold: Int, usageSeconds: Long, key: String, remoteRequestId: String?, requireUnlocked: Boolean = true, onFinished: (() -> Unit)?): Unit {
+    private fun captureAndUpload(packageName: String, threshold: Int, usageSeconds: Long, key: String, remoteRequestId: String?, requireUnlocked: Boolean = true, riskCategory: String = "", sensitiveEvidence: Boolean = false, onFinished: (() -> Unit)?): Unit {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             finishCapture(false, key, remoteRequestId, "Bu Android versiyasida Accessibility screenshot mavjud emas", onFinished)
             return
@@ -212,10 +215,12 @@ class AccessibilityScreenshotService : AccessibilityService() {
                     hardware.recycle()
                     if (bitmap == null) { finishCapture(false, key, remoteRequestId, "Screenshot bitmap nusxalanmadi", onFinished); return }
                     val file = File(cacheDir, "accessibility_screenshot_${System.currentTimeMillis()}.jpg")
-                    FileOutputStream(file).use { bitmap.compress(Bitmap.CompressFormat.JPEG, 82, it) }
+                    val outputBitmap = if (sensitiveEvidence) blurForEvidence(bitmap) else bitmap
+                    FileOutputStream(file).use { outputBitmap.compress(Bitmap.CompressFormat.JPEG, 82, it) }
+                    if (outputBitmap !== bitmap) outputBitmap.recycle()
                     bitmap.recycle()
                     val now: Long = System.currentTimeMillis()
-                    val meta = ScreenshotMetadata(id = "${now}_${threshold}_${packageName.hashCode()}", childId = FirebaseRepo.childId.orEmpty(), familyId = FirebaseRepo.familyCode.orEmpty(), packageName = packageName, appLabel = label(packageName), capturedAt = now, date = todayKey(), dailyUsageSeconds = usageSeconds, thresholdMinute = threshold)
+                    val meta = ScreenshotMetadata(id = "${now}_${threshold}_${packageName.hashCode()}", childId = FirebaseRepo.childId.orEmpty(), familyId = FirebaseRepo.familyCode.orEmpty(), packageName = packageName, appLabel = label(packageName), capturedAt = now, date = todayKey(), dailyUsageSeconds = usageSeconds, thresholdMinute = threshold, riskCategory = riskCategory, sensitiveEvidence = sensitiveEvidence)
                     ScreenshotRepository.upload(file, meta) { ok: Boolean ->
                         file.delete()
                         finishCapture(ok, key, remoteRequestId, if (ok) "Screenshot tayyor" else "Screenshot yuklanmadi", onFinished)
@@ -324,6 +329,13 @@ class AccessibilityScreenshotService : AccessibilityService() {
         } catch (_: Throwable) {}
     }
 
+    private fun blurForEvidence(source: Bitmap): Bitmap {
+        val smallW = (source.width / 24).coerceAtLeast(12)
+        val smallH = (source.height / 24).coerceAtLeast(12)
+        val small = Bitmap.createScaledBitmap(source, smallW, smallH, true)
+        return Bitmap.createScaledBitmap(small, source.width, source.height, false).also { small.recycle() }
+    }
+
     private fun getApplicationInfoSafe(pkg: String) = try { packageManager.getApplicationInfo(pkg, 0) } catch (_: Exception) { null }
     private fun label(pkg: String): String = try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() } catch (_: Exception) { pkg }
     private fun todayKey(): String = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
@@ -331,6 +343,66 @@ class AccessibilityScreenshotService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (settings.enabled && autoCaptureActive) scheduleAutoWatch()
+        analyzeAccessibilityEvent(event)
+    }
+
+    private fun analyzeAccessibilityEvent(event: AccessibilityEvent?) {
+        event ?: return
+        val packageName = event.packageName?.toString()?.takeIf { it.isNotBlank() } ?: return
+        if (packageName == applicationContext.packageName) return
+        val parts = ArrayList<String>()
+        event.text?.forEach { if (!it.isNullOrBlank()) parts.add(it.toString()) }
+        event.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
+        event.className?.toString()?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
+        runCatching { rootInActiveWindow?.let { root -> collectVisibleText(root, parts, 0) } }
+        if (parts.isEmpty()) return
+        val analysis = RiskAnalysisEngine.analyze(*parts.toTypedArray()) ?: return
+        val mediaType = RiskAnalysisEngine.detectMediaMarker(parts)
+        val now = System.currentTimeMillis()
+        val dedupeKey = "${packageName}|${analysis.category}|${mediaType}|${analysis.summary}"
+        val previous = recentRiskEvents[dedupeKey]
+        recentRiskEvents.entries.removeAll { now - it.value > 60_000L }
+        if (previous != null && now - previous < 60_000L) return
+        recentRiskEvents[dedupeKey] = now
+        val appName = runCatching {
+            packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+        }.getOrDefault(packageName)
+        val eventId = "risk_${now}_${dedupeKey.hashCode()}"
+        val context = parts.joinToString(" ").replace(Regex("\\s+"), " ").take(1200)
+        FirebaseRepo.logRiskEvent(
+            RiskEvent(
+                id = eventId, category = analysis.category, severity = analysis.severity,
+                confidence = analysis.confidence, packageName = packageName, appName = appName,
+                source = "accessibility", summary = analysis.summary, contextText = context,
+                mediaType = mediaType,
+                mediaState = if (mediaType.isBlank()) "NONE" else if (analysis.sensitive) "HIDDEN_SENSITIVE" else "VISIBLE",
+                capturedAt = now, evidenceAvailable = analysis.shouldCaptureEvidence, sensitive = analysis.sensitive
+            )
+        )
+        if (analysis.shouldCaptureEvidence && !analysis.sensitive && isScreenInteractive() && !captureRunning) {
+            captureAndUpload(
+                packageName = packageName, threshold = 0, usageSeconds = currentUsageSeconds(),
+                key = eventId, remoteRequestId = null, requireUnlocked = true,
+                riskCategory = analysis.category, sensitiveEvidence = false, onFinished = null
+            )
+        }
+    }
+
+    private fun collectVisibleText(
+        node: android.view.accessibility.AccessibilityNodeInfo,
+        out: MutableList<String>, depth: Int
+    ) {
+        if (depth > 8) return
+        node.text?.toString()?.takeIf { it.isNotBlank() }?.let { out.add(it) }
+        node.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { out.add(it) }
+        for (i in 0 until node.childCount) {
+            runCatching {
+                node.getChild(i)?.let { child ->
+                    collectVisibleText(child, out, depth + 1)
+                    child.recycle()
+                }
+            }
+        }
     }
 
     override fun onInterrupt(): Unit = Unit

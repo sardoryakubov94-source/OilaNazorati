@@ -58,7 +58,7 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding = uz.oilanazorati.parentcontrol.databinding.ActivityParentDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
         if (!ensureAuth()) return
-        setupLists(); setupHeader(); setupBottomNav(); setupSectionButtons(); installAmbientAudioCard(); installSimInfoCard()
+        setupLists(); setupHeader(); setupBottomNav(); setupSectionButtons(); installAmbientAudioCard(); installSimInfoCard(); installRiskAlertsCard()
         FirebaseRepo.checkIsPremium { isPremium ->
             isPremiumUser = isPremium
             contactSummaryAdapter.setPremium(isPremium)
