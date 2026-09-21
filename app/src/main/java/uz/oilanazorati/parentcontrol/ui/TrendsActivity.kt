@@ -20,6 +20,7 @@ import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
+import com.github.mikephil.charting.formatter.ValueFormatter
 import com.github.mikephil.charting.highlight.Highlight
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener
 import uz.oilanazorati.parentcontrol.databinding.ActivityTrendsBinding
@@ -305,6 +306,20 @@ class TrendsActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Ma'lumot bo'lmagan holatda ham donut BO'SH ("No chart data available")
+     * ko'rinmasin — barcha 4 ta kartaning fon/aylana o'lchami bir xil, chiroyli
+     * tursin deb, kulrang to'liq halqa chizamiz (markazida "0 ta" allaqachon
+     * styleDonut() orqali qo'yilgan bo'ladi).
+     */
+    private fun applyEmptyDonut(chart: com.github.mikephil.charting.charts.PieChart) {
+        chart.setOnChartValueSelectedListener(null)
+        chart.setDrawEntryLabels(false)
+        val emptyColor = Color.parseColor("#4A4A4A")
+        chart.data = PieData(donutDataSet(listOf(PieEntry(1f)), listOf(emptyColor)))
+        chart.invalidate()
+    }
+
     private fun drawCallsDonut(calls: List<CallEvent>) {
         val incoming = calls.count { it.turi == "kiruvchi" }
         val outgoing = calls.count { it.turi == "chiquvchi" }
@@ -313,8 +328,7 @@ class TrendsActivity : AppCompatActivity() {
 
         styleDonut(binding.donutCalls, "$total ta")
         if (total == 0) {
-            binding.donutCalls.data = null
-            binding.donutCalls.invalidate()
+            applyEmptyDonut(binding.donutCalls)
             binding.legendCalls.text = "Bugun qo'ng'iroq yo'q"
             return
         }
@@ -339,8 +353,7 @@ class TrendsActivity : AppCompatActivity() {
         styleDonut(binding.donutSms, "${smsList.size} ta")
         binding.donutSms.setOnChartValueSelectedListener(null)
         if (byContact.isEmpty()) {
-            binding.donutSms.data = null
-            binding.donutSms.invalidate()
+            applyEmptyDonut(binding.donutSms)
             binding.legendSms.text = "Bugun SMS yo'q"
             return
         }
@@ -388,8 +401,7 @@ class TrendsActivity : AppCompatActivity() {
         styleDonut(binding.donutContacts, "$distinctCount ta")
         binding.donutContacts.setOnChartValueSelectedListener(null)
         if (byContact.isEmpty()) {
-            binding.donutContacts.data = null
-            binding.donutContacts.invalidate()
+            applyEmptyDonut(binding.donutContacts)
             binding.legendContacts.text = "Bugun qo'ng'iroq yo'q"
             return
         }
@@ -442,9 +454,7 @@ class TrendsActivity : AppCompatActivity() {
         binding.legendApps.visibility = android.view.View.GONE
         val totalSeconds = totals.sumOf { it.second }
         if (totals.isEmpty() || totalSeconds == 0L) {
-            binding.donutApps.setDrawEntryLabels(false)
-            binding.donutApps.data = null
-            binding.donutApps.invalidate()
+            applyEmptyDonut(binding.donutApps)
             return
         }
 
@@ -469,14 +479,52 @@ class TrendsActivity : AppCompatActivity() {
             appsSliceDetail[shortName] = "$appName\n$minutes daq"
         }
 
+        val labelColors = MutableList(entries.size) { Color.WHITE }
         binding.donutApps.apply {
-            data = PieData(donutDataSet(entries, palette, selectionShift = 12f))
-            setDrawEntryLabels(true)
-            setEntryLabelColor(Color.WHITE)
-            setEntryLabelTextSize(8.5f)
-            setOnChartValueSelectedListener(
-                revealOnTapListener(this, appsSliceReveal, appsSliceDetail, "${totals.size} ta")
-            )
+            val dataSet = donutDataSet(entries, palette, selectionShift = 12f).apply {
+                // Ilova nomi to'g'ridan-to'g'ri bo'lak ustiga yoziladi. Odatda
+                // hammasi OQ rangda (aks holda bo'lak rangi bilan bir xil rangdagi
+                // yozuv o'sha bo'lak ustida ko'rinmay qolar edi) — lekin BOSILGAN
+                // (tanlangan) bo'lakning nomi o'sha bo'lakning O'ZI RANGIGA
+                // o'zgaradi, shunda qaysi biri tanlanganini darhol bilib olish
+                // mumkin (markazdagi katta yozuv bilan birga).
+                setDrawValues(true)
+                setValueTextColors(labelColors)
+                valueTextSize = 9.5f
+                valueTypeface = android.graphics.Typeface.DEFAULT_BOLD
+                setValueFormatter(object : ValueFormatter() {
+                    override fun getPieLabel(value: Float, pieEntry: PieEntry?): String = pieEntry?.label.orEmpty()
+                })
+            }
+            data = PieData(dataSet)
+            setDrawEntryLabels(false)
+            setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
+                override fun onValueSelected(e: Entry?, h: Highlight?) {
+                    val label = (e as? PieEntry)?.label ?: return
+                    val idx = entries.indexOfFirst { it.label == label }
+                    if (idx >= 0) {
+                        val updated = MutableList(entries.size) { Color.WHITE }
+                        updated[idx] = appsSliceReveal[label] ?: Color.WHITE
+                        dataSet.setValueTextColors(updated)
+                    }
+                    val color = appsSliceReveal[label] ?: Color.WHITE
+                    val text = appsSliceDetail[label] ?: label
+                    setCenterTextColor(color)
+                    setCenterTextSize(if (text.length > 9) 12f else 14f)
+                    setCenterText(wrapForCenter(text))
+                    invalidate()
+                }
+
+                override fun onNothingSelected() {
+                    dataSet.setValueTextColors(MutableList(entries.size) { Color.WHITE })
+                    val nightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                    val isNight = nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                    setCenterTextColor(if (isNight) Color.parseColor("#FFFFFF") else Color.parseColor("#1A1F26"))
+                    setCenterTextSize(14f)
+                    setCenterText("${totals.size} ta")
+                    invalidate()
+                }
+            })
             invalidate()
         }
     }
