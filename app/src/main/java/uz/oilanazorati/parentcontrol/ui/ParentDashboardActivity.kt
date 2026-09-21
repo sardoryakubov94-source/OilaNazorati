@@ -109,6 +109,79 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding.cardStatScreenshot.setOnClickListener { openIfChildSelected { ScreenshotHistoryActivity::class.java } }
     }
 
+
+    private fun installRiskAlertsCard() {
+        val scroll = binding.root.getChildAt(0) as? android.widget.ScrollView ?: return
+        val content = scroll.getChildAt(0) as? LinearLayout ?: return
+        if (content.findViewWithTag<View>("risk_alerts_card") != null) return
+
+        val density = resources.displayMetrics.density
+        val card = LinearLayout(this).apply {
+            tag = "risk_alerts_card"
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(18, 16, 18, 16)
+            background = GradientDrawable().apply {
+                cornerRadius = 22f
+                setColor(androidx.core.content.ContextCompat.getColor(
+                    this@ParentDashboardActivity,
+                    uz.oilanazorati.parentcontrol.R.color.color_surface
+                ))
+            }
+            elevation = 3f
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                openIfChildSelected { RiskAlertsActivity::class.java }
+            }
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
+                topMargin = (4 * density).toInt()
+                bottomMargin = (12 * density).toInt()
+            }
+        }
+
+        val icon = TextView(this).apply {
+            text = "⚠️"
+            textSize = 28f
+            setPadding(0, 0, 14, 0)
+        }
+        val texts = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+        }
+        texts.addView(TextView(this).apply {
+            text = "Xavfsizlik signallari"
+            textSize = 16f
+            setTextColor(androidx.core.content.ContextCompat.getColor(
+                this@ParentDashboardActivity,
+                uz.oilanazorati.parentcontrol.R.color.color_text_primary
+            ))
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        })
+        texts.addView(TextView(this).apply {
+            text = "Muhim xavf signallari"
+            textSize = 12f
+            setPadding(0, 4, 0, 0)
+            setTextColor(androidx.core.content.ContextCompat.getColor(
+                this@ParentDashboardActivity,
+                uz.oilanazorati.parentcontrol.R.color.color_text_secondary
+            ))
+        })
+        val arrow = TextView(this).apply {
+            text = "›"
+            textSize = 28f
+            setTextColor(Color.parseColor("#4D6FD6"))
+        }
+
+        card.addView(icon)
+        card.addView(texts)
+        card.addView(arrow)
+
+        val simCard = content.findViewWithTag<View>("sim_info_card")
+        val idx = content.indexOfChild(simCard)
+        content.addView(card, if (idx >= 0) idx + 1 else content.childCount)
+    }
+
     private fun installAmbientAudioCard() {
         val scroll = binding.root.getChildAt(0) as? android.widget.ScrollView ?: return
         val content = scroll.getChildAt(0) as? LinearLayout ?: return
