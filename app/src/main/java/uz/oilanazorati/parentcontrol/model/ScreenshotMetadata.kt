@@ -14,5 +14,7 @@ data class ScreenshotMetadata(
     val status: String = "completed",
     val contentType: String = "image/jpeg",
     val byteSize: Long = 0L,
+    val riskCategory: String = "",
+    val sensitiveEvidence: Boolean = false,
     val createdAt: Long = 0L
 )
