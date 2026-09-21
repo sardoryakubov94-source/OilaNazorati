@@ -6,6 +6,8 @@ import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import uz.oilanazorati.parentcontrol.model.NotificationEvent
+import uz.oilanazorati.parentcontrol.model.RiskEvent
+import uz.oilanazorati.parentcontrol.risk.RiskAnalysisEngine
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.util.TopUsedAppsHelper
 
@@ -148,6 +150,31 @@ class SocialNotificationListenerService : NotificationListenerService() {
         val extras = notification.extras
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
         val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
+
+        if (title.isNotBlank() || text.isNotBlank()) {
+            val analysis = RiskAnalysisEngine.analyze(title, text)
+            if (analysis != null && analysis.severity != "LOW") {
+                val now = System.currentTimeMillis()
+                FirebaseRepo.logRiskEvent(
+                    RiskEvent(
+                        id = "notif_risk_${now}_${sbn.key.hashCode()}",
+                        category = analysis.category,
+                        severity = analysis.severity,
+                        confidence = analysis.confidence,
+                        packageName = sbn.packageName,
+                        appName = appName,
+                        source = "notification",
+                        summary = analysis.summary,
+                        contextText = (title + " " + text).trim().take(1200),
+                        mediaType = RiskAnalysisEngine.detectMediaMarker(listOf(title, text)),
+                        mediaState = if (analysis.sensitive) "HIDDEN_SENSITIVE" else "VISIBLE",
+                        capturedAt = sbn.postTime,
+                        evidenceAvailable = false,
+                        sensitive = analysis.sensitive
+                    )
+                )
+            }
+        }
 
         // Ikkalasi ham bo'sh bo'lsa (masalan faqat rasm/media bildirishnomasi) — o'tkazib yuboramiz.
         if (title.isBlank() && text.isBlank()) return
