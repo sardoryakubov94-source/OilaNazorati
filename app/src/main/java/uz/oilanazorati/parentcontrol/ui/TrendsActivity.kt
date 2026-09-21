@@ -20,7 +20,6 @@ import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
-import com.github.mikephil.charting.formatter.ValueFormatter
 import com.github.mikephil.charting.highlight.Highlight
 import com.github.mikephil.charting.listener.OnChartValueSelectedListener
 import uz.oilanazorati.parentcontrol.databinding.ActivityTrendsBinding
@@ -442,7 +441,7 @@ class TrendsActivity : AppCompatActivity() {
         binding.legendContacts.text = legend
     }
 
-    /** Bugun eng ko'p ishlatilgan ilovalar — nomi aylananing o'zida (bo'lak ustida) chiqadi, pastda ro'yxat bo'lmaydi. */
+    /** Bugun eng ko'p ishlatilgan ilovalar — nomlar donut ustiga yozilmaydi. */
     private fun drawAppsDonut(usage: List<uz.oilanazorati.parentcontrol.model.AppUsageEvent>) {
         val totals = usage.groupBy { it.ilovaNomi }
             .mapValues { (_, list) -> list.sumOf { it.davomiylikSoniya } }
@@ -451,14 +450,14 @@ class TrendsActivity : AppCompatActivity() {
 
         styleDonut(binding.donutApps, "${totals.size} ta")
         binding.donutApps.setOnChartValueSelectedListener(null)
-        binding.legendApps.visibility = android.view.View.GONE
+        binding.legendApps.visibility = android.view.View.VISIBLE
         val totalSeconds = totals.sumOf { it.second }
         if (totals.isEmpty() || totalSeconds == 0L) {
             applyEmptyDonut(binding.donutApps)
+            binding.legendApps.text = "Bugun ilova ishlatilmagan"
             return
         }
 
-        // Eng ko'p ishlatilgan 6 ta ilova alohida chiqadi, qolganlari "Boshqalar"ga jamlanadi.
         val topN = 6
         val top = totals.take(topN)
         val rest = totals.drop(topN)
@@ -466,57 +465,43 @@ class TrendsActivity : AppCompatActivity() {
 
         val palette = distinctColorPalette(finalList.size)
         val entries = mutableListOf<PieEntry>()
-        appsSliceReveal.clear(); appsSliceDetail.clear()
+        appsSliceReveal.clear()
+        appsSliceDetail.clear()
+
+        val legend = SpannableStringBuilder()
 
         finalList.forEachIndexed { i, (appName, seconds) ->
             val color = palette[i]
             val minutes = seconds / 60
-            // Nom aylana bo'lagi ustiga to'g'ridan-to'g'ri yoziladi — shu sabab
-            // uzun nomlar joyga sig'ishi uchun qisqartiriladi.
-            val shortName = if (appName.length > 9) appName.take(8) + "…" else appName
-            entries.add(PieEntry(seconds.toFloat(), shortName))
-            appsSliceReveal[shortName] = color
-            appsSliceDetail[shortName] = "$appName\n$minutes daq"
+            val shortName = if (appName.length > 20) appName.take(19) + "…" else appName
+            val label = "slice_${i}"
+
+            entries.add(PieEntry(seconds.toFloat(), label))
+            appsSliceReveal[label] = color
+            appsSliceDetail[label] = "$appName\n$minutes daq"
+
+            appendColoredLegendLine(
+                legend,
+                "$shortName ${percent(seconds, totalSeconds)}% — $minutes daq",
+                color
+            )
         }
 
-        val labelColors = MutableList(entries.size) { Color.WHITE }
         binding.donutApps.apply {
-            val dataSet = donutDataSet(entries, palette, selectionShift = 12f).apply {
-                // Ilova nomi to'g'ridan-to'g'ri bo'lak ustiga yoziladi. Odatda
-                // hammasi OQ rangda (aks holda bo'lak rangi bilan bir xil rangdagi
-                // yozuv o'sha bo'lak ustida ko'rinmay qolar edi) — lekin BOSILGAN
-                // (tanlangan) bo'lakning nomi o'sha bo'lakning O'ZI RANGIGA
-                // o'zgaradi, shunda qaysi biri tanlanganini darhol bilib olish
-                // mumkin (markazdagi katta yozuv bilan birga).
-                setDrawValues(true)
-                setValueTextColors(labelColors)
-                valueTextSize = 9.5f
-                valueTypeface = android.graphics.Typeface.DEFAULT_BOLD
-                setValueFormatter(object : ValueFormatter() {
-                    override fun getPieLabel(value: Float, pieEntry: PieEntry?): String = pieEntry?.label.orEmpty()
-                })
-            }
-            data = PieData(dataSet)
+            data = PieData(donutDataSet(entries, palette, selectionShift = 12f))
             setDrawEntryLabels(false)
             setOnChartValueSelectedListener(object : OnChartValueSelectedListener {
                 override fun onValueSelected(e: Entry?, h: Highlight?) {
                     val label = (e as? PieEntry)?.label ?: return
-                    val idx = entries.indexOfFirst { it.label == label }
-                    if (idx >= 0) {
-                        val updated = MutableList(entries.size) { Color.WHITE }
-                        updated[idx] = appsSliceReveal[label] ?: Color.WHITE
-                        dataSet.setValueTextColors(updated)
-                    }
                     val color = appsSliceReveal[label] ?: Color.WHITE
-                    val text = appsSliceDetail[label] ?: label
+                    val detail = appsSliceDetail[label] ?: label
                     setCenterTextColor(color)
-                    setCenterTextSize(if (text.length > 9) 12f else 14f)
-                    setCenterText(wrapForCenter(text))
+                    setCenterTextSize(if (detail.length > 9) 12f else 14f)
+                    setCenterText(wrapForCenter(detail))
                     invalidate()
                 }
 
                 override fun onNothingSelected() {
-                    dataSet.setValueTextColors(MutableList(entries.size) { Color.WHITE })
                     val nightMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
                     val isNight = nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
                     setCenterTextColor(if (isNight) Color.parseColor("#FFFFFF") else Color.parseColor("#1A1F26"))
@@ -527,6 +512,8 @@ class TrendsActivity : AppCompatActivity() {
             })
             invalidate()
         }
+
+        binding.legendApps.text = legend
     }
 
     private fun percent(part: Int, total: Int): Int = if (total == 0) 0 else (part * 100) / total
