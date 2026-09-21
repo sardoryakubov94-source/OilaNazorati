@@ -1,6 +1,7 @@
 package uz.oilanazorati.parentcontrol.ui
 
 import android.app.DatePickerDialog
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
@@ -111,5 +112,11 @@ class NotificationHistoryActivity : AppCompatActivity() {
             historyList.visibility = if (sorted.isEmpty()) View.GONE else View.VISIBLE
             listTitle.text = "Bildirishnomalar ro'yxati — ${sorted.size} ta"
         }
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        startActivity(Intent(this, ParentDashboardActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP })
+        finish()
     }
 }

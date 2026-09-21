@@ -206,5 +206,8 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     @Suppress("DEPRECATION")
-    override fun onBackPressed() { moveTaskToBack(true) }
+    override fun onBackPressed() {
+        startActivity(Intent(this, ParentDashboardActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP })
+        finish()
+    }
 }

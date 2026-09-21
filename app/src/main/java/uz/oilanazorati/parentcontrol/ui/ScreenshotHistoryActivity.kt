@@ -505,4 +505,10 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
         executor.shutdownNow()
         super.onDestroy()
     }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        startActivity(Intent(this, ParentDashboardActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP })
+        finish()
+    }
 }

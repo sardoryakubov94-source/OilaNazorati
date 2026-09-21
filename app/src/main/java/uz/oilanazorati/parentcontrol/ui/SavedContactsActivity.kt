@@ -1,6 +1,7 @@
 package uz.oilanazorati.parentcontrol.ui
 
 import android.os.Bundle
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import uz.oilanazorati.parentcontrol.databinding.ActivitySavedContactsBinding
@@ -36,5 +37,11 @@ class SavedContactsActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         contactsListener?.remove()
+    }
+
+    @Suppress("DEPRECATION")
+    override fun onBackPressed() {
+        startActivity(Intent(this, ParentDashboardActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP })
+        finish()
     }
 }
