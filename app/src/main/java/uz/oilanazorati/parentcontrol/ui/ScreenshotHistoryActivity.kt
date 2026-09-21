@@ -398,6 +398,17 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
         top.addView(check)
         card.addView(top)
 
+        if (meta.sensitiveEvidence) {
+            card.addView(TextView(this).apply {
+                text = "🔒 Sezgir xavf dalili yashirilgan — media mazmuni ko'rsatilmaydi"
+                textSize = 12f
+                setTextColor(color(uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
+                setPadding(0, dp(10), 0, dp(8))
+            })
+            parent.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+            return
+        }
+
         val image = ImageView(this).apply {
             layoutParams = LinearLayout.LayoutParams(-1, dp(220)).apply { topMargin = dp(7) }
             scaleType = ImageView.ScaleType.CENTER_CROP
