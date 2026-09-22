@@ -93,6 +93,12 @@ android {
         viewBinding true
         buildConfig true
     }
+    androidResources {
+        // nsfw_classifier.tflite mmap orqali (FileChannel.map) to'g'ridan-to'g'ri
+        // o'qiladi — bu APK ichida siqilmagan holda saqlanishini talab qiladi,
+        // aks holda TFLite interpreter uni ocholmaydi.
+        noCompress "tflite"
+    }
 }
 
 dependencies {
@@ -125,4 +131,10 @@ dependencies {
 
     // Grafik (statistikani chizish uchun)
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+
+    // Ekrandagi rasm/kadrni QURILMANING O'ZIDA (hech narsa serverga
+    // yuborilmasdan) tahlil qilib, 18+ tasvirni aniqlash uchun. Faqat
+    // xulosa (kategoriya + ishonchlilik %) Firebase'ga yoziladi — rasmning
+    // o'zi hech qachon serverga jo'natilmaydi.
+    implementation 'org.tensorflow:tensorflow-lite:2.14.0'
 }

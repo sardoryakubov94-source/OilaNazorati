@@ -30,11 +30,17 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executor
+import java.util.concurrent.Executors
+import uz.oilanazorati.parentcontrol.risk.MediaRiskAnalyzer
 
 /** User-enabled screenshot transport. Auto capture only runs while a selected target app is foreground. */
 class AccessibilityScreenshotService : AccessibilityService() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private val mainExecutor: Executor = Executor { command -> mainHandler.post(command) }
+    // Screenshot siqish/yozish HAMDA yangi rasm-tahlil (MediaRiskAnalyzer)
+    // og'ir amallar — bularni asosiy (UI) oqimda emas, shu fon oqimida
+    // bajaramiz, aks holda ilova/ekran vaqtincha "qotib qolishi" mumkin.
+    private val bgExecutor = Executors.newSingleThreadExecutor()
     private var settings: ScreenshotSettings = ScreenshotSettings()
     private var settingsListener: ListenerRegistration? = null
     private var requestListener: ListenerRegistration? = null
@@ -214,16 +220,11 @@ class AccessibilityScreenshotService : AccessibilityService() {
                     val bitmap: Bitmap? = hardware.copy(Bitmap.Config.ARGB_8888, false)
                     hardware.recycle()
                     if (bitmap == null) { finishCapture(false, key, remoteRequestId, "Screenshot bitmap nusxalanmadi", onFinished); return }
-                    val file = File(cacheDir, "accessibility_screenshot_${System.currentTimeMillis()}.jpg")
-                    val outputBitmap = if (sensitiveEvidence) blurForEvidence(bitmap) else bitmap
-                    FileOutputStream(file).use { outputBitmap.compress(Bitmap.CompressFormat.JPEG, 82, it) }
-                    if (outputBitmap !== bitmap) outputBitmap.recycle()
-                    bitmap.recycle()
-                    val now: Long = System.currentTimeMillis()
-                    val meta = ScreenshotMetadata(id = "${now}_${threshold}_${packageName.hashCode()}", childId = FirebaseRepo.childId.orEmpty(), familyId = FirebaseRepo.familyCode.orEmpty(), packageName = packageName, appLabel = label(packageName), capturedAt = now, date = todayKey(), dailyUsageSeconds = usageSeconds, thresholdMinute = threshold, riskCategory = riskCategory, sensitiveEvidence = sensitiveEvidence)
-                    ScreenshotRepository.upload(file, meta) { ok: Boolean ->
-                        file.delete()
-                        finishCapture(ok, key, remoteRequestId, if (ok) "Screenshot tayyor" else "Screenshot yuklanmadi", onFinished)
+                    // Rasm siqish/yozish HAMDA MediaRiskAnalyzer tahlili og'ir amallar —
+                    // shu sabab qolgan bosqichni fon oqimida davom ettiramiz, UI
+                    // (asosiy) oqim band qolmasin.
+                    bgExecutor.execute {
+                        processCapturedBitmap(bitmap, packageName, threshold, usageSeconds, key, remoteRequestId, riskCategory, sensitiveEvidence, onFinished)
                     }
                 } catch (t: Throwable) {
                     finishCapture(false, key, remoteRequestId, t.message ?: "Accessibility screenshot xatosi", onFinished)
@@ -231,6 +232,54 @@ class AccessibilityScreenshotService : AccessibilityService() {
             }
             override fun onFailure(errorCode: Int): Unit = finishCapture(false, key, remoteRequestId, "Accessibility screenshot xatosi: $errorCode", onFinished)
         })
+    }
+
+    /**
+     * Screenshot bitmapini FON OQIMIDA qayta ishlaydi: avval rasmning o'zini
+     * MediaRiskAnalyzer bilan tekshiradi (18+ tasvir bormi), so'ng — agar
+     * xavf topilsa yoki matn tahlili allaqachon sezgir deb belgilagan
+     * bo'lsa — dalilni xiralashtirib (blur) saqlaydi va RiskEvent yozadi.
+     * Rasmning o'zi hech qachon serverga yuborilmaydi — faqat xulosa.
+     */
+    private fun processCapturedBitmap(
+        bitmap: Bitmap, packageName: String, threshold: Int, usageSeconds: Long,
+        key: String, remoteRequestId: String?, riskCategory: String, sensitiveEvidence: Boolean, onFinished: (() -> Unit)?
+    ) {
+        try {
+            val mediaVerdict = runCatching { MediaRiskAnalyzer.analyze(applicationContext, bitmap) }.getOrNull()
+            val finalRiskCategory = mediaVerdict?.category ?: riskCategory
+            val finalSensitive = sensitiveEvidence || mediaVerdict != null
+
+            if (mediaVerdict != null) {
+                val now = System.currentTimeMillis()
+                val appName = runCatching {
+                    packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+                }.getOrDefault(packageName)
+                FirebaseRepo.logRiskEvent(
+                    RiskEvent(
+                        id = "risk_media_${now}_${packageName.hashCode()}", category = mediaVerdict.category,
+                        severity = mediaVerdict.severity, confidence = mediaVerdict.confidence,
+                        packageName = packageName, appName = appName, source = "image_classifier",
+                        summary = mediaVerdict.summary, contextText = "", mediaType = "IMAGE",
+                        mediaState = "HIDDEN_SENSITIVE", capturedAt = now, evidenceAvailable = true, sensitive = true
+                    )
+                )
+            }
+
+            val file = File(cacheDir, "accessibility_screenshot_${System.currentTimeMillis()}.jpg")
+            val outputBitmap = if (finalSensitive) blurForEvidence(bitmap) else bitmap
+            FileOutputStream(file).use { outputBitmap.compress(Bitmap.CompressFormat.JPEG, 82, it) }
+            if (outputBitmap !== bitmap) outputBitmap.recycle()
+            bitmap.recycle()
+            val now: Long = System.currentTimeMillis()
+            val meta = ScreenshotMetadata(id = "${now}_${threshold}_${packageName.hashCode()}", childId = FirebaseRepo.childId.orEmpty(), familyId = FirebaseRepo.familyCode.orEmpty(), packageName = packageName, appLabel = label(packageName), capturedAt = now, date = todayKey(), dailyUsageSeconds = usageSeconds, thresholdMinute = threshold, riskCategory = finalRiskCategory, sensitiveEvidence = finalSensitive)
+            ScreenshotRepository.upload(file, meta) { ok: Boolean ->
+                file.delete()
+                finishCapture(ok, key, remoteRequestId, if (ok) "Screenshot tayyor" else "Screenshot yuklanmadi", onFinished)
+            }
+        } catch (t: Throwable) {
+            finishCapture(false, key, remoteRequestId, t.message ?: "Accessibility screenshot xatosi", onFinished)
+        }
     }
 
     private fun finishCapture(ok: Boolean, key: String, remoteRequestId: String?, message: String, onFinished: (() -> Unit)?): Unit {
@@ -410,6 +459,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         mainHandler.removeCallbacksAndMessages(null)
         settingsListener?.remove(); requestListener?.remove()
         clearBurst()
+        bgExecutor.shutdownNow()
         ScreenshotRepository.updateAccessibilityStatus(false)
         runCatching { unregisterReceiver(testReceiver) }
         super.onDestroy()
