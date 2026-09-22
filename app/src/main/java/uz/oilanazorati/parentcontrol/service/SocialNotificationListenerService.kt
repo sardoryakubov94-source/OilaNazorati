@@ -1,15 +1,20 @@
 package uz.oilanazorati.parentcontrol.service
 
 import android.app.Notification
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import uz.oilanazorati.parentcontrol.model.NotificationEvent
 import uz.oilanazorati.parentcontrol.model.RiskEvent
+import uz.oilanazorati.parentcontrol.risk.MediaRiskAnalyzer
 import uz.oilanazorati.parentcontrol.risk.RiskAnalysisEngine
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.util.TopUsedAppsHelper
+import java.util.concurrent.Executors
 
 /**
  * Ijtimoiy tarmoq va messenjer ilovalaridan kelgan bildirishnomalarni
@@ -43,6 +48,11 @@ import uz.oilanazorati.parentcontrol.util.TopUsedAppsHelper
  *    darajasida yashiringan.
  */
 class SocialNotificationListenerService : NotificationListenerService() {
+
+    // Bildirishnomaga biriktirilgan rasmni (masalan Telegram/Instagram'dan
+    // kelgan rasm-xabar) tekshirish og'ir amal — asosiy oqimda emas, shu
+    // fon oqimida bajaramiz.
+    private val bgExecutor = Executors.newSingleThreadExecutor()
 
     companion object {
         // Kuzatiladigan ijtimoiy tarmoq/messenjer ilovalari.
@@ -106,6 +116,7 @@ class SocialNotificationListenerService : NotificationListenerService() {
         handler.removeCallbacks(refreshTopAppsRunnable)
         premiumListener?.remove()
         premiumListener = null
+        bgExecutor.shutdownNow()
     }
 
     /** Bola o'zi ulangan hujjatidagi "ownerPremium" bayrog'ini tinglaydi
@@ -176,6 +187,33 @@ class SocialNotificationListenerService : NotificationListenerService() {
             }
         }
 
+        // Bildirishnomaga biriktirilgan RASMNI ham tekshiramiz (masalan
+        // Telegram/Instagram'dan matnsiz yoki matn bilan birga kelgan rasm-
+        // xabar) — bu matn tahlili sezmaydigan holatni yopadi. MUHIM: bu
+        // tekshiruv "title/text bo'sh" holatidan QATʼIY NAZAR ishlaydi,
+        // chunki aynan matnsiz-faqat-rasm xabarlari eng ko'p e'tibordan
+        // chetda qoladigan holat. Rasmning o'zi hech qachon
+        // saqlanmaydi/serverga yuborilmaydi — faqat xulosa.
+        extractNotificationPicture(notification)?.let { picture ->
+            bgExecutor.execute {
+                val verdict = runCatching { MediaRiskAnalyzer.analyze(applicationContext, picture) }.getOrNull()
+                if (verdict != null) {
+                    val now = System.currentTimeMillis()
+                    FirebaseRepo.logRiskEvent(
+                        RiskEvent(
+                            id = "notif_media_${now}_${sbn.key.hashCode()}",
+                            category = verdict.category, severity = verdict.severity, confidence = verdict.confidence,
+                            packageName = sbn.packageName, appName = appName, source = "notification_image",
+                            summary = verdict.summary, contextText = "", mediaType = "IMAGE",
+                            mediaState = if (verdict.sensitive) "HIDDEN_SENSITIVE" else "VISIBLE",
+                            capturedAt = sbn.postTime, evidenceAvailable = false, sensitive = verdict.sensitive
+                        )
+                    )
+                }
+                picture.recycle()
+            }
+        }
+
         // Ikkalasi ham bo'sh bo'lsa (masalan faqat rasm/media bildirishnomasi) — o'tkazib yuboramiz.
         if (title.isBlank() && text.isBlank()) return
 
@@ -195,5 +233,26 @@ class SocialNotificationListenerService : NotificationListenerService() {
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
         // Hech narsa qilinmaydi — faqat kelgan bildirishnomalar qayd etiladi.
+    }
+
+    /**
+     * Bildirishnomaga biriktirilgan katta rasmni (BigPictureStyle) ajratib
+     * oladi. Android 12 (API 31)dan boshlab ba'zi ilovalar buni eski
+     * Bitmap o'rniga Icon sifatida yuborishi mumkin — ikkalasi ham
+     * qo'llab-quvvatlanadi. Rasm topilmasa yoki o'qib bo'lmasa — null.
+     */
+    @Suppress("DEPRECATION")
+    private fun extractNotificationPicture(notification: Notification): Bitmap? {
+        val extras = notification.extras
+        (extras.getParcelable(Notification.EXTRA_PICTURE) as? Bitmap)?.let { return it }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val icon = extras.getParcelable(Notification.EXTRA_PICTURE_ICON) as? android.graphics.drawable.Icon
+            if (icon != null) {
+                return runCatching {
+                    (icon.loadDrawable(applicationContext) as? BitmapDrawable)?.bitmap
+                }.getOrNull()
+            }
+        }
+        return null
     }
 }
