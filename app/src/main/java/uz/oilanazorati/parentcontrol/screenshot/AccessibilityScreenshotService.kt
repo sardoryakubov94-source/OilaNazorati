@@ -248,7 +248,12 @@ class AccessibilityScreenshotService : AccessibilityService() {
         try {
             val mediaVerdict = runCatching { MediaRiskAnalyzer.analyze(applicationContext, bitmap) }.getOrNull()
             val finalRiskCategory = mediaVerdict?.category ?: riskCategory
-            val finalSensitive = sensitiveEvidence || mediaVerdict != null
+            // MUHIM: faqat "tasdiqlangan" (mediaVerdict.sensitive == true) holatda
+            // dalil xiralashtiriladi. Shubhali-lekin-noaniq holatda (sensitive=false)
+            // dalil OCHIQ qoladi — xuddi matn-asosidagi tahlildagi bir xil qoidaga
+            // muvofiq: ota-ona faqat aniq/tasdiqlangan holatlarda rasmni ko'rmaydi,
+            // noaniq holatlarda esa o'zi ko'rib baholay oladi.
+            val finalSensitive = sensitiveEvidence || (mediaVerdict?.sensitive == true)
 
             if (mediaVerdict != null) {
                 val now = System.currentTimeMillis()
@@ -261,7 +266,8 @@ class AccessibilityScreenshotService : AccessibilityService() {
                         severity = mediaVerdict.severity, confidence = mediaVerdict.confidence,
                         packageName = packageName, appName = appName, source = "image_classifier",
                         summary = mediaVerdict.summary, contextText = "", mediaType = "IMAGE",
-                        mediaState = "HIDDEN_SENSITIVE", capturedAt = now, evidenceAvailable = true, sensitive = true
+                        mediaState = if (mediaVerdict.sensitive) "HIDDEN_SENSITIVE" else "VISIBLE",
+                        capturedAt = now, evidenceAvailable = true, sensitive = mediaVerdict.sensitive
                     )
                 )
             }

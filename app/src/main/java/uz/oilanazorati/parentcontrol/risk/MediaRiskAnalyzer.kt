@@ -34,16 +34,32 @@ object MediaRiskAnalyzer {
         val category: String,
         val severity: String,
         val confidence: Int,
-        val summary: String
+        val summary: String,
+        // true bo'lsa — model DEYARLI 100% ishonch bilan aytgan (tasdiqlangan
+        // holat): shu holdagina dalil xiralashtiriladi/ko'rsatilmaydi.
+        // false bo'lsa — shubhali, lekin ANIQ EMAS: RiskEvent yoziladi, LEKIN
+        // dalil OCHIQ (xiralashtirilmagan) holda ota-onaga ko'rsatiladi — xuddi
+        // matn-asosidagi tahlildagi kabi, ota-ona o'zi ko'rib xulosa chiqarsin.
+        val sensitive: Boolean
     )
 
     private const val MODEL_FILE = "nsfw_classifier.tflite"
     private const val INPUT_SIZE = 224
     private val LABELS = listOf("drawings", "hentai", "neutral", "porn", "sexy")
 
+    // Pastki chegara: shubha uyg'otadi, RiskEvent yoziladi, LEKIN dalil ochiq
+    // ko'rsatiladi (ota-ona o'zi ko'radi va baholaydi — noaniq holat).
     private const val PORN_THRESHOLD = 0.75f
     private const val HENTAI_THRESHOLD = 0.80f
     private const val SEXY_THRESHOLD = 0.90f
+
+    // Yuqori chegara: model DEYARLI to'liq ishonch bilan aytgan — faqat shu
+    // holatda "tasdiqlangan" deb hisoblanadi va dalil yashiriladi/xiralanadi.
+    // "sexy" (ochiq/intim, lekin yalang'och emas) sinfi hech qachon
+    // "tasdiqlangan" darajaga chiqarilmaydi — u har doim ochiq ko'rsatiladi,
+    // chunki bu haqiqiy 18+ tasvir emas, faqat shubhali/chegaraviy holat.
+    private const val PORN_CONFIRMED_THRESHOLD = 0.95f
+    private const val HENTAI_CONFIRMED_THRESHOLD = 0.95f
 
     @Volatile private var interpreter: Interpreter? = null
     @Volatile private var loadFailed = false
@@ -103,12 +119,16 @@ object MediaRiskAnalyzer {
         val hentai = scores["hentai"] ?: 0f
         val sexy = scores["sexy"] ?: 0f
         return when {
+            porn >= PORN_CONFIRMED_THRESHOLD ->
+                MediaVerdict("ADULT_MEDIA", "HIGH", (porn * 100).toInt(), "Ekranda aniq 18+ tasvir aniqlandi", sensitive = true)
+            hentai >= HENTAI_CONFIRMED_THRESHOLD ->
+                MediaVerdict("ADULT_MEDIA", "HIGH", (hentai * 100).toInt(), "Ekranda aniq 18+ (chizma/anime) tasvir aniqlandi", sensitive = true)
             porn >= PORN_THRESHOLD ->
-                MediaVerdict("ADULT_MEDIA", "HIGH", (porn * 100).toInt(), "Ekranda aniq 18+ tasvir aniqlandi")
+                MediaVerdict("ADULT_MEDIA", "HIGH", (porn * 100).toInt(), "Ekranda 18+ bo'lishi mumkin bo'lgan tasvir aniqlandi", sensitive = false)
             hentai >= HENTAI_THRESHOLD ->
-                MediaVerdict("ADULT_MEDIA", "HIGH", (hentai * 100).toInt(), "Ekranda aniq 18+ (chizma/anime) tasvir aniqlandi")
+                MediaVerdict("ADULT_MEDIA", "HIGH", (hentai * 100).toInt(), "Ekranda 18+ (chizma/anime) bo'lishi mumkin bo'lgan tasvir aniqlandi", sensitive = false)
             sexy >= SEXY_THRESHOLD ->
-                MediaVerdict("SUGGESTIVE_MEDIA", "MEDIUM", (sexy * 100).toInt(), "Ekranda ochiq/intim tasvir aniqlandi")
+                MediaVerdict("SUGGESTIVE_MEDIA", "MEDIUM", (sexy * 100).toInt(), "Ekranda ochiq/intim tasvir aniqlandi", sensitive = false)
             else -> null
         }
     }
