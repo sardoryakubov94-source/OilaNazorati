@@ -558,16 +558,28 @@ class AccessibilityScreenshotService : AccessibilityService() {
                 capturedAt = now, evidenceAvailable = analysis.shouldCaptureEvidence, sensitive = analysis.sensitive
             )
         )
-        // Dalil (screenshot) qachon olinadi:
-        //  - "sensitive" bo'lmagan (noaniq/shubhali) xavf holatlarida — HAR
-        //    doim, ochiq (xiralashtirilmagan) holda (ota-ona o'zi baholasin).
-        //  - "sensitive" (tasdiqlangan intim/grooming) holatda — FAQAT
-        //    suhbatda rasm/video ham aniqlangan bo'lsa (mediaType bo'sh
-        //    emas). Bunday holda screenshot baribir OLINADI, lekin
-        //    processCapturedBitmap/blurForEvidence orqali xiralashtirilib
-        //    saqlanadi (chunki sensitiveEvidence=true beriladi) — shunda
-        //    ota-onada hech bo'lmasa xiralashgan dalil bo'ladi, umuman hech
-        //    narsa yo'qligidan ko'ra yaxshiroq.
+        // Dalil (screenshot) qachon olinadi va qachon XIRALASHTIRILADI —
+        // BU IKKI NARSA ALOHIDA-ALOHIDA HAL QILINADI, ARALASHTIRILMAYDI:
+        //
+        //  1) MATN (suhbat yozishmasi) — xiralashtirilmaydi, HAR DOIM TO'LIQ
+        //     O'QILADIGAN holda saqlanadi. Sabab: yozishma dalili — ayni shu
+        //     ko'rinishda (kim, nima yozgani) keyinchalik suhbatdosh
+        //     xabarlarini o'chirib tashlasa ham, ota-onada isbot qolishi
+        //     kerak. Matnni xiralashtirish bu dalilni butunlay yo'qqa
+        //     chiqaradi — shuning uchun "sensitive" (tasdiqlangan
+        //     intim/grooming) MATN toifasi hech qachon screenshotni
+        //     xiralashtirishga sabab BO'LMAYDI (sensitiveEvidence=false).
+        //
+        //  2) RASM/VIDEO (ekrandagi haqiqiy tasvir) — xiralashtirish FAQAT
+        //     MediaRiskAnalyzer o'zi (processCapturedBitmap ichida) shu
+        //     screenshotning haqiqiy piksellarini tekshirib, ANIQ intim
+        //     tasvir topsagina qo'llaniladi — matn "sensitive" deb
+        //     belgilanganidan qat'iy nazar.
+        //
+        // Screenshot O'ZI qachon olinadi: odatdagi (sensitive bo'lmagan)
+        // holatda har doim; "sensitive" matn holatida esa faqat suhbatda
+        // rasm/video ham aniqlangan bo'lsa (mediaType bo'sh emas) — toki
+        // haqiqatan tasvir bo'lsa, MediaRiskAnalyzer uni tekshira olsin.
         val shouldCapture = analysis.shouldCaptureEvidence &&
             (!analysis.sensitive || mediaType.isNotBlank()) &&
             isScreenInteractive() && !captureRunning
@@ -575,7 +587,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
             captureAndUpload(
                 packageName = packageName, threshold = 0, usageSeconds = currentUsageSeconds(),
                 key = eventId, remoteRequestId = null, requireUnlocked = true,
-                riskCategory = analysis.category, sensitiveEvidence = analysis.sensitive, onFinished = null
+                riskCategory = analysis.category, sensitiveEvidence = false, onFinished = null
             )
         }
     }
