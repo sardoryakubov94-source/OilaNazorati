@@ -396,6 +396,121 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private fun todayKey(): String = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
     private fun triggerKey(child: String, pkg: String, date: String, threshold: Int): String = "${date}_${child.hashCode()}_${pkg.hashCode()}_$threshold"
 
+    // ---------------- Video kadrini davriy tekshirish ----------------
+    // MUHIM — batareya va Firebase kvotasini tejash qoidalari:
+    // 1) Faqat VIDEO KO'RINISHI aniqlangan ilovada ishga tushadi (har doim
+    //    emas), 2) kamida 15 soniyalik oraliq bilan (tez-tez emas),
+    // 3) uzluksiz eng ko'p MAX_VIDEO_SAMPLES marta (keyin to'xtaydi,
+    //    qayta aniqlanishi kerak), 4) ENG MUHIMI — xavf TOPILMASA hech
+    //    qanday fayl yozilmaydi, Firestore'ga yozilmaydi, Storage'ga
+    //    yuklanmaydi: kadr faqat xotirada tekshirilib, darhol tashlanadi.
+    private val VIDEO_SAMPLE_INTERVAL_MS = 15_000L
+    private val MAX_VIDEO_SAMPLES = 12 // ~3 daqiqa uzluksiz kuzatish chegarasi
+
+    private var videoWatchPackage: String? = null
+    private var videoWatchCount: Int = 0
+    private var videoWatchRunnable: Runnable? = null
+
+    private fun ensureVideoWatch(packageName: String) {
+        if (videoWatchPackage == packageName) return // allaqachon shu ilova uchun ishlab turibdi
+        stopVideoWatch()
+        videoWatchPackage = packageName
+        videoWatchCount = 0
+        scheduleVideoSample()
+    }
+
+    private fun stopVideoWatch() {
+        videoWatchRunnable?.let { mainHandler.removeCallbacks(it) }
+        videoWatchRunnable = null
+        videoWatchPackage = null
+        videoWatchCount = 0
+    }
+
+    private fun scheduleVideoSample() {
+        val runnable = Runnable { runVideoFrameCheck() }
+        videoWatchRunnable = runnable
+        mainHandler.postDelayed(runnable, VIDEO_SAMPLE_INTERVAL_MS)
+    }
+
+    private fun runVideoFrameCheck() {
+        val target = videoWatchPackage ?: return
+        if (videoWatchCount >= MAX_VIDEO_SAMPLES) { stopVideoWatch(); return }
+        if (captureRunning || !isScreenInteractive()) { stopVideoWatch(); return }
+        val stillForeground = runCatching { rootInActiveWindow?.packageName?.toString() == target }.getOrDefault(false)
+        if (!stillForeground) { stopVideoWatch(); return }
+
+        videoWatchCount++
+        captureRunning = true
+        takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
+            override fun onSuccess(screenshot: ScreenshotResult) {
+                try {
+                    val hardware = Bitmap.wrapHardwareBuffer(screenshot.hardwareBuffer, screenshot.colorSpace)
+                    screenshot.hardwareBuffer.close()
+                    val bitmap = hardware?.copy(Bitmap.Config.ARGB_8888, false)
+                    hardware?.recycle()
+                    if (bitmap == null) { captureRunning = false; rescheduleIfStillWatching(target); return }
+                    bgExecutor.execute {
+                        processVideoFrame(bitmap, target)
+                        captureRunning = false
+                        rescheduleIfStillWatching(target)
+                    }
+                } catch (t: Throwable) {
+                    captureRunning = false
+                    rescheduleIfStillWatching(target)
+                }
+            }
+            override fun onFailure(errorCode: Int) {
+                captureRunning = false
+                rescheduleIfStillWatching(target)
+            }
+        })
+    }
+
+    private fun rescheduleIfStillWatching(target: String) {
+        mainHandler.post { if (videoWatchPackage == target) scheduleVideoSample() }
+    }
+
+    /**
+     * Video kadrini FAQAT tekshiradi. Xavf topilmasa — bitmap darhol
+     * tashlanadi, HECH QANDAY fayl yozilmaydi, Firestore/Storage'ga
+     * yuborilmaydi (bu qoida batareya va yozuv kvotasini tejashning
+     * o'zagi). Xavf topilgandagina dalil saqlanadi/yuklanadi.
+     */
+    private fun processVideoFrame(bitmap: Bitmap, packageName: String) {
+        val verdict = runCatching { MediaRiskAnalyzer.analyze(applicationContext, bitmap) }.getOrNull()
+        if (verdict == null) { runCatching { bitmap.recycle() }; return }
+        try {
+            val now = System.currentTimeMillis()
+            val appName = runCatching {
+                packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+            }.getOrDefault(packageName)
+            FirebaseRepo.logRiskEvent(
+                RiskEvent(
+                    id = "risk_video_${now}_${packageName.hashCode()}", category = verdict.category,
+                    severity = verdict.severity, confidence = verdict.confidence,
+                    packageName = packageName, appName = appName, source = "video_frame_classifier",
+                    summary = verdict.summary, contextText = "", mediaType = "VIDEO",
+                    mediaState = if (verdict.sensitive) "HIDDEN_SENSITIVE" else "VISIBLE",
+                    capturedAt = now, evidenceAvailable = true, sensitive = verdict.sensitive
+                )
+            )
+            val file = File(cacheDir, "video_frame_${now}.jpg")
+            val outputBitmap = if (verdict.sensitive) blurForEvidence(bitmap) else bitmap
+            FileOutputStream(file).use { outputBitmap.compress(Bitmap.CompressFormat.JPEG, 82, it) }
+            if (outputBitmap !== bitmap) outputBitmap.recycle()
+            bitmap.recycle()
+            val meta = ScreenshotMetadata(
+                id = "${now}_video_${packageName.hashCode()}", childId = FirebaseRepo.childId.orEmpty(),
+                familyId = FirebaseRepo.familyCode.orEmpty(), packageName = packageName, appLabel = label(packageName),
+                capturedAt = now, date = todayKey(), dailyUsageSeconds = 0L, thresholdMinute = 0,
+                riskCategory = verdict.category, sensitiveEvidence = verdict.sensitive
+            )
+            ScreenshotRepository.upload(file, meta) { file.delete() }
+        } catch (t: Throwable) {
+            runCatching { bitmap.recycle() }
+        }
+    }
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (settings.enabled && autoCaptureActive) scheduleAutoWatch()
         analyzeAccessibilityEvent(event)
@@ -409,7 +524,16 @@ class AccessibilityScreenshotService : AccessibilityService() {
         event.text?.forEach { if (!it.isNullOrBlank()) parts.add(it.toString()) }
         event.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
         event.className?.toString()?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
-        runCatching { rootInActiveWindow?.let { root -> collectVisibleText(root, parts, 0) } }
+        val videoFlag = booleanArrayOf(false)
+        runCatching { rootInActiveWindow?.let { root -> collectVisibleText(root, parts, 0, videoFlag) } }
+
+        // Video ko'rinishi (VideoView/PlayerView/...) aniqlansa — davriy kadr
+        // tekshiruvini boshlaymiz (yoki davom ettiramiz, agar allaqachon shu
+        // ilova uchun ishlab turgan bo'lsa). Boshqa ilovaga o'tilgan bo'lsa —
+        // eski kuzatuvni to'xtatamiz (batareya/kvota tejash uchun muhim).
+        if (videoFlag[0]) ensureVideoWatch(packageName)
+        else if (videoWatchPackage != null && videoWatchPackage != packageName) stopVideoWatch()
+
         if (parts.isEmpty()) return
         val analysis = RiskAnalysisEngine.analyze(*parts.toTypedArray()) ?: return
         val mediaType = RiskAnalysisEngine.detectMediaMarker(parts)
@@ -443,17 +567,22 @@ class AccessibilityScreenshotService : AccessibilityService() {
         }
     }
 
+    private val VIDEO_VIEW_HINTS = listOf(
+        "VideoView", "PlayerView", "ExoPlayerView", "StyledPlayerView", "TextureView"
+    )
+
     private fun collectVisibleText(
         node: android.view.accessibility.AccessibilityNodeInfo,
-        out: MutableList<String>, depth: Int
+        out: MutableList<String>, depth: Int, videoFlag: BooleanArray
     ) {
         if (depth > 8) return
         node.text?.toString()?.takeIf { it.isNotBlank() }?.let { out.add(it) }
         node.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { out.add(it) }
+        node.className?.toString()?.let { cls -> if (VIDEO_VIEW_HINTS.any { cls.contains(it) }) videoFlag[0] = true }
         for (i in 0 until node.childCount) {
             runCatching {
                 node.getChild(i)?.let { child ->
-                    collectVisibleText(child, out, depth + 1)
+                    collectVisibleText(child, out, depth + 1, videoFlag)
                     child.recycle()
                 }
             }
@@ -465,6 +594,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         mainHandler.removeCallbacksAndMessages(null)
         settingsListener?.remove(); requestListener?.remove()
         clearBurst()
+        stopVideoWatch()
         bgExecutor.shutdownNow()
         ScreenshotRepository.updateAccessibilityStatus(false)
         runCatching { unregisterReceiver(testReceiver) }
