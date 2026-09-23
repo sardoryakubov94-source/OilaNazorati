@@ -558,11 +558,24 @@ class AccessibilityScreenshotService : AccessibilityService() {
                 capturedAt = now, evidenceAvailable = analysis.shouldCaptureEvidence, sensitive = analysis.sensitive
             )
         )
-        if (analysis.shouldCaptureEvidence && !analysis.sensitive && isScreenInteractive() && !captureRunning) {
+        // Dalil (screenshot) qachon olinadi:
+        //  - "sensitive" bo'lmagan (noaniq/shubhali) xavf holatlarida — HAR
+        //    doim, ochiq (xiralashtirilmagan) holda (ota-ona o'zi baholasin).
+        //  - "sensitive" (tasdiqlangan intim/grooming) holatda — FAQAT
+        //    suhbatda rasm/video ham aniqlangan bo'lsa (mediaType bo'sh
+        //    emas). Bunday holda screenshot baribir OLINADI, lekin
+        //    processCapturedBitmap/blurForEvidence orqali xiralashtirilib
+        //    saqlanadi (chunki sensitiveEvidence=true beriladi) — shunda
+        //    ota-onada hech bo'lmasa xiralashgan dalil bo'ladi, umuman hech
+        //    narsa yo'qligidan ko'ra yaxshiroq.
+        val shouldCapture = analysis.shouldCaptureEvidence &&
+            (!analysis.sensitive || mediaType.isNotBlank()) &&
+            isScreenInteractive() && !captureRunning
+        if (shouldCapture) {
             captureAndUpload(
                 packageName = packageName, threshold = 0, usageSeconds = currentUsageSeconds(),
                 key = eventId, remoteRequestId = null, requireUnlocked = true,
-                riskCategory = analysis.category, sensitiveEvidence = false, onFinished = null
+                riskCategory = analysis.category, sensitiveEvidence = analysis.sensitive, onFinished = null
             )
         }
     }
