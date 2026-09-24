@@ -101,10 +101,11 @@ class RiskAlertsActivity : AppCompatActivity() {
             })
             if (event.mediaType.isNotBlank()) {
                 card.addView(TextView(this).apply {
+                    val mediaLabel = if (event.mediaType == "VIDEO") "Video" else "Rasm"
                     text = if (event.mediaState == "HIDDEN_SENSITIVE") {
-                        "🔒 " + if (event.mediaType == "VIDEO") "Video" else "Rasm" + " yuborilgan/ko'rilgan — sezgir mazmun yashirilgan"
+                        "🔒 $mediaLabel yuborilgan/ko'rilgan — sezgir mazmun yashirilgan"
                     } else {
-                        "📎 " + if (event.mediaType == "VIDEO") "Video" else "Rasm" + " media signali mavjud"
+                        "📎 $mediaLabel media signali mavjud"
                     }
                     textSize = 12f
                     setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary))

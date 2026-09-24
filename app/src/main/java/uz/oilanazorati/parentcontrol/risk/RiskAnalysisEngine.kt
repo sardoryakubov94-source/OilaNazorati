@@ -74,13 +74,14 @@ object RiskAnalysisEngine {
         if (text.isBlank()) return null
 
         val matches = rules.mapNotNull { rule ->
-            val count = rule.terms.count { term -> text.contains(term) }
-            if (count == 0) null else rule to count
+            val hits = rule.terms.filter { term -> containsWholeTerm(text, term) }
+            if (hits.isEmpty()) null else Triple(rule, hits.size, hits)
         }.sortedByDescending { it.first.weight * it.second }
 
         val top = matches.firstOrNull() ?: return null
         val rule = top.first
         val matched = top.second
+        val matchedTerms = top.third
 
         // Bir signalning o'zi yetarlicha yuqori bo'lmasa, "E'tibor" holati.
         // Bir nechta mos signal va kuchli kalit so'zlar confidence'ni oshiradi.
@@ -109,17 +110,43 @@ object RiskAnalysisEngine {
             category = rule.category,
             severity = severity,
             confidence = confidence,
-            summary = summary,
+            // MUHIM: ota-ona (va tuzatuvchi) signal AYNAN NIMA sabab
+            // chiqqanini ko'ra olishi kerak — shu sabab qaysi kalit so'z(lar)
+            // mos tushgani ochiq yoziladi (yolg'on signalni tezda payqash
+            // uchun ham juda muhim).
+            summary = "$summary (aniqlangan so'z: ${matchedTerms.joinToString(", ")})",
             sensitive = rule.sensitive,
             shouldCaptureEvidence = confidence >= 80
         )
     }
 
+    /**
+     * "term" so'zi "text" ichida MUSTAQIL SO'Z sifatida (boshqa so'zning
+     * bir bo'lagi sifatida emas) uchraydimi, tekshiradi. Oddiy
+     * text.contains(term) YOLG'ON SIGNALLARGA olib keladi — masalan "meth"
+     * so'zi "inputMETHodservice" ichida, "kill" so'zi "sKILL" ichida ham
+     * "topilib" qolaveradi. Bu funksiya atrofidagi belgi harf/raqam
+     * bo'lmagan holatlargagina mos deb hisoblaydi.
+     */
+    private fun containsWholeTerm(text: String, term: String): Boolean {
+        if (term.isBlank()) return false
+        var idx = text.indexOf(term)
+        while (idx >= 0) {
+            val before = if (idx > 0) text[idx - 1] else null
+            val after = if (idx + term.length < text.length) text[idx + term.length] else null
+            val beforeOk = before == null || !before.isLetterOrDigit()
+            val afterOk = after == null || !after.isLetterOrDigit()
+            if (beforeOk && afterOk) return true
+            idx = text.indexOf(term, idx + 1)
+        }
+        return false
+    }
+
     fun detectMediaMarker(rawParts: List<String>): String {
         val text = rawParts.joinToString(" ").lowercase(Locale.ROOT)
         return when {
-            listOf("video", "videoni", "videoga", "movie", "ролик", "видео").any { text.contains(it) } -> "VIDEO"
-            listOf("rasm", "rasmini", "foto", "photo", "image", "picture", "📷", "🖼", "фото", "изображение").any { text.contains(it) } -> "IMAGE"
+            listOf("video", "videoni", "videoga", "movie", "ролик", "видео").any { containsWholeTerm(text, it) } -> "VIDEO"
+            listOf("rasm", "rasmini", "foto", "photo", "image", "picture", "📷", "🖼", "фото", "изображение").any { containsWholeTerm(text, it) } -> "IMAGE"
             else -> ""
         }
     }
