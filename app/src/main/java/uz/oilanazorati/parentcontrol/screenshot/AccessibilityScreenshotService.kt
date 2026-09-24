@@ -273,7 +273,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
             }
 
             val file = File(cacheDir, "accessibility_screenshot_${System.currentTimeMillis()}.jpg")
-            val outputBitmap = if (finalSensitive) blurForEvidence(bitmap) else bitmap
+            val outputBitmap = if (finalSensitive) MediaRiskAnalyzer.blurForEvidence(bitmap) else bitmap
             FileOutputStream(file).use { outputBitmap.compress(Bitmap.CompressFormat.JPEG, 82, it) }
             if (outputBitmap !== bitmap) outputBitmap.recycle()
             bitmap.recycle()
@@ -384,13 +384,6 @@ class AccessibilityScreenshotService : AccessibilityService() {
         } catch (_: Throwable) {}
     }
 
-    private fun blurForEvidence(source: Bitmap): Bitmap {
-        val smallW = (source.width / 24).coerceAtLeast(12)
-        val smallH = (source.height / 24).coerceAtLeast(12)
-        val small = Bitmap.createScaledBitmap(source, smallW, smallH, true)
-        return Bitmap.createScaledBitmap(small, source.width, source.height, false).also { small.recycle() }
-    }
-
     private fun getApplicationInfoSafe(pkg: String) = try { packageManager.getApplicationInfo(pkg, 0) } catch (_: Exception) { null }
     private fun label(pkg: String): String = try { packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString() } catch (_: Exception) { pkg }
     private fun todayKey(): String = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
@@ -495,7 +488,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
                 )
             )
             val file = File(cacheDir, "video_frame_${now}.jpg")
-            val outputBitmap = if (verdict.sensitive) blurForEvidence(bitmap) else bitmap
+            val outputBitmap = if (verdict.sensitive) MediaRiskAnalyzer.blurForEvidence(bitmap) else bitmap
             FileOutputStream(file).use { outputBitmap.compress(Bitmap.CompressFormat.JPEG, 82, it) }
             if (outputBitmap !== bitmap) outputBitmap.recycle()
             bitmap.recycle()

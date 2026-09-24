@@ -132,4 +132,20 @@ object MediaRiskAnalyzer {
             else -> null
         }
     }
+
+    /**
+     * Dalil sifatida saqlanadigan tasvirni piksellashtirib, o'qib/tanib
+     * bo'lmas holga keltiradi. FAQAT MediaVerdict.sensitive == true bo'lgan
+     * (deyarli to'liq ishonch bilan tasdiqlangan) holatlarda chaqirilishi
+     * kerak. MUHIM: bu suhbat MATNI uchun HECH QACHON chaqirilmasligi
+     * kerak — faqat aniqlangan haqiqiy tasvir uchun. Ikkala fayl
+     * (AccessibilityScreenshotService va SocialNotificationListenerService)
+     * shu bitta funksiyadan bir xil qoida bilan foydalanadi.
+     */
+    fun blurForEvidence(source: Bitmap): Bitmap {
+        val smallW = (source.width / 24).coerceAtLeast(12)
+        val smallH = (source.height / 24).coerceAtLeast(12)
+        val small = Bitmap.createScaledBitmap(source, smallW, smallH, true)
+        return Bitmap.createScaledBitmap(small, source.width, source.height, false).also { small.recycle() }
+    }
 }

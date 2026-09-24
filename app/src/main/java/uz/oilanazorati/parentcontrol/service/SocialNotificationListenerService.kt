@@ -192,8 +192,13 @@ class SocialNotificationListenerService : NotificationListenerService() {
         // xabar) — bu matn tahlili sezmaydigan holatni yopadi. MUHIM: bu
         // tekshiruv "title/text bo'sh" holatidan QATʼIY NAZAR ishlaydi,
         // chunki aynan matnsiz-faqat-rasm xabarlari eng ko'p e'tibordan
-        // chetda qoladigan holat. Rasmning o'zi hech qachon
-        // saqlanmaydi/serverga yuborilmaydi — faqat xulosa.
+        // chetda qoladigan holat.
+        //
+        // QOIDA (oldindan belgilangan): intim yoki oddiy rasmni ANIQ
+        // ajratib bo'lmagan (yoki hech narsa topilmagan) vaqtda — rasm
+        // OCHIQ holda saqlanadi/ko'rsatiladi. Xiralashtirish FAQAT model
+        // DEYARLI to'liq ishonch bilan (verdict.sensitive=true) aytganda
+        // qo'llanadi.
         extractNotificationPicture(notification)?.let { picture ->
             bgExecutor.execute {
                 val verdict = runCatching { MediaRiskAnalyzer.analyze(applicationContext, picture) }.getOrNull()
@@ -206,9 +211,24 @@ class SocialNotificationListenerService : NotificationListenerService() {
                             packageName = sbn.packageName, appName = appName, source = "notification_image",
                             summary = verdict.summary, contextText = "", mediaType = "IMAGE",
                             mediaState = if (verdict.sensitive) "HIDDEN_SENSITIVE" else "VISIBLE",
-                            capturedAt = sbn.postTime, evidenceAvailable = false, sensitive = verdict.sensitive
+                            capturedAt = now, evidenceAvailable = true, sensitive = verdict.sensitive
                         )
                     )
+                    runCatching {
+                        val file = java.io.File(cacheDir, "notif_image_${now}.jpg")
+                        val output = if (verdict.sensitive) MediaRiskAnalyzer.blurForEvidence(picture) else picture
+                        java.io.FileOutputStream(file).use { output.compress(Bitmap.CompressFormat.JPEG, 82, it) }
+                        if (output !== picture) output.recycle()
+                        val meta = uz.oilanazorati.parentcontrol.model.ScreenshotMetadata(
+                            id = "${now}_notif_${sbn.packageName.hashCode()}",
+                            childId = FirebaseRepo.childId.orEmpty(), familyId = FirebaseRepo.familyCode.orEmpty(),
+                            packageName = sbn.packageName, appLabel = appName, capturedAt = now,
+                            date = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()),
+                            dailyUsageSeconds = 0L, thresholdMinute = 0,
+                            riskCategory = verdict.category, sensitiveEvidence = verdict.sensitive
+                        )
+                        uz.oilanazorati.parentcontrol.screenshot.ScreenshotRepository.upload(file, meta) { file.delete() }
+                    }
                 }
                 picture.recycle()
             }
