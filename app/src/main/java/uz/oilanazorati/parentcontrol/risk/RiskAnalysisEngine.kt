@@ -40,15 +40,23 @@ object RiskAnalysisEngine {
             "private photo", "nude pic", "nudes", "send nudes", "голые фото",
             "интим фото", "пришли интим"
         ), true),
+        // MUHIM: "send or" ataylab OLIB TASHLANDI — bu ikki oddiy ingliz
+        // so'zi ("send or share", "send or don't" kabi) juda ko'p zararsiz
+        // iborada uchraydi, tahdid bilan bog'liq bo'lmasligi mumkin.
         Rule("GROOMING_OR_COERCION", 50, listOf(
             "hech kimga aytma", "sir tut", "don't tell anyone", "keep it secret",
             "rasmni tarqataman", "photo tarqataman", "video tarqataman",
-            "if you don't send", "yubormasang", "send or", "shantaj",
+            "if you don't send", "yubormasang", "shantaj",
             "qo'rqitaman", "qorqitaman", "blackmail"
         ), true),
+        // MUHIM: "bet", "stavka", "slot" ataylab OLIB TASHLANDI — bular
+        // kundalik so'zlashuvda (ingliz tilida "I bet!", "vaqt sloti",
+        // kredit "stavka"si kabi) juda tez-tez uchraydi va qimor bilan
+        // aloqasi bo'lmasligi mumkin. Qolgan so'zlar (1xbet, betting,
+        // casino, qimor va h.k.) allaqachon yetarlicha aniq va xavfsiz.
         Rule("GAMBLING", 40, listOf(
             "1xbet", "1x bet", "melbet", "betting", "casino", "kazino",
-            "stavka", "bet", "qimor", "slot", "parimatch", "mostbet"
+            "qimor", "parimatch", "mostbet"
         )),
         Rule("SELF_HARM", 45, listOf(
             "o'z joniga qasd", "oz joniga qasd", "jonimga qasd",
@@ -59,9 +67,16 @@ object RiskAnalysisEngine {
             "narkotik", "giyohvand", "marixuana", "marihuana", "kokain",
             "geroin", "meth", "mdma", "drug", "наркотик"
         )),
+        // MUHIM: "kill" va "murder" ataylab OLIB TASHLANDI — bular
+        // o'yinlarda (masalan juda mashhur "Among Us" o'yinida "murder",
+        // ko'plab otishma o'yinlarida "kill/nice kill") kundalik atama
+        // sifatida doimiy ishlatiladi va haqiqiy zo'ravonlik bilan
+        // bog'liq emas. O'zbek/rus tilidagi teng ma'nodagi so'zlar
+        // ("o'ldirish", "qotillik", "убийство") qoldirildi — bular
+        // o'yin-slengida bunday tez-tez ishlatilmaydi.
         Rule("VIOLENCE", 30, listOf(
             "zo'ravonlik", "zoravonlik", "o'ldirish", "oldirish", "urish",
-            "qiynash", "qotillik", "kill", "murder", "violence", "убийство"
+            "qiynash", "qotillik", "violence", "убийство"
         )),
         Rule("DANGEROUS_CHALLENGE", 30, listOf(
             "dangerous challenge", "xavfli challenge", "xavfli challange",
