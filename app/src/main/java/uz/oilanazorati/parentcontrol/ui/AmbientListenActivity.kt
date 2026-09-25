@@ -31,6 +31,14 @@ import uz.oilanazorati.parentcontrol.repo.AmbientAudioRepository
  * qabul qiladi. WebRTC audio device module playback uchun saqlanadi.
  */
 class AmbientListenActivity : AppCompatActivity() {
+    private companion object {
+        // PeerConnectionFactory.initialize() ilova jarayoni umrida FAQAT
+        // BIR MARTA chaqirilishi kerak (native tomon buni shunday kutadi) —
+        // takroriy chaqiruvlar ba'zi qurilmalarda nozik native xatolarga
+        // sabab bo'lishi mumkin.
+        @Volatile private var webRtcGloballyInitialized = false
+    }
+
     private val crashlytics = FirebaseCrashlytics.getInstance()
     private var requestListener: ListenerRegistration? = null
     private var sessionListener: ListenerRegistration? = null
@@ -183,22 +191,32 @@ class AmbientListenActivity : AppCompatActivity() {
         }
 
         try {
-            diag("initialize_webrtc")
-            PeerConnectionFactory.initialize(
-                PeerConnectionFactory.InitializationOptions.builder(applicationContext)
-                    .createInitializationOptions()
-            )
+            // MUHIM: butun og'ir native ishga tushirish ketma-ketligi umumiy
+            // qulf ostida — qarang NativeWorkloadGuard izohi. Bu MediaRiskAnalyzer
+            // (TensorFlow Lite) aynan shu lahzada fon oqimida ishlab turgan
+            // bo'lsa ham, ikkalasi native darajada bir vaqtda to'qnashmasligini
+            // ta'minlaydi (past-resursli qurilmalarda ehtimoliy SIGTRAP manbai).
+            uz.oilanazorati.parentcontrol.risk.NativeWorkloadGuard.withLock {
+                diag("initialize_webrtc")
+                if (!webRtcGloballyInitialized) {
+                    PeerConnectionFactory.initialize(
+                        PeerConnectionFactory.InitializationOptions.builder(applicationContext)
+                            .createInitializationOptions()
+                    )
+                    webRtcGloballyInitialized = true
+                }
 
-            diag("create_audio_device_module")
-            audioDeviceModule = JavaAudioDeviceModule.builder(applicationContext)
-                .setUseHardwareAcousticEchoCanceler(false)
-                .setUseHardwareNoiseSuppressor(false)
-                .createAudioDeviceModule()
+                diag("create_audio_device_module")
+                audioDeviceModule = JavaAudioDeviceModule.builder(applicationContext)
+                    .setUseHardwareAcousticEchoCanceler(false)
+                    .setUseHardwareNoiseSuppressor(false)
+                    .createAudioDeviceModule()
 
-            diag("create_peer_connection_factory")
-            factory = PeerConnectionFactory.builder()
-                .setAudioDeviceModule(audioDeviceModule)
-                .createPeerConnectionFactory()
+                diag("create_peer_connection_factory")
+                factory = PeerConnectionFactory.builder()
+                    .setAudioDeviceModule(audioDeviceModule)
+                    .createPeerConnectionFactory()
+            }
 
             diag("create_peer_connection")
             val iceServers = listOf(

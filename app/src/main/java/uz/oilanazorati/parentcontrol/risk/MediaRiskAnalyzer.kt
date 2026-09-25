@@ -109,7 +109,10 @@ object MediaRiskAnalyzer {
             if (scaled !== bitmap) scaled.recycle()
 
             val output = Array(1) { FloatArray(LABELS.size) }
-            model.run(input, output)
+            // MUHIM: native TFLite chaqiruvi umumiy qulf ostida — qarang
+            // NativeWorkloadGuard izohi (WebRTC bilan bir vaqtda ishga
+            // tushmasligi uchun).
+            NativeWorkloadGuard.withLock { model.run(input, output) }
             toVerdict(LABELS.zip(output[0].toList()).toMap())
         }.getOrNull()
     }
