@@ -74,9 +74,16 @@ $('openPremium').onclick=()=>{show('premiumScreen');renderPremiumScreen()};
 $('backPremium').onclick=()=>{if(cardsUnsub){cardsUnsub();cardsUnsub=null}show('dashboard')};
 function isIosOrStandalonePwa(){
   const ua=navigator.userAgent||'';
-  const iOS=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  // MUHIM: signInWithPopup mobil brauzerlarning HAMMASIDA (nafaqat
+  // iPhone'da) ishonchsiz — Chrome Android'da ham popup oynasi
+  // ochiladi-yu, unga Google login manzili KECHIKIB (asinxron)
+  // yuklanadi, va mobil brauzer bu kechikkan navigatsiyani ko'pincha
+  // bloklab, oynani about:blank holida abadiy qoldiradi. Shu sabab
+  // BARCHA mobil qurilmalarda (Android + iOS) to'g'ridan-to'g'ri
+  // redirect ishlatiladi; popup faqat desktop brauzerida qoldiriladi.
+  const mobile=/Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|Opera Mini|IEMobile/i.test(ua);
   const standalone=window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;
-  return iOS||standalone;
+  return mobile||standalone;
 }
 async function login(){
   // MUHIM: iPhone'da, ayniqsa "Bosh ekranga qo'shilgan" (standalone) rejimda,
