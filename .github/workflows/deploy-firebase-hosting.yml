@@ -1,0 +1,39 @@
+name: Deploy Firebase Hosting (auth domain bootstrap)
+
+# MUHIM: auth.oilanazorati.uz (Firebase Auth uchun maxsus domen) hozircha
+# "No healthy backends" (503) qaytaryapti, chunki Firebase Hosting'ning
+# bu loyihasiga hech qachon birorta ham sayt joylashtirilmagan ("Waiting
+# for your first release"). Google login-qaytarish yo'li (/__/auth/handler)
+# Firebase Hosting orqali avtomatik xizmat qilinadi, lekin FAQAT hosting
+# saytida kamida bitta release bo'lsa. Shu sabab bu workflow shunchaki
+# bo'sh/oddiy bitta sahifani deploy qiladi — panel.html yoki asosiy sayt
+# bilan hech qanday aloqasi yo'q, faqat Hosting'ni "faollashtirish" uchun.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firebase-hosting-public/**'
+      - 'firebase.json'
+      - '.firebaserc'
+      - '.github/workflows/deploy-firebase-hosting.yml'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Firebase Hosting
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::FIREBASE_SERVICE_ACCOUNT sekret sozlanmagan. GitHub repo -> Settings -> Secrets and variables -> Actions -> New repository secret."
+            exit 1
+          fi
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/firebase-sa.json"
+          npx --yes firebase-tools@13 deploy --only hosting --project oilanazorat-3c8de --non-interactive
