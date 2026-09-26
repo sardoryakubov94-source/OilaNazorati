@@ -72,7 +72,28 @@ async function sub(name,field,n=100){const q=query(collection(db,'families',fami
 $('start').onclick=()=>{if(auth.currentUser){show('codeScreen');renderFamilyScreen()}else login()};$('out').onclick=()=>signOut(auth);$('newCode').onclick=()=>{localStorage.removeItem('family');family=null;show('codeScreen');renderFamilyScreen()};$('backChildren').onclick=()=>{stopLiveListeners();show('codeScreen');renderFamilyScreen()};
 $('openPremium').onclick=()=>{show('premiumScreen');renderPremiumScreen()};
 $('backPremium').onclick=()=>{if(cardsUnsub){cardsUnsub();cardsUnsub=null}show('dashboard')};
+function isIosOrStandalonePwa(){
+  const ua=navigator.userAgent||'';
+  const iOS=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const standalone=window.navigator.standalone===true||window.matchMedia('(display-mode: standalone)').matches;
+  return iOS||standalone;
+}
 async function login(){
+  // MUHIM: iPhone'da, ayniqsa "Bosh ekranga qo'shilgan" (standalone) rejimda,
+  // signInWithPopup oynasi umuman ochilmaydi va bu holatda Firebase kutilgan
+  // xato kodini tashlamasdan jim qolib, cheksiz osilib qoladi (foydalanuvchi
+  // "Google orqali kirish"ni bossa ham hech narsa bo'lmagandek tuyuladi).
+  // Shu sabab iOS/standalone'da to'g'ridan-to'g'ri redirect orqali kiramiz.
+  if(isIosOrStandalonePwa()){
+    try{
+      await setPersistence(auth,browserLocalPersistence);
+      await signInWithRedirect(auth,new GoogleAuthProvider());
+    }catch(e){
+      console.error('redirect sign-in failed',e);
+      alert('Google orqali kirishda xatolik: '+(e.code||e.message||e));
+    }
+    return;
+  }
   try{
     await signInWithPopup(auth,new GoogleAuthProvider());
   }catch(e){
