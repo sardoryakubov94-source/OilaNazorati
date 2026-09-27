@@ -1,0 +1,95 @@
+name: Test Build (no website publish)
+
+# MUHIM: bu workflow FAQAT qo'lda ishga tushiriladi (workflow_dispatch) va
+# HECH QACHON downloads/oila-nazorati.apk ga yozmaydi — asosiy "Build
+# Release APK" ishidan farqli. Shu sabab bu bilan istalgan eski commit'ni
+# xavfsiz sinab ko'rish mumkin, sayt/foydalanuvchilar uchun hech qanday
+# xavf yo'q. Natija faqat "Actions" sahifasidagi vaqtinchalik artifact
+# sifatida (30 kun) yuklab olinadi.
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_ref:
+        description: 'Sinaladigan commit SHA yoki branch nomi'
+        required: true
+        default: 'main'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Kodni olish (belgilangan ref)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.test_ref }}
+          fetch-depth: 0
+
+      - name: JDK 17 o'rnatish
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Gradle 8.5 o'rnatish
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.5'
+
+      - name: google-services.json faylini yaratish
+        env:
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          test -n "$GOOGLE_SERVICES_JSON_B64" || { echo "GOOGLE_SERVICES_JSON_B64 secret topilmadi"; exit 1; }
+          echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > app/google-services.json
+
+      - name: Google Web OAuth client ID resursini tayyorlash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('app/google-services.json').read_text())
+          client_id = None
+          for client in data.get('client', []):
+              for oauth in client.get('oauth_client', []):
+                  if oauth.get('client_type') == 3 and oauth.get('client_id'):
+                      client_id = oauth['client_id']
+                      break
+              if client_id:
+                  break
+          out = Path('app/src/main/res/values/google_auth.xml')
+          out.parent.mkdir(parents=True, exist_ok=True)
+          if client_id:
+              escaped = client_id.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&apos;')
+              out.write_text('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <string name="default_web_client_id" translatable="false">' + escaped + '</string>\n</resources>\n')
+          else:
+              out.write_text('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <string name="default_web_client_id" translatable="false"></string>\n</resources>\n')
+          PY
+
+      - name: Release keystore'ni tiklash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo "KEYSTORE_BASE64 secret topilmadi"; exit 1; }
+          echo "$KEYSTORE_BASE64" | base64 -d > app/release.keystore
+
+      - name: Release APK build
+        env:
+          OILA_KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
+          OILA_KEYSTORE_PASSWORD: ${{ secrets.OILA_KEYSTORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+          OILA_KEY_ALIAS: ${{ secrets.OILA_KEY_ALIAS || secrets.KEY_ALIAS }}
+          OILA_KEY_PASSWORD: ${{ secrets.OILA_KEY_PASSWORD || secrets.KEY_PASSWORD }}
+        run: |
+          gradle --no-daemon clean assembleRelease
+
+      - name: APK nomini tayyorlash
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk OilaNazorati-TEST-${{ github.event.inputs.test_ref }}.apk
+
+      - name: Test APK artifact (sayt/foydalanuvchilarga TA'SIR QILMAYDI)
+        uses: actions/upload-artifact@v4
+        with:
+          name: OilaNazorati-TEST-build
+          path: OilaNazorati-TEST-*.apk
+          retention-days: 14
