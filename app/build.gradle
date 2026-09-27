@@ -119,7 +119,13 @@ dependencies {
     implementation 'com.google.firebase:firebase-crashlytics-ktx'
     // Captures native (C++/WebRTC) crashes too, not just JVM exceptions —
     // needed to actually see WebRTC library crashes in Crashlytics.
-    implementation 'com.google.firebase:firebase-crashlytics-ndk'
+    // MUHIM (vaqtinchalik test uchun o'chirildi): firebase-crashlytics-ndk
+    // native signal-ushlagich o'rnatadi. Taxmin: WebRTC initialize()
+    // paytida ichki (zararsiz) signal chiqarsa, bu ushlagich uni chinakam
+    // qulash deb tushunib, ilovani to'xtatib qo'yayotgan bo'lishi mumkin —
+    // ikkala eski ham, eng yangi WebRTC versiyasi bir xil joyda tushishi
+    // shu nazariyaga mos keladi.
+    // implementation 'com.google.firebase:firebase-crashlytics-ndk'
     implementation 'com.google.firebase:firebase-analytics-ktx'
 
     // WebRTC real-time audio transport. Firestore remains the signaling channel.
