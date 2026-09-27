@@ -127,7 +127,7 @@ dependencies {
     // mirror (1.0.32006, built ~2017) was causing unexplained native crashes with
     // no Java stack trace on some devices. Switched to Stream's actively maintained
     // WebRTC AAR, published on Maven Central and tracking current upstream libwebrtc.
-    implementation 'io.github.webrtc-sdk:android:144.7559.09'
+    implementation 'io.github.webrtc-sdk:android:150.7871.01'
 
     // Grafik (statistikani chizish uchun)
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
