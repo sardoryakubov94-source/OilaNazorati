@@ -14,6 +14,10 @@ on:
         description: 'Sinaladigan commit SHA yoki branch nomi'
         required: true
         default: 'main'
+      build_variant:
+        description: 'assembleRelease yoki assembleDebug'
+        required: true
+        default: 'assembleRelease'
 
 jobs:
   build:
@@ -68,24 +72,27 @@ jobs:
           PY
 
       - name: Release keystore'ni tiklash
+        if: ${{ github.event.inputs.build_variant == 'assembleRelease' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
           test -n "$KEYSTORE_BASE64" || { echo "KEYSTORE_BASE64 secret topilmadi"; exit 1; }
           echo "$KEYSTORE_BASE64" | base64 -d > app/release.keystore
 
-      - name: Release APK build
+      - name: APK build
         env:
           OILA_KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
           OILA_KEYSTORE_PASSWORD: ${{ secrets.OILA_KEYSTORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
           OILA_KEY_ALIAS: ${{ secrets.OILA_KEY_ALIAS || secrets.KEY_ALIAS }}
           OILA_KEY_PASSWORD: ${{ secrets.OILA_KEY_PASSWORD || secrets.KEY_PASSWORD }}
         run: |
-          gradle --no-daemon clean assembleRelease
+          gradle --no-daemon clean ${{ github.event.inputs.build_variant }}
 
       - name: APK nomini tayyorlash
         run: |
-          cp app/build/outputs/apk/release/app-release.apk OilaNazorati-TEST-${{ github.event.inputs.test_ref }}.apk
+          VARIANT_DIR=$(echo "${{ github.event.inputs.build_variant }}" | sed 's/^assemble//' | tr '[:upper:]' '[:lower:]')
+          APK_PATH=$(find app/build/outputs/apk/$VARIANT_DIR -name "*.apk" | head -1)
+          cp "$APK_PATH" OilaNazorati-TEST-${{ github.event.inputs.test_ref }}-${{ github.event.inputs.build_variant }}.apk
 
       - name: Test APK artifact (sayt/foydalanuvchilarga TA'SIR QILMAYDI)
         uses: actions/upload-artifact@v4
