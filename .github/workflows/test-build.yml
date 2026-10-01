@@ -72,7 +72,7 @@ jobs:
           PY
 
       - name: Release keystore'ni tiklash
-        if: ${{ github.event.inputs.build_variant == 'assembleRelease' }}
+        if: ${{ github.event.inputs.build_variant != 'assembleDebug' }}
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
@@ -90,8 +90,9 @@ jobs:
 
       - name: APK nomini tayyorlash
         run: |
-          VARIANT_DIR=$(echo "${{ github.event.inputs.build_variant }}" | sed 's/^assemble//' | tr '[:upper:]' '[:lower:]')
-          APK_PATH=$(find app/build/outputs/apk/$VARIANT_DIR -name "*.apk" | head -1)
+          APK_PATH=$(find app/build/outputs/apk -name "*.apk" -newer app/build.gradle | head -1)
+          test -n "$APK_PATH" || APK_PATH=$(find app/build/outputs/apk -name "*.apk" | head -1)
+          echo "Topilgan APK: $APK_PATH"
           cp "$APK_PATH" OilaNazorati-TEST-${{ github.event.inputs.test_ref }}-${{ github.event.inputs.build_variant }}.apk
 
       - name: Test APK artifact (sayt/foydalanuvchilarga TA'SIR QILMAYDI)
