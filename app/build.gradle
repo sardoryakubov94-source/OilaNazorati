@@ -80,19 +80,6 @@ android {
                 nativeSymbolUploadEnabled false
             }
         }
-        releaseNoMinify {
-            // VAQTINCHALIK TEST BUILD TURI (SIGTRAP/WebRTC sinovi uchun):
-            // xuddi "release" kabi release keystore bilan imzolanadi (shu
-            // sabab mavjud o'rnatilgan ilovani ustidan yozadi, Google
-            // Sign-In SHA-1 ham mos keladi — alohida ro'yxatdan o'tkazish
-            // shart emas), lekin R8/minifikatsiya O'CHIRILGAN. Shu orqali
-            // R8 WebRTC bilan bog'liq biror narsani noto'g'ri o'zgartirib
-            // qo'yayotganini sinaymiz. Doimiy ishlatish uchun emas.
-            initWith release
-            minifyEnabled false
-            shrinkResources false
-            matchingFallbacks = ['release']
-        }
     }
 
     compileOptions {
