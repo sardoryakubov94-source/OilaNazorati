@@ -1,11 +1,13 @@
 package uz.oilanazorati.parentcontrol.ui
 
+import android.content.pm.PackageManager
 import android.graphics.Typeface
 import android.media.AudioManager
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.firebase.crashlytics.FirebaseCrashlytics
@@ -38,6 +40,25 @@ class AmbientListenActivity : AppCompatActivity() {
         // sabab bo'lishi mumkin.
         @Volatile private var webRtcGloballyInitialized = false
     }
+
+    // MUHIM (8-sentabrdagi "root cause of the previous crash" muammosining
+    // qaytarilishi): parent WebRTC orqali mikrofon TRACK'ini yubormasa ham,
+    // JavaAudioDeviceModule native darajada audio yozish infratuzilmasini
+    // tayyorlaydi va RECORD_AUDIO ruxsatini talab qiladi. Bu ruxsat
+    // berilmagan bo'lsa, xato Java darajasida emas, balki native SIGTRAP
+    // sifatida chiqadi — aynan shuning uchun bu tekshiruv shart.
+    private val micPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) startListening()
+        else {
+            status.text = "❌ Mikrofon ruxsati kerak"
+            startButton.isEnabled = true
+            stopButton.isEnabled = false
+            currentRequestId = null
+        }
+    }
+
+    private fun hasMicPermission(): Boolean =
+        ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
 
     private val crashlytics = FirebaseCrashlytics.getInstance()
     private var requestListener: ListenerRegistration? = null
@@ -135,7 +156,7 @@ class AmbientListenActivity : AppCompatActivity() {
                         .show()
                     return@checkIsPremium
                 }
-                startListening()
+                if (hasMicPermission()) startListening() else micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
             }
         }
         stopButton.setOnClickListener { stopListening() }
@@ -167,6 +188,10 @@ class AmbientListenActivity : AppCompatActivity() {
 
     private fun startListening() {
         if (currentRequestId != null) return
+        if (!hasMicPermission()) {
+            micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+            return
+        }
         stopping = false
         appliedChildCandidates.clear()
         localCandCount = 0
