@@ -55,11 +55,20 @@ class LegacyMicAudioService : Service() {
         const val CHANNEL_ID = "oila_nazorati_mic"
         const val NOTIFICATION_ID = 510
         const val SAMPLE_RATE = 16000
-        const val CHUNK_MS = 500
-        // Firebase kvotasini nazorat qilish uchun: WebRTC'ga o'tishning asl
-        // sababi ham shu edi. 10 daqiqa bitta sessiya uchun yetarli va
-        // kvotani tez tugatmaydi (har 500ms'da bitta yozuv — 10 daqiqada
-        // ~1200 ta hujjat).
+        // MUHIM (Firebase kvotasi): har bo'lak — bitta Firestore yozuvi.
+        // Bepul tarifda kuniga ~20 000 yozuv bor, BARCHA funksiyalar
+        // (SMS, qo'ng'iroq, skrinshot va h.k.) shu limitni baham ko'radi.
+        // 500ms bilan sekundiga 2 yozuv bo'lib, bu limitni 2-3 soatda
+        // tugatib qo'yar edi (WebRTC'ga o'tishning asl sababi aynan shu
+        // edi). 2000ms (2 soniya) bilan sekundiga 0.5 yozuv — ya'ni 4
+        // baravar kamroq, kuniga ~4 soatlik tinglashga yetadi va "jonli"
+        // tuyg'usi deyarli yo'qolmaydi (ovoz 2 soniya kechikish bilan
+        // yetib boradi, suhbatni emas, atrof-muhitni kuzatish uchun bu
+        // yetarlicha tez).
+        const val CHUNK_MS = 2000
+        // Bitta sessiya (bitta "Eshitishni boshlash" bosilishi) uchun
+        // xavfsizlik chegarasi — 10 daqiqa, 2000ms bilan bu atigi ~300
+        // ta yozuv (avvalgi 500ms'dagi ~1200 taga nisbatan 4 baravar kam).
         const val MAX_SESSION_MS = 10 * 60 * 1000L
     }
 
