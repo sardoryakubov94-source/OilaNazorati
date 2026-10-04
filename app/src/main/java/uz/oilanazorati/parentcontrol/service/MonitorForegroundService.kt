@@ -75,6 +75,7 @@ class MonitorForegroundService : Service() {
     }
 
     private var micRequestListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var legacyMicRequestListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -99,6 +100,7 @@ class MonitorForegroundService : Service() {
                 return@checkMinRequiredVersion
             }
             registerMicRequestListener()
+            registerLegacyMicRequestListener()
             registerCallLogObserver()
             registerContactsObserver()
             registerSmsSentObserver()
@@ -154,6 +156,38 @@ class MonitorForegroundService : Service() {
                     log("WebRtcAmbientAudioService start failed: ${t.message}")
                     recordException(t)
                 }
+            }
+        }
+    }
+
+    /** Android "Ovoz" ekrani uchun — WebRTC EMAS, oddiy Firestore PCM
+     * transport (qarang LegacyMicAudioService izohi — WebRTC'ning native
+     * ishga tushirish bosqichi barcha sinalgan qurilmalarda qulab tushgani
+     * uchun shu usulga qaytarildi). Veb-panelning WebRTC so'rovlariga
+     * aralashmaslik uchun transport=="webrtc" bo'lgan hujjatlarni e'tiborsiz
+     * qoldiradi — registerMicRequestListener() esa aksincha ishlaydi. */
+    private fun registerLegacyMicRequestListener() {
+        val isChild = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+            .getBoolean("is_child_device", false)
+        if (!isChild) return
+        val family = FirebaseRepo.familyCode ?: return
+        val child = FirebaseRepo.childId ?: com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val ref = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            .collection("families").document(family).collection("children").document(child)
+            .collection("mic_requests").document("current")
+        legacyMicRequestListener = ref.addSnapshotListener { snap, error ->
+            if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
+            val data = snap.data.orEmpty()
+            if (data["transport"] == "webrtc") return@addSnapshotListener
+            val state = data["status"] as? String ?: return@addSnapshotListener
+            if (state != "requested") return@addSnapshotListener
+            if (Build.VERSION.SDK_INT >= 23 &&
+                checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+            ) return@addSnapshotListener
+            try {
+                ContextCompat.startForegroundService(this, Intent(this, LegacyMicAudioService::class.java))
+            } catch (t: Throwable) {
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(t)
             }
         }
     }
@@ -411,5 +445,6 @@ class MonitorForegroundService : Service() {
         callLogObserver?.let { contentResolver.unregisterContentObserver(it) }
         liveTrackingListener?.remove()
         micRequestListener?.remove()
+        legacyMicRequestListener?.remove()
     }
 }
