@@ -1,84 +1,49 @@
 package uz.oilanazorati.parentcontrol.ui
 
-import android.content.pm.PackageManager
 import android.graphics.Typeface
+import android.media.AudioAttributes
+import android.media.AudioFormat
 import android.media.AudioManager
+import android.media.AudioTrack
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.firestore.ListenerRegistration
-import org.webrtc.IceCandidate
-import org.webrtc.MediaConstraints
-import org.webrtc.MediaStreamTrack
-import org.webrtc.PeerConnection
-import org.webrtc.PeerConnectionFactory
-import org.webrtc.RtpReceiver
-import org.webrtc.RtpTransceiver
-import org.webrtc.SdpObserver
-import org.webrtc.SessionDescription
-import org.webrtc.audio.AudioDeviceModule
-import org.webrtc.audio.JavaAudioDeviceModule
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.repo.AmbientAudioRepository
 
 /**
- * Ota-ona tomonidagi jonli ovoz — WebRTC transport.
+ * Ota-ona tomonidagi jonli ovoz — Firestore PCM16 transport (AudioTrack).
  *
- * Ota-ona lokal mikrofon trekini yubormaydi, faqat bolaning audio trekini
- * qabul qiladi. WebRTC audio device module playback uchun saqlanadi.
+ * MUHIM TARIXIY ESLATMA (3-oktabr): bu funksiya avval (8-sentabrdan buyon)
+ * WebRTC orqali ishlagan, lekin WebRTC native ishga tushirish bosqichida
+ * (PeerConnectionFactory.initialize()/JavaAudioDeviceModule) BARCHA sinalgan
+ * qurilmalarda, kutubxona versiyasidan qat'i nazar, SIGTRAP bilan qulab
+ * tushardi. Sabab turli ehtimollar (ruxsat, R8, crashlytics-ndk, TensorFlow
+ * Lite ziddiyati) birma-bir sinalib, hech biri yordam bermadi — demak bu
+ * muammo ilovaning o'zida yoki ma'lum bir kutubxona versiyasida emas,
+ * balki WebRTC'ning native qatlamiga xos, tuzatib bo'lmaydigan narsa edi.
+ *
+ * Shu sabab bu funksiya ATAYLAB sodda, sinab ko'rilgan, FAQAT Android'ning
+ * o'z standart API'lariga (AudioTrack/AudioRecord) asoslangan usulga
+ * qaytarildi — bu usul 7-sentabrgacha ishlatilgan va hech qachon native
+ * crash bermagan edi. WebRTC'ga faqat Firebase kvotasini tejash uchun
+ * o'tilgan edi (ovoz uzatish Firestore orqali ko'proq yozuv sarflaydi);
+ * bu muvozanatni SESSIYA_MAX_MS bilan nazorat qilamiz.
  */
 class AmbientListenActivity : AppCompatActivity() {
-    private companion object {
-        // PeerConnectionFactory.initialize() ilova jarayoni umrida FAQAT
-        // BIR MARTA chaqirilishi kerak (native tomon buni shunday kutadi) —
-        // takroriy chaqiruvlar ba'zi qurilmalarda nozik native xatolarga
-        // sabab bo'lishi mumkin.
-        @Volatile private var webRtcGloballyInitialized = false
-    }
-
-    // MUHIM (8-sentabrdagi "root cause of the previous crash" muammosining
-    // qaytarilishi): parent WebRTC orqali mikrofon TRACK'ini yubormasa ham,
-    // JavaAudioDeviceModule native darajada audio yozish infratuzilmasini
-    // tayyorlaydi va RECORD_AUDIO ruxsatini talab qiladi. Bu ruxsat
-    // berilmagan bo'lsa, xato Java darajasida emas, balki native SIGTRAP
-    // sifatida chiqadi — aynan shuning uchun bu tekshiruv shart.
-    private val micPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) startListening()
-        else {
-            status.text = "❌ Mikrofon ruxsati kerak"
-            startButton.isEnabled = true
-            stopButton.isEnabled = false
-            currentRequestId = null
-        }
-    }
-
-    private fun hasMicPermission(): Boolean =
-        ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
-
     private val crashlytics = FirebaseCrashlytics.getInstance()
     private var requestListener: ListenerRegistration? = null
-    private var sessionListener: ListenerRegistration? = null
+    private var audioListener: ListenerRegistration? = null
+    private var audioTrack: AudioTrack? = null
     private var currentRequestId: String? = null
+    private var currentSessionId: String? = null
     private var stopping = false
-    private var localCandCount = 0
-    private var remoteCandCount = 0
-    private var gotAnswer = false
-    private val localCandTypes = mutableSetOf<String>()
-    private val remoteCandTypes = mutableSetOf<String>()
-    private fun candTypeOf(sdp: String): String {
-        val m = Regex("typ (\\w+)").find(sdp)
-        return m?.groupValues?.get(1) ?: "?"
-    }
-
-    private var factory: PeerConnectionFactory? = null
-    private var peerConnection: PeerConnection? = null
-    private var audioDeviceModule: AudioDeviceModule? = null
-    private val appliedChildCandidates = HashSet<String>()
+    private val seenSequences = HashSet<Int>()
 
     private lateinit var status: TextView
     private lateinit var waveform: AudioWaveformView
@@ -87,9 +52,8 @@ class AmbientListenActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        crashlytics.setCustomKey("webrtc_activity", "AmbientListenActivity")
-        crashlytics.setCustomKey("webrtc_phase", "onCreate")
-        crashlytics.log("WebRTC audio activity created")
+        crashlytics.setCustomKey("ovoz_activity", "AmbientListenActivity")
+        crashlytics.setCustomKey("ovoz_transport", "firestore_pcm")
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(28, 28, 28, 28)
@@ -156,25 +120,24 @@ class AmbientListenActivity : AppCompatActivity() {
                         .show()
                     return@checkIsPremium
                 }
-                if (hasMicPermission()) startListening() else micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
+                startListening()
             }
         }
         stopButton.setOnClickListener { stopListening() }
 
-        requestListener = AmbientAudioRepository.listenRequestStatus { _, state, _ ->
+        requestListener = AmbientAudioRepository.listenRequestStatus { _, state, sessionId ->
             runOnUiThread {
                 if (currentRequestId == null) status.text = statusLabel(state)
+                if (currentRequestId != null && state == "active" && !sessionId.isNullOrBlank() && currentSessionId == null) {
+                    currentSessionId = sessionId
+                    startPlayback(sessionId)
+                }
+                if (currentRequestId != null && state == "failed") {
+                    status.text = "❌ Mikrofonni ulab bo'lmadi"
+                    resetUi()
+                }
+                if (currentRequestId != null && state == "stopped") resetUi("To'xtatildi")
             }
-        }
-    }
-
-    private fun diag(phase: String, error: Throwable? = null) {
-        crashlytics.setCustomKey("webrtc_phase", phase)
-        crashlytics.log("WebRTC phase: $phase")
-        if (error != null) {
-            crashlytics.setCustomKey("webrtc_error", error.javaClass.name)
-            crashlytics.setCustomKey("webrtc_error_message", error.message ?: "")
-            crashlytics.recordException(error)
         }
     }
 
@@ -182,251 +145,60 @@ class AmbientListenActivity : AppCompatActivity() {
         "requested" -> "⏳ Bola qurilmasidan kutilmoqda..."
         "active" -> "🔴 Jonli ovoz"
         "stopped" -> "To'xtatildi"
-        "failed" -> "❌ Ovoz ulanmaydi"
+        "failed" -> "❌ Mikrofonni ulab bo'lmadi"
         else -> "Tayyor"
     }
 
     private fun startListening() {
         if (currentRequestId != null) return
-        if (!hasMicPermission()) {
-            micPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
-            return
-        }
         stopping = false
-        appliedChildCandidates.clear()
-        localCandCount = 0
-        remoteCandCount = 0
-        gotAnswer = false
-        localCandTypes.clear()
-        remoteCandTypes.clear()
-        waveform.setActive(false)
-        status.text = "⏳ Ulanmoqda..."
+        seenSequences.clear()
+        status.text = "⏳ So'rov yuborilmoqda..."
         startButton.isEnabled = false
         stopButton.isEnabled = true
         currentRequestId = "pending"
-        diag("startListening")
-
-        try {
-            diag("configure_audio_manager")
-            val am = getSystemService(AUDIO_SERVICE) as AudioManager
-            am.mode = AudioManager.MODE_NORMAL
-            am.isSpeakerphoneOn = true
-        } catch (t: Throwable) {
-            diag("audio_manager_failed", t)
-        }
-
-        try {
-            // MUHIM: butun og'ir native ishga tushirish ketma-ketligi umumiy
-            // qulf ostida — qarang NativeWorkloadGuard izohi. Bu MediaRiskAnalyzer
-            // (TensorFlow Lite) aynan shu lahzada fon oqimida ishlab turgan
-            // bo'lsa ham, ikkalasi native darajada bir vaqtda to'qnashmasligini
-            // ta'minlaydi (past-resursli qurilmalarda ehtimoliy SIGTRAP manbai).
-            uz.oilanazorati.parentcontrol.risk.NativeWorkloadGuard.withLock {
-                diag("initialize_webrtc")
-                if (!webRtcGloballyInitialized) {
-                    PeerConnectionFactory.initialize(
-                        PeerConnectionFactory.InitializationOptions.builder(applicationContext)
-                            .createInitializationOptions()
-                    )
-                    webRtcGloballyInitialized = true
-                }
-
-                diag("create_audio_device_module")
-                audioDeviceModule = JavaAudioDeviceModule.builder(applicationContext)
-                    .setUseHardwareAcousticEchoCanceler(false)
-                    .setUseHardwareNoiseSuppressor(false)
-                    .createAudioDeviceModule()
-
-                diag("create_peer_connection_factory")
-                factory = PeerConnectionFactory.builder()
-                    .setAudioDeviceModule(audioDeviceModule)
-                    .createPeerConnectionFactory()
-            }
-
-            diag("create_peer_connection")
-            val iceServers = listOf(
-                PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
-                PeerConnection.IceServer.builder("stun:stun1.l.google.com:19302").createIceServer(),
-                // TURN relay: STUN alone often fails when both devices are on mobile
-                // data behind carrier-grade/symmetric NAT (common on 4G). TURN relays
-                // the audio through a server so the call still connects.
-                PeerConnection.IceServer.builder("stun:stun.relay.metered.ca:80").createIceServer(),
-                PeerConnection.IceServer.builder("turn:standard.relay.metered.ca:80")
-                    .setUsername("af995878e6ecdbb7cba4b5c7").setPassword("osjSuj4NtjUsvY99").createIceServer(),
-                PeerConnection.IceServer.builder("turn:standard.relay.metered.ca:80?transport=tcp")
-                    .setUsername("af995878e6ecdbb7cba4b5c7").setPassword("osjSuj4NtjUsvY99").createIceServer(),
-                PeerConnection.IceServer.builder("turn:standard.relay.metered.ca:443")
-                    .setUsername("af995878e6ecdbb7cba4b5c7").setPassword("osjSuj4NtjUsvY99").createIceServer(),
-                PeerConnection.IceServer.builder("turns:standard.relay.metered.ca:443?transport=tcp")
-                    .setUsername("af995878e6ecdbb7cba4b5c7").setPassword("osjSuj4NtjUsvY99").createIceServer()
-            )
-
-            peerConnection = factory?.createPeerConnection(
-                PeerConnection.RTCConfiguration(iceServers),
-                object : PeerConnection.Observer {
-                    override fun onSignalingChange(newState: PeerConnection.SignalingState?) {}
-                    override fun onIceConnectionChange(newState: PeerConnection.IceConnectionState?) {
-                        crashlytics.setCustomKey("webrtc_ice_state", newState?.name ?: "null")
-                        crashlytics.log("WebRTC ICE state: ${newState?.name}")
-                        runOnUiThread {
-                            when (newState) {
-                                PeerConnection.IceConnectionState.CONNECTED,
-                                PeerConnection.IceConnectionState.COMPLETED -> {
-                                    status.text = "🔴 Jonli ovoz"
-                                    waveform.setActive(true)
-                                }
-                                PeerConnection.IceConnectionState.FAILED -> fail("WebRTC tarmoq ulanishi muvaffaqiyatsiz")
-                                else -> Unit
-                            }
-                        }
-                    }
-                    override fun onIceConnectionReceivingChange(receiving: Boolean) {}
-                    override fun onIceGatheringChange(newState: PeerConnection.IceGatheringState?) {}
-                    override fun onIceCandidate(candidate: IceCandidate) {
-                        try {
-                            crashlytics.log("WebRTC parent ICE candidate generated")
-                            localCandCount++
-                            localCandTypes.add(candTypeOf(candidate.sdp))
-                            AmbientAudioRepository.sendParentIceCandidate(candidate.sdp, candidate.sdpMid, candidate.sdpMLineIndex)
-                        } catch (t: Throwable) { diag("on_ice_candidate_exception", t) }
-                    }
-                    override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
-                    override fun onAddStream(stream: org.webrtc.MediaStream?) {}
-                    override fun onRemoveStream(stream: org.webrtc.MediaStream?) {}
-                    override fun onDataChannel(dataChannel: org.webrtc.DataChannel?) {}
-                    override fun onRenegotiationNeeded() {}
-                    override fun onAddTrack(receiver: RtpReceiver?, mediaStreams: Array<out org.webrtc.MediaStream>?) {
-                        crashlytics.log("WebRTC remote audio track received via onAddTrack")
-                        runOnUiThread { status.text = "🔴 Jonli ovoz"; waveform.setActive(true) }
-                    }
-                    override fun onConnectionChange(newState: PeerConnection.PeerConnectionState?) {
-                        crashlytics.setCustomKey("webrtc_connection_state", newState?.name ?: "null")
-                        crashlytics.log("WebRTC connection state: ${newState?.name}")
-                        if (newState == PeerConnection.PeerConnectionState.FAILED) {
-                            runOnUiThread { fail("WebRTC ulanishi muvaffaqiyatsiz") }
-                        }
-                    }
-                    override fun onStandardizedIceConnectionChange(newState: PeerConnection.IceConnectionState?) {}
-                    override fun onTrack(transceiver: RtpTransceiver?) {
-                        crashlytics.log("WebRTC remote track received via onTrack")
-                        runOnUiThread { status.text = "🔴 Jonli ovoz"; waveform.setActive(true) }
-                    }
-                }
-            )
-
-            if (peerConnection == null) throw IllegalStateException("WebRTC ulanish yaratilmadi")
-
-            diag("add_recv_only_audio_transceiver")
-            peerConnection!!.addTransceiver(
-                MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO,
-                RtpTransceiver.RtpTransceiverInit(RtpTransceiver.RtpTransceiverDirection.RECV_ONLY)
-            )
-
-            diag("create_offer")
-            peerConnection!!.createOffer(object : SdpObserver {
-                override fun onCreateSuccess(desc: SessionDescription?) {
-                    try {
-                        if (desc == null) return runOnUiThread { fail("WebRTC taklif bo'sh") }
-                        diag("set_local_description")
-                        peerConnection?.setLocalDescription(object : SdpObserver {
-                            override fun onCreateSuccess(d: SessionDescription?) {}
-                            override fun onSetSuccess() {
-                                try {
-                                    diag("send_offer")
-                                    sendOffer(desc.description)
-                                } catch (t: Throwable) { diag("send_offer_exception", t); runOnUiThread { fail(t.message) } }
-                            }
-                            override fun onCreateFailure(error: String?) { runOnUiThread { fail(error) } }
-                            override fun onSetFailure(error: String?) { runOnUiThread { fail(error) } }
-                        }, desc)
-                    } catch (t: Throwable) { diag("set_local_description_exception", t); runOnUiThread { fail(t.message) } }
-                }
-                override fun onSetSuccess() {}
-                override fun onCreateFailure(error: String?) { runOnUiThread { fail(error) } }
-                override fun onSetFailure(error: String?) { runOnUiThread { fail(error) } }
-            }, MediaConstraints())
-        } catch (t: Throwable) {
-            diag("startListening_exception", t)
-            fail(t.message ?: "WebRTC ishga tushmadi")
-        }
-    }
-
-    private fun sendOffer(offerSdp: String) {
-        diag("request_start_webrtc")
-        AmbientAudioRepository.requestStartWebRtc(offerSdp) { ok, error, requestId ->
+        crashlytics.log("Ovoz: so'rov yuborilmoqda (Firestore PCM)")
+        AmbientAudioRepository.requestStart { ok, error ->
             runOnUiThread {
-                try {
-                    if (!ok || requestId == null) {
-                        fail(error ?: "So'rov yuborilmadi")
-                        return@runOnUiThread
-                    }
-                    currentRequestId = requestId
-                    crashlytics.setCustomKey("webrtc_request_id", requestId)
+                if (!ok) {
+                    status.text = "❌ ${error ?: "So'rov yuborilmadi"}"
+                    resetUi()
+                } else {
                     status.text = "⏳ Bola qurilmasidan kutilmoqda..."
-                    diag("listen_webrtc_session")
-                    sessionListener = AmbientAudioRepository.listenWebRtcSession(
-                        requestId,
-                        onAnswer = { answerSdp ->
-                            try {
-                                gotAnswer = true
-                                // Bu Firestore real-vaqt tinglovchisi — hujjatdagi keyingi HAR
-                                // QANDAY o'zgarish (masalan navbatdagi ICE candidate) yana shu
-                                // yerni chaqiradi, javob allaqachon qo'llanilgan bo'lsa ham.
-                                // setRemoteDescription()ni ikkinchi marta chaqirish "Called in
-                                // wrong state: stable" xatosini berardi. Faqat kutilayotgan
-                                // holatda (hali javob qo'yilmagan) qo'llaymiz.
-                                if (peerConnection?.signalingState() == PeerConnection.SignalingState.HAVE_LOCAL_OFFER) {
-                                    diag("set_remote_description")
-                                    peerConnection?.setRemoteDescription(object : SdpObserver {
-                                        override fun onCreateSuccess(desc: SessionDescription?) {}
-                                        override fun onSetSuccess() { runOnUiThread { status.text = "🔴 Jonli ovoz"; waveform.setActive(true) } }
-                                        override fun onCreateFailure(error: String?) { runOnUiThread { fail(error) } }
-                                        override fun onSetFailure(error: String?) { runOnUiThread { fail(error) } }
-                                    }, SessionDescription(SessionDescription.Type.ANSWER, answerSdp))
-                                }
-                            } catch (t: Throwable) { diag("set_remote_description_exception", t); runOnUiThread { fail(t.message) } }
-                        },
-                        onChildCandidate = { candidate, mid, index ->
-                            try {
-                                if (appliedChildCandidates.add(candidate)) {
-                                    crashlytics.log("WebRTC child ICE candidate received")
-                                    remoteCandCount++
-                                    remoteCandTypes.add(candTypeOf(candidate))
-                                    peerConnection?.addIceCandidate(IceCandidate(mid, index, candidate))
-                                }
-                            } catch (t: Throwable) { diag("add_child_ice_exception", t) }
-                        },
-                        onStatus = { state, error ->
-                            runOnUiThread {
-                                try {
-                                    when (state) {
-                                        "active" -> {
-                                            status.text = "🔴 Jonli ovoz"
-                                            waveform.setActive(true)
-                                        }
-                                        "failed" -> fail(error ?: "Ovoz ulanmadi")
-                                        "stopped" -> if (!stopping) resetUi("To'xtatildi")
-                                    }
-                                } catch (t: Throwable) { diag("session_status_exception", t); fail(t.message) }
-                            }
-                        }
-                    )
-                } catch (t: Throwable) { diag("send_offer_callback_exception", t); fail(t.message) }
+                }
             }
         }
     }
 
-    private fun fail(message: String?) {
-        crashlytics.setCustomKey("webrtc_failure_message", message ?: "Ulanmadi")
-        crashlytics.log("WebRTC failure: ${message ?: "Ulanmadi"}")
-        val diagSuffix = " [men:$localCandCount(${localCandTypes.joinToString(",")}) bola:$remoteCandCount(${remoteCandTypes.joinToString(",")}) javob:${if (gotAnswer) "bor" else "yo'q"}]"
-        val text = "❌ ${message ?: "Ulanmadi"}$diagSuffix"
-        resetUi(text)
+    private fun startPlayback(sessionId: String) {
+        try {
+            audioListener?.remove()
+            audioTrack?.release()
+            val minBuffer = AudioTrack.getMinBufferSize(16000, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+            if (minBuffer <= 0) throw IllegalStateException("AudioTrack buffer xatosi")
+            val bufferSize = maxOf(minBuffer, 16000 * 2)
+            audioTrack = AudioTrack.Builder()
+                .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build())
+                .setAudioFormat(AudioFormat.Builder().setSampleRate(16000).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+                .setBufferSizeInBytes(bufferSize)
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .build()
+            audioTrack?.play()
+            status.text = "🔴 Jonli ovoz"
+            waveform.setActive(true)
+            audioListener = AmbientAudioRepository.listenAudioChunks(sessionId) { sequence, bytes ->
+                if (!seenSequences.add(sequence)) return@listenAudioChunks
+                try { audioTrack?.write(bytes, 0, bytes.size) } catch (t: Throwable) { crashlytics.recordException(t) }
+            }
+        } catch (t: Throwable) {
+            crashlytics.recordException(t)
+            status.text = "❌ Ovoz chiqarishda xato"
+            resetUi()
+        }
     }
 
     private fun stopListening() {
         stopping = true
-        diag("stopListening")
         status.text = "⏳ To'xtatilmoqda..."
         stopButton.isEnabled = false
         AmbientAudioRepository.requestStop()
@@ -435,36 +207,29 @@ class AmbientListenActivity : AppCompatActivity() {
     }
 
     private fun resetUi(message: String = "Tayyor") {
-        diag("resetUi")
         waveform.setActive(false)
-        sessionListener?.remove()
-        sessionListener = null
-        try { peerConnection?.close() } catch (t: Throwable) { diag("peer_close_exception", t) }
-        try { peerConnection?.dispose() } catch (t: Throwable) { diag("peer_dispose_exception", t) }
-        try { audioDeviceModule?.release() } catch (t: Throwable) { diag("audio_module_release_exception", t) }
-        try { factory?.dispose() } catch (t: Throwable) { diag("factory_dispose_exception", t) }
-        try {
-            val am = getSystemService(AUDIO_SERVICE) as AudioManager
-            am.isSpeakerphoneOn = false
-        } catch (t: Throwable) { diag("audio_manager_reset_exception", t) }
-        peerConnection = null
-        audioDeviceModule = null
-        factory = null
+        audioListener?.remove()
+        audioListener = null
+        try { audioTrack?.stop() } catch (_: Throwable) {}
+        try { audioTrack?.release() } catch (_: Throwable) {}
+        audioTrack = null
         currentRequestId = null
+        currentSessionId = null
         startButton.isEnabled = true
         stopButton.isEnabled = false
         status.text = message
+        try {
+            val am = getSystemService(AUDIO_SERVICE) as AudioManager
+            am.isSpeakerphoneOn = false
+        } catch (_: Throwable) {}
     }
 
     override fun onDestroy() {
-        crashlytics.log("AmbientListenActivity onDestroy")
         if (currentRequestId != null && !stopping) AmbientAudioRepository.requestStop()
         requestListener?.remove()
-        sessionListener?.remove()
-        try { peerConnection?.close() } catch (t: Throwable) { diag("destroy_peer_close_exception", t) }
-        try { peerConnection?.dispose() } catch (t: Throwable) { diag("destroy_peer_dispose_exception", t) }
-        try { audioDeviceModule?.release() } catch (t: Throwable) { diag("destroy_audio_module_exception", t) }
-        try { factory?.dispose() } catch (t: Throwable) { diag("destroy_factory_exception", t) }
+        audioListener?.remove()
+        try { audioTrack?.release() } catch (_: Throwable) {}
+        audioTrack = null
         super.onDestroy()
     }
 }
