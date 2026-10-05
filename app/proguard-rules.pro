@@ -33,6 +33,8 @@
 # uchun — hajmni ozroq kamaytirsa ham, ishlashdan afzal).
 -keep class org.webrtc.** { *; }
 -dontwarn org.webrtc.**
+-keep class io.agora.** { *; }
+-dontwarn io.agora.**
 
 # --- Firebase / Play Services / gRPC ko'pincha ixtiyoriy sinflarga
 # murojaat qiladi (build muhitida yo'q bo'lishi mumkin) — bular haqida

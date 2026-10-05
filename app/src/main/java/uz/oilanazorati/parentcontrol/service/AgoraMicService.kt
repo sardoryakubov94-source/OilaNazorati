@@ -1,0 +1,203 @@
+package uz.oilanazorati.parentcontrol.service
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Handler
+import android.os.IBinder
+import android.os.Looper
+import androidx.core.app.NotificationCompat
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
+import io.agora.rtc2.ChannelMediaOptions
+import io.agora.rtc2.Constants
+import io.agora.rtc2.IRtcEngineEventHandler
+import io.agora.rtc2.RtcEngine
+import io.agora.rtc2.RtcEngineConfig
+import uz.oilanazorati.parentcontrol.R
+import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
+
+/**
+ * Ota-ona "Ovoz" funksiyasi — Agora orqali (WebRTC/io.github.webrtc-sdk
+ * O'RNIGA, 3-oktabr). Qarang AmbientListenActivity.kt'dagi izoh — WebRTC'ning
+ * native ishga tushish bosqichi BARCHA sinalgan qurilmalarda qulab tushardi.
+ * Agora — millionlab qurilmada sinalgan, professional tarzda qo'llab-
+ * quvvatlanadigan tayyor xizmat, shu muammoni chetlab o'tadi.
+ *
+ * MUHIM: Agora'da WebRTC'dagi kabi qo'lda SDP offer/answer yoki ICE candidate
+ * almashish SHART EMAS — ikkala tomon ham shunchaki bir xil kanal nomiga
+ * "kiradi" (joinChannel), qolgan hamma narsani Agora'ning serverlari
+ * boshqaradi. Shu sabab bu versiya ancha sodda va kam xato ehtimolli.
+ *
+ * `transport == "agora"` tekshiruvi orqali veb-panelning WebRTC so'rovlariga
+ * (WebRtcAmbientAudioService) aralashmaydi.
+ */
+class AgoraMicService : Service() {
+    private val db = FirebaseFirestore.getInstance()
+    private var requestListener: ListenerRegistration? = null
+    private var engine: RtcEngine? = null
+    private var activeRequestId: String? = null
+    private val idleHandler = Handler(Looper.getMainLooper())
+    private val idleStopRunnable = Runnable { stopSelf() }
+    private val maxSessionRunnable = Runnable { stopSession("stopped", "Vaqt limiti tugadi") }
+    private val crashlytics = FirebaseCrashlytics.getInstance()
+
+    companion object {
+        const val CHANNEL_ID = "oila_nazorati_mic"
+        const val NOTIFICATION_ID = 511
+        const val IDLE_STOP_DELAY_MS = 30_000L
+        const val MAX_SESSION_MS = 30 * 60 * 1000L
+    }
+
+    private val rtcHandler = object : IRtcEngineEventHandler() {
+        override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
+            crashlytics.log("Agora: bola kanalga qo'shildi ($channel)")
+            activeRequestId?.let { updateRequest(it, "active") }
+        }
+
+        override fun onError(err: Int) {
+            crashlytics.setCustomKey("agora_error_code", err)
+            activeRequestId?.let { updateRequest(it, "failed", "Agora xatosi: $err") }
+        }
+
+        override fun onUserOffline(uid: Int, reason: Int) {
+            // Ota-ona chiqib ketdi — bola ham sessiyani yopadi.
+            Handler(Looper.getMainLooper()).post { stopSession("stopped") }
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        createChannel()
+        startForeground(NOTIFICATION_ID, idleNotification(), foregroundTypes())
+        listenForRequests()
+        idleHandler.postDelayed(idleStopRunnable, IDLE_STOP_DELAY_MS)
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+
+    private fun foregroundTypes(): Int =
+        if (Build.VERSION.SDK_INT >= 29) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE else 0
+
+    private fun listenForRequests() {
+        val family = FirebaseRepo.familyCode ?: return
+        val child = FirebaseRepo.childId ?: FirebaseAuth.getInstance().currentUser?.uid ?: return
+        requestListener = db.collection("families").document(family)
+            .collection("children").document(child)
+            .collection("mic_requests").document("current")
+            .addSnapshotListener { snap, error ->
+                if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
+                val data = snap.data.orEmpty()
+                if (data["transport"] != "agora") return@addSnapshotListener
+                val requestId = data["requestId"] as? String ?: return@addSnapshotListener
+                val channelName = data["channelName"] as? String
+                when (data["status"] as? String) {
+                    "requested" -> if (engine == null && channelName != null) startSession(requestId, channelName)
+                    "stop_requested" -> if (activeRequestId == requestId) stopSession("stopped")
+                }
+            }
+    }
+
+    private fun startSession(requestId: String, channelName: String) {
+        idleHandler.removeCallbacks(idleStopRunnable)
+        if (Build.VERSION.SDK_INT >= 23 &&
+            checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
+        ) {
+            updateRequest(requestId, "failed", "Mikrofon ruxsati berilmagan")
+            idleHandler.postDelayed(idleStopRunnable, IDLE_STOP_DELAY_MS)
+            return
+        }
+        activeRequestId = requestId
+        updateActiveNotification()
+        crashlytics.log("Agora: kanalga kirilmoqda ($channelName)")
+        try {
+            val config = RtcEngineConfig()
+            config.mContext = applicationContext
+            config.mAppId = AgoraConfig.APP_ID
+            config.mEventHandler = rtcHandler
+            config.mChannelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
+            val rtc = RtcEngine.create(config)
+            engine = rtc
+            rtc.enableAudio()
+            rtc.disableVideo()
+            rtc.setDefaultAudioRoutetoSpeakerphone(false)
+            val options = ChannelMediaOptions()
+            options.channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
+            options.clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
+            options.publishMicrophoneTrack = true
+            options.autoSubscribeAudio = false
+            rtc.joinChannel(null, channelName, 0, options)
+        } catch (t: Throwable) {
+            crashlytics.recordException(t)
+            stopSession("failed", t.message ?: "Agora ishga tushmadi")
+        }
+    }
+
+    private fun stopSession(status: String, error: String? = null) {
+        idleHandler.removeCallbacks(maxSessionRunnable)
+        try {
+            engine?.leaveChannel()
+        } catch (_: Throwable) {}
+        if (engine != null) { try { RtcEngine.destroy() } catch (_: Throwable) {} }
+        engine = null
+        val requestId = activeRequestId
+        activeRequestId = null
+        if (requestId != null) updateRequest(requestId, status, error)
+        restoreIdleNotification()
+        idleHandler.removeCallbacks(idleStopRunnable)
+        idleHandler.postDelayed(idleStopRunnable, IDLE_STOP_DELAY_MS)
+    }
+
+    private fun updateRequest(requestId: String, status: String, error: String? = null) {
+        val family = FirebaseRepo.familyCode ?: return
+        val child = FirebaseRepo.childId ?: FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val data = mutableMapOf<String, Any>("requestId" to requestId, "status" to status, "updatedAt" to System.currentTimeMillis())
+        if (error != null) data["error"] = error.take(200)
+        db.collection("families").document(family).collection("children").document(child)
+            .collection("mic_requests").document("current").update(data)
+        if (status == "active") idleHandler.postDelayed(maxSessionRunnable, MAX_SESSION_MS)
+    }
+
+    private fun createChannel() {
+        if (Build.VERSION.SDK_INT >= 26) {
+            val ch = NotificationChannel(CHANNEL_ID, "Ovoz nazorati", NotificationManager.IMPORTANCE_LOW)
+            ch.setShowBadge(false)
+            getSystemService(NotificationManager::class.java).createNotificationChannel(ch)
+        }
+    }
+
+    private fun idleNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        .setSmallIcon(R.drawable.ic_blank).setContentTitle("Oila Nazorati").setPriority(NotificationCompat.PRIORITY_LOW)
+        .setCategory(NotificationCompat.CATEGORY_SERVICE).setOngoing(true).setShowWhen(false).build()
+
+    private fun activeNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        .setSmallIcon(R.drawable.ic_blank).setContentTitle("🎙️ Mikrofon faol").setPriority(NotificationCompat.PRIORITY_LOW)
+        .setCategory(NotificationCompat.CATEGORY_SERVICE).setOngoing(true).setShowWhen(false).build()
+
+    private fun updateActiveNotification() {
+        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, activeNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+        else startForeground(NOTIFICATION_ID, activeNotification())
+    }
+
+    private fun restoreIdleNotification() {
+        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, idleNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+        else startForeground(NOTIFICATION_ID, idleNotification())
+    }
+
+    override fun onDestroy() {
+        idleHandler.removeCallbacksAndMessages(null)
+        requestListener?.remove()
+        try { engine?.leaveChannel() } catch (_: Throwable) {}
+        try { RtcEngine.destroy() } catch (_: Throwable) {}
+        engine = null
+        super.onDestroy()
+    }
+
+    override fun onBind(intent: Intent?): IBinder? = null
+}
