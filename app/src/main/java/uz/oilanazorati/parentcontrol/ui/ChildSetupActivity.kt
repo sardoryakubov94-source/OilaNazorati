@@ -26,6 +26,7 @@ import uz.oilanazorati.parentcontrol.databinding.ActivityChildSetupBinding
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.service.AppDeviceAdminReceiver
 import uz.oilanazorati.parentcontrol.service.MonitorForegroundService
+import uz.oilanazorati.parentcontrol.service.AgoraMicService
 import uz.oilanazorati.parentcontrol.util.ContactSyncHelper
 import uz.oilanazorati.parentcontrol.util.SimInfoSync
 
@@ -278,5 +279,10 @@ class ChildSetupActivity : AppCompatActivity() {
     private fun requestBackgroundLocationIfNeeded() { if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) { val granted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED; if (!granted) ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION), 1001) } }
     private fun showExplanationDialog() { AlertDialog.Builder(this).setTitle("Ruxsatlar kerak").setMessage("Statistika va Oila Nazorati funksiyalari uchun so'ralgan ruxsatlar zarur. Mikrofon ruxsati faqat ota-ona panelidan jonli ovoz funksiyasi yoqilganda ishlatiladi. Telefon raqami uchun Androidning 'Telefon raqamlariga ruxsat' so'rovi ham bir marta beriladi; operator raqamni taqdim qilmasa panelda 'Aniqlanmadi' ko'rsatiladi.").setPositiveButton("Sozlamalarga o'tish") { _, _ -> openAppSettings() }.setNegativeButton("Yopish", null).show() }
     private fun syncContactsNow() { val granted = ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED; if (!granted) { ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.READ_CONTACTS), 1002); return }; ContactSyncHelper.syncNow(this); binding.pairStatusText.text = "✅ Saqlangan kontaktlar sinxronlandi (raqamlarsiz, faqat ism+rang)" }
-    private fun finishSetupAndStartMonitoring() { if (FirebaseRepo.familyCode == null) { binding.pairStatusText.text = "Avval oila kodini kiriting"; return }; if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) { binding.pairStatusText.text = "Avval Mikrofon ruxsatini bering"; return }; getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit().putBoolean("is_child_device", true).apply(); SimInfoSync.start(this); requestPhoneNumberHint(); ContextCompat.startForegroundService(this, Intent(this, MonitorForegroundService::class.java)); binding.pairStatusText.text = "✅ Nazorat ishga tushdi" }
+    private fun finishSetupAndStartMonitoring() { if (FirebaseRepo.familyCode == null) { binding.pairStatusText.text = "Avval oila kodini kiriting"; return }; if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) { binding.pairStatusText.text = "Avval Mikrofon ruxsatini bering"; return }; getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit().putBoolean("is_child_device", true).apply(); SimInfoSync.start(this); requestPhoneNumberHint(); ContextCompat.startForegroundService(this, Intent(this, MonitorForegroundService::class.java))
+        // Microphone FGS is started while this setup Activity is visible.
+        // Android 12+ blocks starting microphone FGS from a background app;
+        // the old Firestore-triggered start therefore often failed silently.
+        ContextCompat.startForegroundService(this, Intent(this, AgoraMicService::class.java))
+        binding.pairStatusText.text = "✅ Nazorat va Ovoz xizmati ishga tushdi" }
 }
