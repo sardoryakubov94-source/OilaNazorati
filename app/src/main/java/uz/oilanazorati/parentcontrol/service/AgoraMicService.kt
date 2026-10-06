@@ -51,7 +51,6 @@ class AgoraMicService : Service() {
     private var savedSpeakerphone: Boolean? = null
     private var audioStateSaved = false
     private val idleHandler = Handler(Looper.getMainLooper())
-    private val idleStopRunnable = Runnable { stopSelf() }
     private val maxSessionRunnable = Runnable { stopSession("stopped", "Vaqt limiti tugadi") }
     private val crashlytics = FirebaseCrashlytics.getInstance()
 
@@ -82,9 +81,8 @@ class AgoraMicService : Service() {
     override fun onCreate() {
         super.onCreate()
         createChannel()
-        startForeground(NOTIFICATION_ID, idleNotification(), foregroundTypes())
+        startForeground(NOTIFICATION_ID, readyNotification(), foregroundTypes())
         listenForRequests()
-        idleHandler.postDelayed(idleStopRunnable, IDLE_STOP_DELAY_MS)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
@@ -112,7 +110,6 @@ class AgoraMicService : Service() {
     }
 
     private fun startSession(requestId: String, channelName: String) {
-        idleHandler.removeCallbacks(idleStopRunnable)
         if (Build.VERSION.SDK_INT >= 23 &&
             checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -129,7 +126,7 @@ class AgoraMicService : Service() {
             config.mContext = applicationContext
             config.mAppId = AgoraConfig.APP_ID
             config.mEventHandler = rtcHandler
-            config.mChannelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
+            config.mChannelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
             val rtc = RtcEngine.create(config)
             engine = rtc
             rtc.enableAudio()
@@ -137,12 +134,17 @@ class AgoraMicService : Service() {
             // Bola faqat mikrofon yuboradi; lokal playback yo'q.
             // Speaker routingni majburlamaymiz, chunki bu ayrim telefonlarda
             // tizim media ovozini pasaytirishi yoki earpiece rejimiga o'tkazishi mumkin.
-            rtc.setAudioScenario(Constants.AUDIO_SCENARIO_DEFAULT)
+            rtc.setAudioProfile(
+                Constants.AUDIO_PROFILE_SPEECH_STANDARD,
+                Constants.AUDIO_SCENARIO_GAME_STREAMING
+            )
+            rtc.adjustRecordingSignalVolume(100)
             val options = ChannelMediaOptions()
-            options.channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
+            options.channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
             options.clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
             options.publishMicrophoneTrack = true
             options.autoSubscribeAudio = false
+            options.autoSubscribeVideo = false
             rtc.joinChannel(null, channelName, 0, options)
         } catch (t: Throwable) {
             crashlytics.recordException(t)
@@ -161,9 +163,7 @@ class AgoraMicService : Service() {
         val requestId = activeRequestId
         activeRequestId = null
         if (requestId != null) updateRequest(requestId, status, error)
-        restoreIdleNotification()
-        idleHandler.removeCallbacks(idleStopRunnable)
-        idleHandler.postDelayed(idleStopRunnable, IDLE_STOP_DELAY_MS)
+        showReadyNotification()
     }
 
     private fun updateRequest(requestId: String, status: String, error: String? = null) {
@@ -184,9 +184,13 @@ class AgoraMicService : Service() {
         }
     }
 
-    private fun idleNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_blank).setContentTitle("Oila Nazorati").setPriority(NotificationCompat.PRIORITY_LOW)
-        .setCategory(NotificationCompat.CATEGORY_SERVICE).setOngoing(true).setShowWhen(false).build()
+    private fun readyNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
+        .setSmallIcon(R.drawable.ic_blank)
+        .setContentTitle("Oila Nazorati — Ovoz xizmati tayyor")
+        .setContentText("Ovoz ota-ona jonli ovozni ishga tushirganda faollashadi")
+        .setPriority(NotificationCompat.PRIORITY_LOW)
+        .setCategory(NotificationCompat.CATEGORY_SERVICE)
+        .setOngoing(true).setShowWhen(false).build()
 
     private fun activeNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_blank).setContentTitle("🎙️ Mikrofon faol").setPriority(NotificationCompat.PRIORITY_LOW)
