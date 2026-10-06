@@ -143,7 +143,10 @@ class AgoraMicService : Service() {
             options.publishMicrophoneTrack = true
             options.autoSubscribeAudio = false
             options.autoSubscribeVideo = false
-            rtc.joinChannel(null, channelName, 0, options)
+            val joinResult = rtc.joinChannel(null, channelName, 0, options)
+            if (joinResult != Constants.ERR_OK) {
+                throw IllegalStateException("Agora joinChannel failed: $joinResult")
+            }
         } catch (t: Throwable) {
             crashlytics.recordException(t)
             stopSession("failed", t.message ?: "Agora ishga tushmadi")
