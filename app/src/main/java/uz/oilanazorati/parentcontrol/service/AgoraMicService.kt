@@ -57,7 +57,6 @@ class AgoraMicService : Service() {
     companion object {
         const val CHANNEL_ID = "oila_nazorati_mic"
         const val NOTIFICATION_ID = 511
-        const val IDLE_STOP_DELAY_MS = 30_000L
         const val MAX_SESSION_MS = 30 * 60 * 1000L
     }
 
@@ -114,7 +113,6 @@ class AgoraMicService : Service() {
             checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
         ) {
             updateRequest(requestId, "failed", "Mikrofon ruxsati berilmagan")
-            idleHandler.postDelayed(idleStopRunnable, IDLE_STOP_DELAY_MS)
             return
         }
         activeRequestId = requestId
@@ -201,9 +199,9 @@ class AgoraMicService : Service() {
         else startForeground(NOTIFICATION_ID, activeNotification())
     }
 
-    private fun restoreIdleNotification() {
-        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, idleNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
-        else startForeground(NOTIFICATION_ID, idleNotification())
+    private fun showReadyNotification() {
+        if (Build.VERSION.SDK_INT >= 29) startForeground(NOTIFICATION_ID, readyNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE)
+        else startForeground(NOTIFICATION_ID, readyNotification())
     }
 
     private fun saveAudioState() {
