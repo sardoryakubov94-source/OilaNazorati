@@ -195,7 +195,7 @@ class AmbientListenActivity : AppCompatActivity() {
             // telefonning asosiy karnayidan eshitsin.
             rtc.setDefaultAudioRoutetoSpeakerphone(true)
             rtc.setEnableSpeakerphone(true)
-            rtc.adjustPlaybackSignalVolume(100)
+            rtc.adjustPlaybackSignalVolume(200)
             val options = ChannelMediaOptions()
             options.channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
             options.clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
