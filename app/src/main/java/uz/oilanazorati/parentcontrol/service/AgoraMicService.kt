@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.media.AudioManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -43,6 +44,8 @@ class AgoraMicService : Service() {
     private var requestListener: ListenerRegistration? = null
     private var engine: RtcEngine? = null
     private var activeRequestId: String? = null
+    private var savedMusicVolume: Int? = null
+    private var savedAudioMode: Int? = null
     private val idleHandler = Handler(Looper.getMainLooper())
     private val idleStopRunnable = Runnable { stopSelf() }
     private val maxSessionRunnable = Runnable { stopSession("stopped", "Vaqt limiti tugadi") }
@@ -114,6 +117,7 @@ class AgoraMicService : Service() {
             return
         }
         activeRequestId = requestId
+        saveAudioState()
         updateActiveNotification()
         crashlytics.log("Agora: kanalga kirilmoqda ($channelName)")
         try {
@@ -146,6 +150,7 @@ class AgoraMicService : Service() {
         } catch (_: Throwable) {}
         if (engine != null) { try { RtcEngine.destroy() } catch (_: Throwable) {} }
         engine = null
+        restoreAudioState()
         val requestId = activeRequestId
         activeRequestId = null
         if (requestId != null) updateRequest(requestId, status, error)
@@ -190,12 +195,31 @@ class AgoraMicService : Service() {
         else startForeground(NOTIFICATION_ID, idleNotification())
     }
 
+    private fun saveAudioState() {
+        try {
+            val am = getSystemService(AUDIO_SERVICE) as AudioManager
+            savedMusicVolume = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+            savedAudioMode = am.mode
+        } catch (_: Throwable) {}
+    }
+
+    private fun restoreAudioState() {
+        try {
+            val am = getSystemService(AUDIO_SERVICE) as AudioManager
+            savedMusicVolume?.let { am.setStreamVolume(AudioManager.STREAM_MUSIC, it, 0) }
+            savedAudioMode?.let { am.mode = it }
+        } catch (_: Throwable) {}
+        savedMusicVolume = null
+        savedAudioMode = null
+    }
+
     override fun onDestroy() {
         idleHandler.removeCallbacksAndMessages(null)
         requestListener?.remove()
         try { engine?.leaveChannel() } catch (_: Throwable) {}
         try { RtcEngine.destroy() } catch (_: Throwable) {}
         engine = null
+        restoreAudioState()
         super.onDestroy()
     }
 
