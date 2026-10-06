@@ -101,7 +101,13 @@ class AgoraMicService : Service() {
         )
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // Also refresh identity/listener on every explicit service start.
+        // This covers an already-running service during an APK upgrade.
+        restoreChildIdentityFromPrefs()
+        if (requestListener == null) listenForRequests()
+        return START_STICKY
+    }
 
     private fun foregroundTypes(): Int =
         if (Build.VERSION.SDK_INT >= 29) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE else 0
