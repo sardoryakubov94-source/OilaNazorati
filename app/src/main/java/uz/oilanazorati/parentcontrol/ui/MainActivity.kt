@@ -78,6 +78,31 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        // Existing child installations may be upgraded directly without
+        // visiting ChildSetupActivity again. Start the idle Agora microphone
+        // FGS while this Activity is visible; the service still opens the
+        // microphone only when an explicit Agora request arrives.
+        val childPrefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        if (
+            childPrefs.getBoolean("is_child_device", false) &&
+            !childPrefs.getString("family_code", null).isNullOrBlank() &&
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                this,
+                android.Manifest.permission.RECORD_AUDIO
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            try {
+                androidx.core.content.ContextCompat.startForegroundService(
+                    this,
+                    Intent(this, uz.oilanazorati.parentcontrol.service.AgoraMicService::class.java)
+                )
+            } catch (_: Throwable) {
+                // The Activity is visible here; Android should allow the
+                // microphone FGS. If a manufacturer blocks it, setup can
+                // retry when the child opens the app again.
+            }
+        }
+
         // Ota-ona paneli uchun Google talabi hamon "har safar qayta
         // kirish" tartibida qoladi — faqat anonim (bola) sessiyaga
         // tegilmaydi, uni signOut qilmaymiz.
