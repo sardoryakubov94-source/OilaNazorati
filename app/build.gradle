@@ -130,7 +130,7 @@ dependencies {
     implementation 'io.github.webrtc-sdk:android:144.7559.09'
     // Agora Voice SDK — Android ilovaning o'z "Ovoz" ekrani uchun (3-oktabr,
     // WebRTC o'rniga). Faqat ovoz (video emas) uchun eng kichik SDK.
-    implementation 'io.agora.rtc:voice-sdk:4.6.4'
+    implementation 'io.agora.rtc:voice-sdk:4.7.0'
 
     // Grafik (statistikani chizish uchun)
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
