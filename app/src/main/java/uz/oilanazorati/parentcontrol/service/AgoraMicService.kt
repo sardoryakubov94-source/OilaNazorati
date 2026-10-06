@@ -81,7 +81,24 @@ class AgoraMicService : Service() {
         super.onCreate()
         createChannel()
         startForeground(NOTIFICATION_ID, readyNotification(), foregroundTypes())
+
+        // MainActivity can start this service during an upgrade before
+        // ChildSetupActivity has restored FirebaseRepo's in-memory fields.
+        // Always restore the child identity from persistent storage first.
+        restoreChildIdentityFromPrefs()
         listenForRequests()
+    }
+
+    private fun restoreChildIdentityFromPrefs() {
+        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        val savedFamily = prefs.getString("family_code", null)
+        val savedChild = prefs.getString("child_id", null)
+            ?: FirebaseAuth.getInstance().currentUser?.uid
+        if (!savedFamily.isNullOrBlank()) FirebaseRepo.familyCode = savedFamily
+        if (!savedChild.isNullOrBlank()) FirebaseRepo.childId = savedChild
+        crashlytics.log(
+            "Agora identity restored from prefs"
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_STICKY
@@ -90,8 +107,12 @@ class AgoraMicService : Service() {
         if (Build.VERSION.SDK_INT >= 29) android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE else 0
 
     private fun listenForRequests() {
-        val family = FirebaseRepo.familyCode ?: return
-        val child = FirebaseRepo.childId ?: FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val family = FirebaseRepo.familyCode
+        val child = FirebaseRepo.childId ?: FirebaseAuth.getInstance().currentUser?.uid
+        if (family.isNullOrBlank() || child.isNullOrBlank()) {
+            crashlytics.log("Agora: mic request listener skipped — child identity missing")
+            return
+        }
         requestListener = db.collection("families").document(family)
             .collection("children").document(child)
             .collection("mic_requests").document("current")
