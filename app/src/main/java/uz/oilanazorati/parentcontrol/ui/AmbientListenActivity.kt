@@ -51,6 +51,15 @@ class AmbientListenActivity : AppCompatActivity() {
 
     private val rtcHandler = object : IRtcEngineEventHandler() {
         override fun onUserJoined(uid: Int, elapsed: Int) {
+            try {
+                engine?.muteRemoteAudioStream(uid, false)
+                engine?.adjustUserPlaybackSignalVolume(uid, 100)
+                engine?.adjustPlaybackSignalVolume(100)
+                engine?.setDefaultAudioRoutetoSpeakerphone(true)
+                engine?.setEnableSpeakerphone(true)
+            } catch (t: Throwable) {
+                crashlytics.recordException(t)
+            }
             runOnUiThread {
                 status.text = "🔴 Jonli ovoz"
                 waveform.setActive(true)
@@ -184,7 +193,7 @@ class AmbientListenActivity : AppCompatActivity() {
             config.mContext = applicationContext
             config.mAppId = AgoraConfig.APP_ID
             config.mEventHandler = rtcHandler
-            config.mChannelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
+            config.mChannelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
             val rtc = RtcEngine.create(config)
             engine = rtc
             rtc.enableAudio()
@@ -195,13 +204,17 @@ class AmbientListenActivity : AppCompatActivity() {
             // telefonning asosiy karnayidan eshitsin.
             rtc.setDefaultAudioRoutetoSpeakerphone(true)
             rtc.setEnableSpeakerphone(true)
-            rtc.adjustPlaybackSignalVolume(200)
+            rtc.setAudioProfile(
+                Constants.AUDIO_PROFILE_SPEECH_STANDARD,
+                Constants.AUDIO_SCENARIO_GAME_STREAMING
+            )
+            rtc.adjustPlaybackSignalVolume(100)
             val options = ChannelMediaOptions()
-            options.channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
-            options.clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
+            options.channelProfile = Constants.CHANNEL_PROFILE_LIVE_BROADCASTING
+            options.clientRoleType = Constants.CLIENT_ROLE_AUDIENCE
             options.publishMicrophoneTrack = false
             options.autoSubscribeAudio = true
-            rtc.joinChannel(null, channelName, 0, options)
+            options.autoSubscribeVideo = false
 
             doc.set(mapOf(
                 "requestId" to requestId,
