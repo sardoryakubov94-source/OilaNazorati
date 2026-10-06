@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.os.Build
@@ -45,7 +46,10 @@ class AgoraMicService : Service() {
     private var engine: RtcEngine? = null
     private var activeRequestId: String? = null
     private var savedMusicVolume: Int? = null
+    private var savedVoiceCallVolume: Int? = null
     private var savedAudioMode: Int? = null
+    private var savedSpeakerphone: Boolean? = null
+    private var audioStateSaved = false
     private val idleHandler = Handler(Looper.getMainLooper())
     private val idleStopRunnable = Runnable { stopSelf() }
     private val maxSessionRunnable = Runnable { stopSession("stopped", "Vaqt limiti tugadi") }
@@ -130,7 +134,10 @@ class AgoraMicService : Service() {
             engine = rtc
             rtc.enableAudio()
             rtc.disableVideo()
-            rtc.setDefaultAudioRoutetoSpeakerphone(false)
+            // Bola faqat mikrofon yuboradi; lokal playback yo'q.
+            // Speaker routingni majburlamaymiz, chunki bu ayrim telefonlarda
+            // tizim media ovozini pasaytirishi yoki earpiece rejimiga o'tkazishi mumkin.
+            rtc.setAudioScenario(Constants.AUDIO_SCENARIO_DEFAULT)
             val options = ChannelMediaOptions()
             options.channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
             options.clientRoleType = Constants.CLIENT_ROLE_BROADCASTER
@@ -199,18 +206,27 @@ class AgoraMicService : Service() {
         try {
             val am = getSystemService(AUDIO_SERVICE) as AudioManager
             savedMusicVolume = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+            savedVoiceCallVolume = am.getStreamVolume(AudioManager.STREAM_VOICE_CALL)
             savedAudioMode = am.mode
+            savedSpeakerphone = am.isSpeakerphoneOn
+            audioStateSaved = true
         } catch (_: Throwable) {}
     }
 
     private fun restoreAudioState() {
+        if (!audioStateSaved) return
         try {
-            val am = getSystemService(AUDIO_SERVICE) as AudioManager
+            val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
             savedMusicVolume?.let { am.setStreamVolume(AudioManager.STREAM_MUSIC, it, 0) }
+            savedVoiceCallVolume?.let { am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, it, 0) }
             savedAudioMode?.let { am.mode = it }
+            savedSpeakerphone?.let { @Suppress("DEPRECATION") run { am.isSpeakerphoneOn = it } }
         } catch (_: Throwable) {}
         savedMusicVolume = null
+        savedVoiceCallVolume = null
         savedAudioMode = null
+        savedSpeakerphone = null
+        audioStateSaved = false
     }
 
     override fun onDestroy() {
