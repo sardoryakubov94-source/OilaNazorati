@@ -190,6 +190,11 @@ class AmbientListenActivity : AppCompatActivity() {
             rtc.enableAudio()
             rtc.disableVideo()
             rtc.enableLocalAudio(false) // ota-ona mikrofonni ishlatmaydi, faqat eshitadi
+            // Android/Agora Communication rejimida ayrim qurilmalarda
+            // ovoz earpiece ga ketib qolishi mumkin. Ota-ona tomoni doim
+            // telefonning asosiy karnayidan eshitsin.
+            rtc.setDefaultAudioRoutetoSpeakerphone(true)
+            rtc.setEnableSpeakerphone(true)
             rtc.adjustPlaybackSignalVolume(100)
             val options = ChannelMediaOptions()
             options.channelProfile = Constants.CHANNEL_PROFILE_COMMUNICATION
