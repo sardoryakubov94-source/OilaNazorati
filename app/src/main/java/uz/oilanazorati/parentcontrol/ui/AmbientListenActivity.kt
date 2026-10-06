@@ -50,6 +50,15 @@ class AmbientListenActivity : AppCompatActivity() {
     private lateinit var stopButton: Button
 
     private val rtcHandler = object : IRtcEngineEventHandler() {
+        override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
+            crashlytics.log("Agora parent: joined channel=$channel uid=$uid")
+            runOnUiThread {
+                if (currentRequestId != null) {
+                    status.text = "⏳ Ovoz kanali ulandi, bola kutilmoqda..."
+                }
+            }
+        }
+
         override fun onUserJoined(uid: Int, elapsed: Int) {
             try {
                 engine?.muteRemoteAudioStream(uid, false)
@@ -72,7 +81,21 @@ class AmbientListenActivity : AppCompatActivity() {
 
         override fun onError(err: Int) {
             crashlytics.setCustomKey("agora_parent_error_code", err)
-            runOnUiThread { if (currentRequestId != null) { status.text = "❌ Ulanish xatosi ($err)"; resetUi() } }
+            crashlytics.log("Agora parent: onError=$err")
+            runOnUiThread {
+                if (currentRequestId != null) {
+                    status.text = "❌ Agora xatosi: $err"
+                    waveform.setActive(false)
+                    startButton.isEnabled = true
+                    stopButton.isEnabled = false
+                    requestListener?.remove()
+                    requestListener = null
+                    try { engine?.leaveChannel() } catch (_: Throwable) {}
+                    if (engine != null) { try { RtcEngine.destroy() } catch (_: Throwable) {} }
+                    engine = null
+                    currentRequestId = null
+                }
+            }
         }
     }
 
@@ -223,7 +246,13 @@ class AmbientListenActivity : AppCompatActivity() {
                 "channelName" to channelName,
                 "requestedByUid" to (FirebaseAuth.getInstance().currentUser?.uid ?: ""),
                 "updatedAt" to System.currentTimeMillis()
-            ))
+            )).addOnFailureListener { e ->
+                crashlytics.recordException(e)
+                runOnUiThread {
+                    status.text = "❌ So'rov yuborilmadi"
+                    resetUi()
+                }
+            }
 
             val joinResult = rtc.joinChannel(null, channelName, 0, options)
             if (joinResult != Constants.ERR_OK) {
