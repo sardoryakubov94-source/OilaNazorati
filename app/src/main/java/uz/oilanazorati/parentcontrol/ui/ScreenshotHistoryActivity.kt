@@ -18,6 +18,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.firestore.ListenerRegistration
 import uz.oilanazorati.parentcontrol.model.ScreenshotMetadata
+import uz.oilanazorati.parentcontrol.model.effectiveKind
 import uz.oilanazorati.parentcontrol.screenshot.ScreenshotRepository
 import java.text.SimpleDateFormat
 import java.util.*
@@ -255,8 +256,10 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
     private fun loadHistory() {
         ScreenshotRepository.fetchHistory { list ->
             runOnUiThread {
-                autoItems = list.filter { it.thresholdMinute > 0 }
-                manualItems = list.filter { it.thresholdMinute == 0 }
+                // Xavf signali screenshotlari bu yerda EMAS — ular "Xavfsizlik signallari" bo'limining
+                // "Screenshot" bo'limida saqlanadi.
+                autoItems = list.filter { it.effectiveKind() == "auto" }
+                manualItems = list.filter { it.effectiveKind() == "manual" }
                 val validIds = (autoItems + manualItems).map { it.id }.toHashSet()
                 selectedIds.retainAll(validIds)
                 tabAuto.text = "Avtomatik (${autoItems.size})"

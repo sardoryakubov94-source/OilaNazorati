@@ -109,7 +109,7 @@ function installButton() {
   const tab = document.querySelector('[data-tab="ss"]');
   const content = document.getElementById('content');
   if (!tab || !content) return;
-  if (!tab.classList.contains('active')) {
+  if (!tab.classList.contains('active') || document.body.dataset.ssSub === 'auto') {
     requestButton?.remove();
     requestButton = null;
     return;

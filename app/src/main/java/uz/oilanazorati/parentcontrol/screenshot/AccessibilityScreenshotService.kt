@@ -94,9 +94,21 @@ class AccessibilityScreenshotService : AccessibilityService() {
         mainHandler.postDelayed(autoWatchRunnable, AUTO_WATCH_INTERVAL_MS)
     }
 
-    private fun queueRemoteCapture(requestId: String): Unit {
+    private var handledRemoteRequestId: String? = null
+
+    private fun queueRemoteCapture(requestId: String, attempt: Int = 0): Unit {
         if (!settings.enabled) return
-        if (captureRunning) return
+        if (attempt == 0) {
+            if (handledRemoteRequestId == requestId) return
+            handledRemoteRequestId = requestId
+        }
+        if (captureRunning) {
+            // Boshqa screenshot (xavf signali / avtomatik) hozir olinmoqda — qo'lda so'rovni
+            // jimgina tashlab yubormaymiz, bir necha soniya kutib qayta urinamiz.
+            if (attempt < 10) mainHandler.postDelayed({ queueRemoteCapture(requestId, attempt + 1) }, 1000L)
+            else ScreenshotRepository.markScreenshotRequest(requestId, "failed", BUSY_MESSAGE)
+            return
+        }
         if (!isPowerOn()) {
             // Ekran butunlay o'chiq — qisqa muddatga uyg'otib ko'ramiz, chunki
             // qulflangan (lekin yoniq) ekrandan farqli o'laroq, o'chiq
@@ -207,7 +219,10 @@ class AccessibilityScreenshotService : AccessibilityService() {
         // yoniq bo'lishi kifoya (qulf ekrani ham suratga olinadi).
         val screenOk = if (requireUnlocked) isScreenInteractive() else isPowerOn()
         if (captureRunning || !screenOk) {
-            if (remoteRequestId != null && !screenOk) finishCapture(false, key, remoteRequestId, LOCKED_SCREEN_MESSAGE, onFinished)
+            if (remoteRequestId != null) {
+                if (captureRunning) ScreenshotRepository.markScreenshotRequest(remoteRequestId, "failed", BUSY_MESSAGE)
+                else finishCapture(false, key, remoteRequestId, LOCKED_SCREEN_MESSAGE, onFinished)
+            }
             return
         }
         captureRunning = true
@@ -278,7 +293,8 @@ class AccessibilityScreenshotService : AccessibilityService() {
             if (outputBitmap !== bitmap) outputBitmap.recycle()
             bitmap.recycle()
             val now: Long = System.currentTimeMillis()
-            val meta = ScreenshotMetadata(id = "${now}_${threshold}_${packageName.hashCode()}", childId = FirebaseRepo.childId.orEmpty(), familyId = FirebaseRepo.familyCode.orEmpty(), packageName = packageName, appLabel = label(packageName), capturedAt = now, date = todayKey(), dailyUsageSeconds = usageSeconds, thresholdMinute = threshold, riskCategory = finalRiskCategory, sensitiveEvidence = finalSensitive)
+            val meta = ScreenshotMetadata(id = "${now}_${threshold}_${packageName.hashCode()}", childId = FirebaseRepo.childId.orEmpty(), familyId = FirebaseRepo.familyCode.orEmpty(), packageName = packageName, appLabel = label(packageName), capturedAt = now, date = todayKey(), dailyUsageSeconds = usageSeconds, thresholdMinute = threshold, riskCategory = finalRiskCategory, sensitiveEvidence = finalSensitive,
+                kind = when { remoteRequestId != null -> "manual"; threshold > 0 -> "auto"; else -> "risk" })
             ScreenshotRepository.upload(file, meta) { ok: Boolean ->
                 file.delete()
                 finishCapture(ok, key, remoteRequestId, if (ok) "Screenshot tayyor" else "Screenshot yuklanmadi", onFinished)
@@ -496,7 +512,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
                 id = "${now}_video_${packageName.hashCode()}", childId = FirebaseRepo.childId.orEmpty(),
                 familyId = FirebaseRepo.familyCode.orEmpty(), packageName = packageName, appLabel = label(packageName),
                 capturedAt = now, date = todayKey(), dailyUsageSeconds = 0L, thresholdMinute = 0,
-                riskCategory = verdict.category, sensitiveEvidence = verdict.sensitive
+                riskCategory = verdict.category, sensitiveEvidence = verdict.sensitive, kind = "risk"
             )
             ScreenshotRepository.upload(file, meta) { file.delete() }
         } catch (t: Throwable) {
@@ -624,6 +640,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         const val AUTO_WATCH_INTERVAL_MS = 30_000L
         const val AUTO_BURST_INTERVAL_MS = 60_000L
         const val AUTO_BURST_COUNT = 3
+        const val BUSY_MESSAGE = "⏳ Qurilma hozir boshqa screenshot bilan band edi. Bir necha soniyadan so'ng qayta urinib ko'ring."
         const val LOCKED_SCREEN_MESSAGE = "📱 Bola qurilmasi ekranini uyg'otib bo'lmadi, shuning uchun screenshot olinmadi. Birozdan so'ng qayta urinib ko'ring."
 
         fun isServiceEnabled(context: Context): Boolean {

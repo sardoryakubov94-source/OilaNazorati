@@ -54,7 +54,8 @@
 .payCopyBtn{width:40px;height:40px;border-radius:12px;border:0;background:#ffffff33;color:#fff;font-size:18px;cursor:pointer}
 .attachBtn{width:100%;border:1px dashed #dce2eb;background:#f8fafc;border-radius:13px;padding:14px;font-weight:800;color:#596578;cursor:pointer}
 .premiumStatusLine{color:#8993a2;font-size:13px;margin-bottom:16px}
-</style></head>
+</style><style>.subtabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}.subtab{border:1px solid #dce2eb;background:#fff;color:#596578;border-radius:14px;padding:11px 8px;font-size:13px;font-weight:800;cursor:pointer;line-height:1.25}.subtab.on{background:#111827;color:#fff;border-color:#111827}</style>
+</head>
 <body>
 <div class="top"><div class="wrap head"><span class="logo"><img src="icons/app-logo.svg" alt="Oila Nazorati" style="width:32px;height:32px"></span><div><b>Oila Nazorati</b><small id="sub">Ota-ona paneli</small></div><button id="install" style="display:none">📲</button><button id="out" style="display:none">Chiqish</button></div></div>
 <main class="wrap">
@@ -313,7 +314,7 @@ async function apps(){const x=await sub('app_usage','boshlanishMs',300);
   $('content').innerHTML='<h3 style="margin:4px 0 8px">Eng ko\\u2018p ishlatilgan ilovalar</h3>'+top+'<h3 style="margin:18px 0 8px">So\\u2018nggi faoliyat</h3>'+recent;
 }
 async function notif(){const x=await sub('notifications','vaqtMs',100);$('content').innerHTML=x.length?x.map(v=>'<div class="row"><div class="rowtop"><b>'+esc(v.ilovaNomi||v.ilovaPaket||'Ilova')+'</b><span class="badge">'+fmt(v.vaqtMs)+'</span></div><p>'+esc(v.sarlavha||'')+(v.matn?' — '+esc(v.matn):'')+'</p></div>').join(''):'<div class="empty">Bildirishnomalar topilmadi.</div>'}
-async function risk(){const x=await sub('risk_events','capturedAt',100);$('content').innerHTML='<div class="empty" style="margin-bottom:12px;text-align:left">Faqat muhim xavf signallari ko\u2018rsatiladi: 18+ tasvir/video, intim suhbat yoki media, o\u2018z joniga qasd yoki giyohvand moddalar bo\u2018yicha aktiv qidiruv/suhbat aniqlansa — shu yerda qayd etiladi.</div>'+(x.length?x.map(v=>{
+async function riskAlertsHtml(){const x=await sub('risk_events','capturedAt',100);return '<div class="empty" style="margin-bottom:12px;text-align:left">Faqat muhim xavf signallari ko\u2018rsatiladi: 18+ tasvir/video, intim suhbat yoki media, o\u2018z joniga qasd yoki giyohvand moddalar bo\u2018yicha aktiv qidiruv/suhbat aniqlansa — shu yerda qayd etiladi.</div>'+(x.length?x.map(v=>{
   const high=v.severity==='HIGH';
   const dot=high?'🔴':'🟠';
   const sevClass=high?'miss':'out';
@@ -322,7 +323,54 @@ async function risk(){const x=await sub('risk_events','capturedAt',100);$('conte
   const ctxLine=v.contextText?'<p>'+(v.sensitive?'Dalil konteksti: ':'')+esc(v.contextText)+'</p>':'';
   return'<div class="row"><div class="rowtop"><b>'+dot+' '+esc(v.summary||'')+'</b><span class="badge '+sevClass+'">'+esc(v.severity||'')+'</span></div><p>'+esc(v.appName||'')+' · '+fmt(v.capturedAt)+' · Ishonchlilik: '+esc(v.confidence)+'% · '+esc(v.category||'')+'</p>'+mediaLine+ctxLine+'</div>';
 }).join(''):'<div class="empty">Hozircha jiddiy xavf signali aniqlanmadi.</div>')}
-async function shots(){const cd=await getDoc(doc(db,'families',family,'children',child));const cv=cd.data()||{};const active=cv.screenProjectionActive===true;const upd=cv.screenProjectionUpdatedAt;const bannerText=active?'🟢 Ekran nazorati ulangan':'🔴 Ekran nazorati ulanmagan'+(upd?' ('+fmt(upd)+')':'')+' — farzand qurilmasida ilova ochilishi kerak';const banner='<div class="empty" style="margin-bottom:12px;text-align:left">'+bannerText+'</div>';const q=query(collection(db,'families',family,'children',child,'screenshots'),orderBy('capturedAt','desc'),limit(100));const x=(await getDocs(q)).docs.map(d=>({id:d.id,...d.data()}));$('content').innerHTML=banner+(x.length?'<div class="ssgrid">'+x.map(v=>'<button class="ss" data-id="'+esc(v.id)+'">▣<small>'+esc(v.appLabel||'Ilova')+'</small><small>'+fmt(v.capturedAt)+'</small></button>').join('')+'</div>':'<div class="empty">Screenshot topilmadi.</div>');document.querySelectorAll('.ss').forEach(b=>b.onclick=async()=>{try{const d=await getDoc(doc(db,'families',family,'children',child,'screenshot_data',b.dataset.id));const v=d.data();const blob=v?.image;if(blob){const b64=typeof blob.toBase64==='function'?blob.toBase64():btoa(String.fromCharCode(...blob.toUint8Array()));$('shot').src='data:image/jpeg;base64,'+b64;$('lightbox').classList.add('active')}}catch(e){console.error(e)}})}
+// --- Screenshot / Xavf signali: har biri ikki bo'limga bo'lingan ---
+// Screenshot turi (kind): manual — "Hozir screenshot olish", auto — eng ko'p ishlatilgan
+// ilovalar bo'yicha avtomatik, risk — xavf signali bo'yicha olingan. Eski yozuvlarda
+// kind yo'q, ular avvalgi qoidalar bo'yicha aniqlanadi.
+let ssSub='manual',riskSub='alerts';
+const shotKind=v=>v.kind?v.kind:((v.thresholdMinute||0)>0?'auto':((v.riskCategory||v.sensitiveEvidence)?'risk':'manual'));
+async function loadShotMeta(){
+  const q=query(collection(db,'families',family,'children',child,'screenshots'),orderBy('capturedAt','desc'),limit(200));
+  return(await getDocs(q)).docs.map(d=>({id:d.id,...d.data()}));
+}
+function subTabsHtml(cur,items){
+  return'<div class="subtabs">'+items.map(([k,l])=>'<button type="button" class="subtab'+(cur===k?' on':'')+'" data-sub="'+k+'">'+l+'</button>').join('')+'</div>';
+}
+function shotGridHtml(x,empty,labelFn){
+  return x.length?'<div class="ssgrid">'+x.map(v=>'<button class="ss" data-id="'+esc(v.id)+'">▣<small>'+esc(labelFn(v))+'</small><small>'+fmt(v.capturedAt)+'</small></button>').join('')+'</div>':'<div class="empty">'+empty+'</div>';
+}
+function bindShotClicks(){
+  document.querySelectorAll('.ss').forEach(b=>b.onclick=async()=>{try{const d=await getDoc(doc(db,'families',family,'children',child,'screenshot_data',b.dataset.id));const v=d.data();const blob=v?.image;if(blob){const b64=typeof blob.toBase64==='function'?blob.toBase64():btoa(String.fromCharCode(...blob.toUint8Array()));$('shot').src='data:image/jpeg;base64,'+b64;$('lightbox').classList.add('active')}}catch(e){console.error(e)}});
+}
+async function shots(){
+  document.body.dataset.ssSub=ssSub;
+  const cd=await getDoc(doc(db,'families',family,'children',child));const cv=cd.data()||{};
+  const active=cv.screenProjectionActive===true;const upd=cv.screenProjectionUpdatedAt;
+  const bannerText=active?'🟢 Ekran nazorati ulangan':'🔴 Ekran nazorati ulanmagan'+(upd?' ('+fmt(upd)+')':'')+' — farzand qurilmasida ilova ochilishi kerak';
+  const banner='<div class="empty" style="margin-bottom:12px;text-align:left">'+bannerText+'</div>';
+  const all=await loadShotMeta();
+  const manual=all.filter(v=>shotKind(v)==='manual'),auto=all.filter(v=>shotKind(v)==='auto');
+  const tabs=subTabsHtml(ssSub,[['manual','📸 Hozir olingan ('+manual.length+')'],['auto','📊 Top ilovalar ('+auto.length+')']]);
+  const list=ssSub==='auto'
+    ?shotGridHtml(auto,'Avtomatik screenshot hali yo‘q.',v=>(v.appLabel||'Ilova')+(v.thresholdMinute?' · '+v.thresholdMinute+' daq':''))
+    :shotGridHtml(manual,'Qo‘lda olingan screenshot hali yo‘q.',v=>v.appLabel||'Ilova');
+  $('content').innerHTML=banner+tabs+list;
+  document.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{ssSub=b.dataset.sub;shots()});
+  bindShotClicks();
+}
+async function risk(){
+  document.body.dataset.ssSub='';
+  const tabs=subTabsHtml(riskSub,[['alerts','⚠️ Ogohlantirish'],['shots','📷 Screenshot']]);
+  if(riskSub==='shots'){
+    const rs=(await loadShotMeta()).filter(v=>shotKind(v)==='risk');
+    $('content').innerHTML=tabs+'<div class="empty" style="margin-bottom:12px;text-align:left">Xavf signali aniqlanganda olingan screenshotlar shu yerda saqlanadi.</div>'
+      +shotGridHtml(rs,'Xavf signali bo‘yicha screenshot hali yo‘q.',v=>(v.appLabel||'Ilova')+(v.riskCategory?' · '+v.riskCategory:''));
+  }else{
+    $('content').innerHTML=tabs+await riskAlertsHtml();
+  }
+  document.querySelectorAll('.subtab').forEach(b=>b.onclick=()=>{riskSub=b.dataset.sub;risk()});
+  bindShotClicks();
+}
 
 // --- Ovoz (Agora jonli eshitish) ---
 // So'rov Firestore'ga yoziladi; farzand qurilmasi Agora kanaliga kirib, shu kanal

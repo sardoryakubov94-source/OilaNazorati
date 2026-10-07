@@ -66,7 +66,7 @@ object ScreenshotRepository {
             dataRef.set(mapOf("image" to Blob.fromBytes(imageBytes), "contentType" to "image/jpeg", "byteSize" to imageBytes.size.toLong(), "createdAt" to System.currentTimeMillis())).continueWithTask { metaRef.set(finalMeta) }.addOnSuccessListener { onResult(true) }.addOnFailureListener { dataRef.delete(); onResult(false) }
         } catch (_: Exception) { onResult(false) }
     }
-    fun fetchHistory(onResult: (List<ScreenshotMetadata>) -> Unit) { val col = childDoc()?.collection("screenshots") ?: return onResult(emptyList()); col.orderBy("capturedAt", com.google.firebase.firestore.Query.Direction.DESCENDING).limit(100).get().addOnSuccessListener { onResult(it.documents.mapNotNull { d -> d.toObject(ScreenshotMetadata::class.java) }) }.addOnFailureListener { onResult(emptyList()) } }
+    fun fetchHistory(onResult: (List<ScreenshotMetadata>) -> Unit) { val col = childDoc()?.collection("screenshots") ?: return onResult(emptyList()); col.orderBy("capturedAt", com.google.firebase.firestore.Query.Direction.DESCENDING).limit(200).get().addOnSuccessListener { onResult(it.documents.mapNotNull { d -> d.toObject(ScreenshotMetadata::class.java) }) }.addOnFailureListener { onResult(emptyList()) } }
     fun loadImageBytes(id: String, onResult: (ByteArray?) -> Unit) { val child = childDoc() ?: return onResult(null); child.collection("screenshot_data").document(id).get().addOnSuccessListener { onResult(it.getBlob("image")?.toBytes()) }.addOnFailureListener { onResult(null) } }
     fun deleteScreenshot(id: String, onResult: (Boolean) -> Unit = {}) {
         val child = childDoc() ?: return onResult(false)
