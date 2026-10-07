@@ -318,11 +318,22 @@ async function riskAlertsHtml(){const x=await sub('risk_events','capturedAt',100
   const high=v.severity==='HIGH';
   const dot=high?'🔴':'🟠';
   const sevClass=high?'miss':'out';
+  const title=String(v.summary||'').split(" (aniqlangan so'z:")[0].trim();
+  const tm=/aniqlangan so'z: (.*)\)/.exec(v.summary||'');const term=tm?tm[1].trim():'';
   const mediaLabel=v.mediaType==='VIDEO'?'Video':'Rasm';
-  const mediaLine=v.mediaType?'<p>'+(v.mediaState==='HIDDEN_SENSITIVE'?'🔒 '+mediaLabel+' yuborilgan/ko\u2018rilgan — sezgir mazmun yashirilgan':'📎 '+mediaLabel+' media signali mavjud')+'</p>':'';
-  const ctxLine=v.contextText?'<p>'+(v.sensitive?'Dalil konteksti: ':'')+esc(v.contextText)+'</p>':'';
-  return'<div class="row"><div class="rowtop"><b>'+dot+' '+esc(v.summary||'')+'</b><span class="badge '+sevClass+'">'+esc(v.severity||'')+'</span></div><p>'+esc(v.appName||'')+' · '+fmt(v.capturedAt)+' · Ishonchlilik: '+esc(v.confidence)+'% · '+esc(v.category||'')+'</p>'+mediaLine+ctxLine+'</div>';
+  const mediaLine=v.mediaType?'<p>'+(v.mediaState==='HIDDEN_SENSITIVE'?'🔒 '+mediaLabel+' yuborilgan/ko‘rilgan — sezgir mazmun yashirilgan':'📎 '+mediaLabel+' media signali mavjud')+'</p>':'';
+  const full=String(v.contextText||'').replace(/\b(?:android|androidx)\.[\w.$]+/g,' ').replace(/\s+/g,' ').trim();
+  const short=riskSnippet(full,term);
+  const ctxLine=full?'<p>Matn: '+esc(short)+'</p>'+(short!==full?'<details><summary style="cursor:pointer;font-size:12px">To‘liq matnni ko‘rish</summary><p>'+esc(full)+'</p></details>':''):'';
+  return'<div class="row"><div class="rowtop"><b>'+dot+' '+esc(title)+'</b></div><p>'+esc(v.appName||'')+' · '+fmt(v.capturedAt)+(term?'<br>Aniqlangan so‘z: '+esc(term):'')+'</p>'+mediaLine+ctxLine+'</div>';
 }).join(''):'<div class="empty">Hozircha jiddiy xavf signali aniqlanmadi.</div>')}
+function riskSnippet(t,term,r=70){
+  if(t.length<=r*2+20)return t;
+  const i=term?t.toLowerCase().indexOf(term.toLowerCase()):-1;
+  if(i<0)return t.slice(0,r*2).trim()+'…';
+  const a=Math.max(0,i-r),b=Math.min(t.length,i+r);
+  return(a>0?'…':'')+t.slice(a,b).trim()+(b<t.length?'…':'');
+}
 // --- Screenshot / Xavf signali: har biri ikki bo'limga bo'lingan ---
 // Screenshot turi (kind): manual — "Hozir screenshot olish", auto — eng ko'p ishlatilgan
 // ilovalar bo'yicha avtomatik, risk — xavf signali bo'yicha olingan. Eski yozuvlarda

@@ -1,5 +1,5 @@
-// Oila Nazorati — service worker v2026.10.08a
-const STYLE_VERSION='20261008a';
+// Oila Nazorati — service worker v2026.10.08b
+const STYLE_VERSION='20261008b';
 self.addEventListener('install',e=>{self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(self.clients.claim())});
 self.addEventListener('fetch',e=>{

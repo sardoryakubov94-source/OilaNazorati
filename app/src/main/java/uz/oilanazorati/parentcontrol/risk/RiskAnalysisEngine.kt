@@ -9,7 +9,9 @@ data class RiskAnalysis(
     val summary: String,
     val sensitive: Boolean = false,
     val mediaType: String = "",
-    val shouldCaptureEvidence: Boolean = false
+    val shouldCaptureEvidence: Boolean = false,
+    /** Qaysi so'z(lar) mos tushgani — qisqa dalil matnini shu atrofdan kesib olish uchun. */
+    val matchedTerms: List<String> = emptyList()
 )
 
 object RiskAnalysisEngine {
@@ -84,6 +86,20 @@ object RiskAnalysisEngine {
         ))
     )
 
+    /**
+     * Uzun ekran matnidan faqat aniqlangan so'z atrofidagi QISQA parchani qaytaradi
+     * (ota-ona butun ekran matnini emas, aynan nima sabab bo'lganini ko'rsin).
+     */
+    fun snippet(text: String, terms: List<String>, radius: Int = 70): String {
+        val clean = text.replace(Regex("\\s+"), " ").trim()
+        if (clean.length <= radius * 2 + 20) return clean
+        val idx = terms.map { clean.indexOf(it, ignoreCase = true) }.filter { it >= 0 }.minOrNull()
+            ?: return clean.take(radius * 2).trimEnd() + "…"
+        val start = (idx - radius).coerceAtLeast(0)
+        val end = (idx + radius).coerceAtMost(clean.length)
+        return (if (start > 0) "…" else "") + clean.substring(start, end).trim() + (if (end < clean.length) "…" else "")
+    }
+
     fun analyze(vararg rawParts: String): RiskAnalysis? {
         val text = rawParts.filter { it.isNotBlank() }.joinToString(" ").lowercase(Locale.ROOT)
         if (text.isBlank()) return null
@@ -131,7 +147,8 @@ object RiskAnalysisEngine {
             // uchun ham juda muhim).
             summary = "$summary (aniqlangan so'z: ${matchedTerms.joinToString(", ")})",
             sensitive = rule.sensitive,
-            shouldCaptureEvidence = confidence >= 80
+            shouldCaptureEvidence = confidence >= 80,
+            matchedTerms = matchedTerms
         )
     }
 

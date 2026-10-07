@@ -176,7 +176,7 @@ class SocialNotificationListenerService : NotificationListenerService() {
                         appName = appName,
                         source = "notification",
                         summary = analysis.summary,
-                        contextText = (title + " " + text).trim().take(1200),
+                        contextText = RiskAnalysisEngine.snippet((title + " " + text).trim(), analysis.matchedTerms),
                         mediaType = RiskAnalysisEngine.detectMediaMarker(listOf(title, text)),
                         mediaState = if (analysis.sensitive) "HIDDEN_SENSITIVE" else "VISIBLE",
                         capturedAt = sbn.postTime,

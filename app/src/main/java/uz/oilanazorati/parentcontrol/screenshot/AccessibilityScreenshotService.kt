@@ -570,7 +570,11 @@ class AccessibilityScreenshotService : AccessibilityService() {
             packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
         }.getOrDefault(packageName)
         val eventId = "risk_${now}_${dedupeKey.hashCode()}"
-        val context = parts.joinToString(" ").replace(Regex("\\s+"), " ").take(1200)
+        // Faqat aniqlangan so'z atrofidagi qisqa parcha (texnik sinf nomlarisiz) saqlanadi.
+        val readable = parts.filterNot {
+            it.startsWith("android.") || it.startsWith("androidx.") || it.startsWith("com.google.android.")
+        }
+        val context = RiskAnalysisEngine.snippet(readable.joinToString(" "), analysis.matchedTerms)
         FirebaseRepo.logRiskEvent(
             RiskEvent(
                 id = eventId, category = analysis.category, severity = analysis.severity,

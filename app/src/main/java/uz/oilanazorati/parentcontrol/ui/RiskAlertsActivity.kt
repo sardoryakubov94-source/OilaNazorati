@@ -14,6 +14,7 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.firestore.ListenerRegistration
 import uz.oilanazorati.parentcontrol.model.RiskEvent
+import uz.oilanazorati.parentcontrol.risk.RiskAnalysisEngine
 import uz.oilanazorati.parentcontrol.model.ScreenshotMetadata
 import uz.oilanazorati.parentcontrol.model.effectiveKind
 import uz.oilanazorati.parentcontrol.screenshot.ScreenshotRepository
@@ -304,16 +305,20 @@ class RiskAlertsActivity : AppCompatActivity() {
                 setBackgroundColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_surface))
                 elevation = dp(2).toFloat()
             }
-            val title = if (event.severity == "HIGH") "🔴" else "🟠"
+            val dot = if (event.severity == "HIGH") "🔴" else "🟠"
+            // Eski yozuvlarda sarlavha oxirida "(aniqlangan so'z: ...)" va juda uzun matn bor —
+            // ularni ham qisqa va tushunarli ko'rinishga keltiramiz.
+            val shortTitle = event.summary.substringBefore(" (aniqlangan so'z:").trim()
+            val term = Regex("aniqlangan so'z: (.*)\\)").find(event.summary)?.groupValues?.get(1)?.trim().orEmpty()
             card.addView(TextView(this).apply {
-                text = title + " " + event.summary
+                text = "$dot $shortTitle"
                 textSize = 15f
                 setTypeface(typeface, Typeface.BOLD)
                 setTextColor(if (event.severity == "HIGH") 0xFFE74C3C.toInt() else 0xFFF39C12.toInt())
             })
             card.addView(TextView(this).apply {
                 val time = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(event.capturedAt))
-                text = event.appName + " • " + time + "\nIshonchlilik: " + event.confidence + "%\nKategoriya: " + event.category
+                text = event.appName + " • " + time + (if (term.isNotBlank()) "\nAniqlangan so'z: $term" else "")
                 textSize = 12f
                 setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
                 setPadding(0, dp(5), 0, dp(5))
@@ -330,13 +335,35 @@ class RiskAlertsActivity : AppCompatActivity() {
                     setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_primary))
                 })
             }
-            if (event.contextText.isNotBlank()) {
-                card.addView(TextView(this).apply {
-                    text = if (event.sensitive) "Dalil konteksti: " + event.contextText else event.contextText
+            val fullText = event.contextText
+                .replace(Regex("\\b(?:android|androidx)\\.[\\w.$]+"), " ")
+                .replace(Regex("\\s+"), " ").trim()
+            if (fullText.isNotBlank()) {
+                val shortText = RiskAnalysisEngine.snippet(fullText, listOf(term).filter { it.isNotBlank() })
+                val expandable = shortText != fullText
+                var expanded = false
+                val ctx = TextView(this).apply {
+                    text = "Matn: $shortText"
                     textSize = 12f
                     setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
                     setPadding(0, dp(5), 0, 0)
-                })
+                }
+                card.addView(ctx)
+                if (expandable) {
+                    val toggle = TextView(this).apply {
+                        text = "▼ To'liq matnni ko'rish"
+                        textSize = 11f
+                        setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
+                        setPadding(0, dp(6), 0, 0)
+                    }
+                    card.addView(toggle)
+                    val flip = View.OnClickListener {
+                        expanded = !expanded
+                        ctx.text = "Matn: " + (if (expanded) fullText else shortText)
+                        toggle.text = if (expanded) "▲ Yig'ish" else "▼ To'liq matnni ko'rish"
+                    }
+                    card.setOnClickListener(flip)
+                }
             }
             list.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(9) })
         }
