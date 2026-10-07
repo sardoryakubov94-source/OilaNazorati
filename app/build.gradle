@@ -141,12 +141,6 @@ dependencies {
     implementation 'com.google.firebase:firebase-crashlytics-ndk'
     implementation 'com.google.firebase:firebase-analytics-ktx'
 
-    // WebRTC real-time audio transport. Firestore remains the signaling channel.
-    // The original org.webrtc artifact is no longer resolvable, and the QuickBlox
-    // mirror (1.0.32006, built ~2017) was causing unexplained native crashes with
-    // no Java stack trace on some devices. Switched to Stream's actively maintained
-    // WebRTC AAR, published on Maven Central and tracking current upstream libwebrtc.
-    implementation 'io.github.webrtc-sdk:android:144.7559.09'
     // Agora Voice SDK — Android ilovaning o'z "Ovoz" ekrani uchun (3-oktabr,
     // WebRTC o'rniga). Faqat ovoz (video emas) uchun eng kichik SDK.
     implementation 'io.agora.rtc:voice-sdk:4.7.0'

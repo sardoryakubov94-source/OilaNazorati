@@ -74,7 +74,6 @@ class MonitorForegroundService : Service() {
         private const val NORMAL_LOCATION_MAX_AGE_MS = 5 * 60 * 1000L
     }
 
-    private var micRequestListener: com.google.firebase.firestore.ListenerRegistration? = null
     private var agoraMicRequestListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     override fun onCreate() {
@@ -99,7 +98,6 @@ class MonitorForegroundService : Service() {
                 stopSelf()
                 return@checkMinRequiredVersion
             }
-            registerMicRequestListener()
             registerAgoraMicRequestListener()
             registerCallLogObserver()
             registerContactsObserver()
@@ -120,50 +118,10 @@ class MonitorForegroundService : Service() {
         return START_STICKY
     }
 
-    /** Doimiy ishlab turadigan bu servisda faqat YENGIL Firestore tinglovchisi
-     * saqlanadi. WebRTC/mikrofon servisi (batareya sarflaydigan qismi) faqat
-     * haqiqiy so'rov (transport=webrtc, status=requested, webrtcOffer mavjud)
-     * kelganda ishga tushadi — va o'sha servis o'zi bo'sh turgan payt birozdan
-     * so'ng o'z-o'zini to'xtatadi (qarang: WebRtcAmbientAudioService). */
-    private fun registerMicRequestListener() {
-        val isChild = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
-            .getBoolean("is_child_device", false)
-        if (!isChild) return
-        val family = FirebaseRepo.familyCode ?: return
-        val child = FirebaseRepo.childId ?: com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val ref = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-            .collection("families").document(family).collection("children").document(child)
-            .collection("mic_requests").document("current")
-        micRequestListener = ref.addSnapshotListener { snap, error ->
-            if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
-            val data = snap.data.orEmpty()
-            if (data["transport"] != "webrtc") return@addSnapshotListener
-            val state = data["status"] as? String ?: return@addSnapshotListener
-            if (state != "requested" && state != "webrtc_requested") return@addSnapshotListener
-            val hasOffer = !(data["webrtcOffer"] as? String).isNullOrBlank()
-            if (!hasOffer) return@addSnapshotListener
-            if (Build.VERSION.SDK_INT >= 23 &&
-                checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
-            ) return@addSnapshotListener
-            try {
-                ContextCompat.startForegroundService(this, Intent(this, WebRtcAmbientAudioService::class.java))
-            } catch (t: Throwable) {
-                // Android may reject microphone FGS startup when this service was
-                // itself restarted from the background/boot. A later visible app
-                // launch calls onStartCommand again and retries safely.
-                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().apply {
-                    setCustomKey("webrtc_ambient_start_failed", t.javaClass.name)
-                    log("WebRtcAmbientAudioService start failed: ${t.message}")
-                    recordException(t)
-                }
-            }
-        }
-    }
-
     /** Android "Ovoz" ekrani uchun — Agora orqali (WebRTC O'RNIGA, 3-oktabr —
      * qarang AgoraMicService izohi). Faqat transport=="agora" bo'lgan
      * so'rovlarga reaksiya beradi, shuning uchun veb-panelning WebRTC
-     * so'rovlariga (registerMicRequestListener) aralashmaydi. */
+     * so'rovlariga aralashmaydi. */
     private fun registerAgoraMicRequestListener() {
         val isChild = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
             .getBoolean("is_child_device", false)
@@ -442,7 +400,6 @@ class MonitorForegroundService : Service() {
         smsSentObserver?.let { contentResolver.unregisterContentObserver(it) }
         callLogObserver?.let { contentResolver.unregisterContentObserver(it) }
         liveTrackingListener?.remove()
-        micRequestListener?.remove()
         agoraMicRequestListener?.remove()
     }
 }

@@ -28,11 +28,6 @@
 -keepattributes EnclosingMethod
 -keepattributes InnerClasses
 
-# --- WebRTC: native (JNI) tomon Java klasslarini nom bo'yicha chaqiradi.
-# R8 buni ko'rmaydi, shuning uchun butun paketni saqlaymiz (xavfsizlik
-# uchun — hajmni ozroq kamaytirsa ham, ishlashdan afzal).
--keep class org.webrtc.** { *; }
--dontwarn org.webrtc.**
 -keep class io.agora.** { *; }
 -dontwarn io.agora.**
 
