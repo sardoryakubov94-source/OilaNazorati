@@ -95,6 +95,10 @@ class AccessibilityScreenshotService : AccessibilityService() {
     }
 
     private var handledRemoteRequestId: String? = null
+    // Qo'lda screenshot so'rovi bajarilayotgan paytda (maks. ~20 soniya) xavf-tahlil asosiy oqimni
+    // band qilmasin: aks holda screenshot javobi kechikib, ota-ona tomonida "vaqtida yakunlanmadi" bo'lardi.
+    private var manualCaptureUntil = 0L
+    private var lastRiskScanAt = 0L
 
     private fun queueRemoteCapture(requestId: String, attempt: Int = 0): Unit {
         if (!settings.enabled) return
@@ -109,6 +113,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
             else ScreenshotRepository.markScreenshotRequest(requestId, "failed", BUSY_MESSAGE)
             return
         }
+        manualCaptureUntil = android.os.SystemClock.uptimeMillis() + 20_000L
         if (!isPowerOn()) {
             // Ekran butunlay o'chiq — qisqa muddatga uyg'otib ko'ramiz, chunki
             // qulflangan (lekin yoniq) ekrandan farqli o'laroq, o'chiq
@@ -261,7 +266,9 @@ class AccessibilityScreenshotService : AccessibilityService() {
         key: String, remoteRequestId: String?, riskCategory: String, sensitiveEvidence: Boolean, onFinished: (() -> Unit)?
     ) {
         try {
-            val mediaVerdict = runCatching { MediaRiskAnalyzer.analyze(applicationContext, bitmap) }.getOrNull()
+            // Ota-ona o'zi so'ragan (qo'lda) screenshot avvalgidek oddiy surat: og'ir rasm-tahlilsiz
+            // va xiralashtirishsiz tez yakunlanadi. Xavf tahlili avtomatik/xavf screenshotlarida ishlaydi.
+            val mediaVerdict = if (remoteRequestId != null) null else runCatching { MediaRiskAnalyzer.analyze(applicationContext, bitmap) }.getOrNull()
             val finalRiskCategory = mediaVerdict?.category ?: riskCategory
             // MUHIM: faqat "tasdiqlangan" (mediaVerdict.sensitive == true) holatda
             // dalil xiralashtiriladi. Shubhali-lekin-noaniq holatda (sensitive=false)
@@ -305,6 +312,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
     }
 
     private fun finishCapture(ok: Boolean, key: String, remoteRequestId: String?, message: String, onFinished: (() -> Unit)?): Unit {
+        if (remoteRequestId != null) manualCaptureUntil = 0L
         if (remoteRequestId != null) ScreenshotRepository.markScreenshotRequest(remoteRequestId, if (ok) "completed" else "failed", message)
         captureRunning = false
         onFinished?.invoke()
@@ -527,6 +535,12 @@ class AccessibilityScreenshotService : AccessibilityService() {
 
     private fun analyzeAccessibilityEvent(event: AccessibilityEvent?) {
         event ?: return
+        // Ekran har soniyada o'nlab hodisa yuboradi (typeAllMask). Har birida butun oynani
+        // aylanib chiqish asosiy oqimni band qilib, screenshot so'rovlarini sekinlashtirardi.
+        val uptime = android.os.SystemClock.uptimeMillis()
+        if (uptime < manualCaptureUntil) return
+        if (uptime - lastRiskScanAt < RISK_SCAN_MIN_INTERVAL_MS) return
+        lastRiskScanAt = uptime
         val packageName = event.packageName?.toString()?.takeIf { it.isNotBlank() } ?: return
         if (packageName == applicationContext.packageName) return
         val parts = ArrayList<String>()
@@ -638,6 +652,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
     companion object {
         const val ACTION_TEST_SCREENSHOT = "uz.oilanazorati.action.ACCESSIBILITY_SCREENSHOT_TEST"
         const val AUTO_WATCH_INTERVAL_MS = 30_000L
+        const val RISK_SCAN_MIN_INTERVAL_MS = 1_500L
         const val AUTO_BURST_INTERVAL_MS = 60_000L
         const val AUTO_BURST_COUNT = 3
         const val BUSY_MESSAGE = "⏳ Qurilma hozir boshqa screenshot bilan band edi. Bir necha soniyadan so'ng qayta urinib ko'ring."
