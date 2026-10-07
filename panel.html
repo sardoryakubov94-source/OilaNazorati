@@ -67,8 +67,8 @@
 <script type="module">
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import{getAuth,GoogleAuthProvider,signInWithPopup,signInWithRedirect,signInWithCredential,getRedirectResult,setPersistence,browserLocalPersistence,onAuthStateChanged,signOut}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import{getFirestore,doc,getDoc,setDoc,updateDoc,arrayUnion,collection,getDocs,query,where,orderBy,limit,deleteDoc,onSnapshot}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
-const app=initializeApp({apiKey:'AIzaSyB72y9YkdCifEodbo2g_43FbbcDbvg0QF4',authDomain:'oilanazorat-3c8de.firebaseapp.com',projectId:'oilanazorat-3c8de',storageBucket:'oilanazorat-3c8de.firebasestorage.app',messagingSenderId:'1086556994078',appId:'1:1086556994078:web:5e576984e784d0bbdc4c0f',measurementId:'G-NWER8TE97X'});const auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);let family=null,child=null,childName='',isPremium=false,ownedFamilies=[],planLoadError=null;
+import{getFirestore,doc,getDoc,setDoc,updateDoc,arrayUnion,collection,getDocs,query,where,orderBy,limit,deleteDoc,onSnapshot,runTransaction}from'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+const app=initializeApp({apiKey:'AIzaSyB72y9YkdCifEodbo2g_43FbbcDbvg0QF4',authDomain:'oilanazorat-3c8de.firebaseapp.com',projectId:'oilanazorat-3c8de',storageBucket:'oilanazorat-3c8de.firebasestorage.app',messagingSenderId:'1086556994078',appId:'1:1086556994078:web:5e576984e784d0bbdc4c0f',measurementId:'G-NWER8TE97X'});const auth=getAuth(app),db=getFirestore(app),$=id=>document.getElementById(id);let family=null,child=null,childName='',isPremium=false,isAdminUser=false,ownedFamilies=[],planLoadError=null;
 const show=id=>{document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));$(id).classList.add('active');scrollTo(0,0)};const esc=v=>String(v??'').replace(/[&<>\"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[m]));const fmt=v=>v?new Date(Number(v)).toLocaleString('uz-UZ',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'—';const dur=s=>{s=Number(s||0);return s>=60?Math.floor(s/60)+' daq '+s%60+' sek':s+' sek'};
 async function sub(name,field,n=100){const q=query(collection(db,'families',family,'children',child,name),orderBy(field,'desc'),limit(n));return(await getDocs(q)).docs.map(d=>({id:d.id,...d.data()}))}
 $('start').onclick=()=>{if(auth.currentUser){show('codeScreen');renderFamilyScreen()}else login()};$('out').onclick=()=>signOut(auth);$('newCode').onclick=()=>{localStorage.removeItem('family');family=null;show('codeScreen');renderFamilyScreen()};$('backChildren').onclick=()=>{stopLiveListeners();show('codeScreen');renderFamilyScreen()};
@@ -151,8 +151,8 @@ async function loadPlan(){const u=auth.currentUser;if(!u)return;planLoadError=nu
     // hisoblar parents/{uid}.premium maydoniga qaramay avtomatik premium
     // hisoblanadi (email hardcode qilinmaydi, faqat UID orqali).
     const adminDoc=await getDoc(doc(db,'admin_uids',u.uid));
-    if(adminDoc.exists()){isPremium=true}
-    else{const p=await getDoc(doc(db,'parents',u.uid));isPremium=p.exists()&&p.data()?.premium===true}
+    if(adminDoc.exists()){isPremium=true;isAdminUser=true}
+    else{isAdminUser=false;const p=await getDoc(doc(db,'parents',u.uid));isPremium=p.exists()&&p.data()?.premium===true}
   }catch(e){console.error(e);isPremium=false}try{const s=await getDocs(query(collection(db,'families'),where('ownerUid','==',u.uid)));ownedFamilies=s.docs}catch(e){console.error(e);ownedFamilies=[];planLoadError=e.message||String(e)}}
 function premiumMessage(){return'<div class="premium-box"><b>⭐ Premium kerak</b><p>1 ta oila kodi orqali bir nechta bola qurilmasini qo\u2018shib kuzatish, bir nechta oila kodi yaratish va boshqa oilalarni qo\u2018shish.</p><button id="premiumInfo" class="secondary">Premiumni faollashtirish</button></div>'}
 async function renderFamilyScreen(){const box=$('familyRoot');if(!box)return;box.innerHTML='<div class="loading">Tarif va oilalar tekshirilmoqda…</div>';await loadPlan();let html=(child?'<button id="backToDash" class="secondary" style="margin-bottom:10px">← Panelga qaytish</button>':'')+(planLoadError?'<div class="err" style="margin-bottom:10px">⚠️ Oilalar ro\u2018yxati tekshirilmadi: '+esc(planLoadError)+'</div>':'')+(family?'<div class="family-card"><b>Hozir ochiq: '+esc(family)+'</b><small>Joriy oila kodi</small><button id="openCurrentFamily">Farzandlarni ko\u2018rish →</button></div>':'')+'<button id="createFamily" class="primary">➕ Yangi oila kodi yaratish'+((!isPremium&&ownedFamilies.length>=1)?' 🔒':'')+'</button><button id="joinFamily" class="secondary">🔗 Mavjud oila kodini kiritish</button><div id="familyList" class="pwa-family"></div>';if(!isPremium&&ownedFamilies.length>=1)html+=premiumMessage();box.innerHTML=html;if($('backToDash'))$('backToDash').onclick=()=>show('dashboard');if($('openCurrentFamily'))$('openCurrentFamily').onclick=()=>loadChildren();$('createFamily').onclick=createFamily;$('joinFamily').onclick=()=>{box.innerHTML='<h3>Mavjud oila kodi</h3><p class="muted">Android farzand qurilmasi ulangan oila kodini kiriting.</p><input id="pwaCode" class="code" maxlength="20" autocomplete="off" autocapitalize="characters" placeholder="AB12CD"><button id="pwaJoin" class="primary">Davom etish</button><p id="pwaErr" class="err"></p><button id="pwaBack" class="secondary">← Orqaga</button>';$('pwaJoin').onclick=joinFamily;$('pwaBack').onclick=renderFamilyScreen};if($('premiumInfo'))$('premiumInfo').onclick=()=>{box.innerHTML=premiumMessage()+'<button id="premiumBack" class="secondary">← Orqaga</button>';$('premiumInfo').onclick=null;$('premiumBack').onclick=renderFamilyScreen};const list=$('familyList');if(!list)return;if(ownedFamilies.length===0){list.innerHTML='<div class="empty">Hali sizga tegishli oila yaratilmagan.<br>Yuqoridagi tugma orqali yangi kod yarating.</div>'}else{list.innerHTML='<h3 style="margin:18px 0 8px">Mening oilalarim '+(isPremium?'⭐ Premium':'(Free)')+'</h3>';ownedFamilies.forEach(d=>{const el=document.createElement('div');el.className='family-card';el.innerHTML='<b>Oila kodi: '+esc(d.id)+'</b><small>Saqlangan oila · Farzandlar bilan bog\u2018langan</small><button>Oila panelini ochish →</button>';el.querySelector('button').onclick=()=>{localStorage.setItem('family',d.id);family=d.id;loadChildren()};list.appendChild(el)})}}
@@ -329,7 +329,61 @@ async function shots(){const cd=await getDoc(doc(db,'families',family,'children'
 // uchun token yaratadi va so'rov hujjatiga yozadi. Panel shu token bilan Agora Web
 // SDK orqali kanalga tinglovchi bo'lib qo'shiladi. Sertifikat sahifada saqlanmaydi.
 let micClient=null,micUnsub=null,micActive=false,micRequestId=null,micTimer=null,micJoining=false;
+let micRemaining=0,micConnectedAt=0,micFlushed=0,micTicker=null,micLimitNote='';
 const MIC_HINT='Yoqsangiz, farzand qurilmasidan real vaqtda ovoz eshitiladi (internet orqali).';
+// Kunlik limit: har bir ota-ona hisobiga kuniga 30 daqiqa, Toshkent vaqti (UTC+5) bo'yicha
+// yarim tunda qayta tiklanadi. Adminlar uchun cheklov yo'q. Ma'lumot parents/{uid}
+// hujjatida (voiceDay, voiceSeconds) — Android ilova bilan umumiy.
+const VOICE_DAILY=30*60;
+const dayKey=()=>new Date(Date.now()+5*3600*1000).toISOString().slice(0,10);
+const fmtTime=x=>{x=Math.max(0,Math.floor(x));return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')};
+async function voiceRemaining(){
+  if(isAdminUser)return Infinity;
+  const snap=await getDoc(doc(db,'parents',auth.currentUser.uid));
+  const d=snap.exists()?snap.data():{};
+  const used=d.voiceDay===dayKey()?(Number(d.voiceSeconds)||0):0;
+  return Math.max(0,VOICE_DAILY-used);
+}
+async function addVoiceUsage(sec){
+  if(isAdminUser||sec<=0||!auth.currentUser)return;
+  const ref=doc(db,'parents',auth.currentUser.uid);
+  await runTransaction(db,async tx=>{
+    const snap=await tx.get(ref);
+    const d=snap.exists()?snap.data():{};
+    const today=dayKey();
+    const used=d.voiceDay===today?(Number(d.voiceSeconds)||0):0;
+    tx.set(ref,{voiceDay:today,voiceSeconds:used+sec},{merge:true});
+  });
+}
+async function refreshMicLimit(){
+  try{
+    const r=await voiceRemaining();
+    micLimitNote=isAdminUser?'<br>♾️ Cheksiz (admin)':'<br>⏱ Bugun qoldi: '+fmtTime(r)+' / '+fmtTime(VOICE_DAILY);
+  }catch(e){micLimitNote=''}
+  if(!micActive&&$('micTxt')&&!$('micTxt').dataset.busy)$('micTxt').innerHTML='<b>Ovoz eshitish o‘chirilgan</b>'+MIC_HINT+micLimitNote;
+}
+function micStartCounting(){
+  if(micTicker)return;
+  micConnectedAt=Date.now();micFlushed=0;
+  micTicker=setInterval(()=>{
+    if(!micActive||!micConnectedAt)return;
+    const el=$('micLeft');
+    if(isAdminUser){ if(el)el.textContent='♾️ Cheksiz (admin)'; return }
+    const elapsed=Math.floor((Date.now()-micConnectedAt)/1000);
+    const left=micRemaining-elapsed;
+    if(el)el.textContent='⏱ Qolgan vaqt: '+fmtTime(left);
+    if(elapsed-micFlushed>=15){ const dlt=elapsed-micFlushed;micFlushed=elapsed;addVoiceUsage(dlt).catch(()=>{}) }
+    if(left<=0)stopVoice('⏳ Kunlik 30 daqiqalik limit tugadi. Ertaga qayta tiklanadi.');
+  },1000);
+}
+function micStopCounting(){
+  if(micTicker){clearInterval(micTicker);micTicker=null}
+  if(!isAdminUser&&micConnectedAt){
+    const rest=Math.floor((Date.now()-micConnectedAt)/1000)-micFlushed;
+    if(rest>0)addVoiceUsage(rest).catch(()=>{});
+  }
+  micConnectedAt=0;micFlushed=0;
+}
 function setMicUi(html,btn,cls){
   if($('micTxt'))$('micTxt').innerHTML=html;
   if($('micBtn')){$('micBtn').textContent=btn;$('micBtn').className=cls}
@@ -338,6 +392,7 @@ function setMicUi(html,btn,cls){
 async function voice(){
   $('content').innerHTML='<div class="liveRow"><div class="liveTxt" id="micTxt"><b>Ovoz eshitish o‘chirilgan</b>Yoqsangiz, farzand qurilmasidan real vaqtda ovoz eshitiladi (internet orqali, to‘g‘ridan-to‘g‘ri).</div><button id="micBtn" class="liveBtn off">🎙️ Eshitishni boshlash</button></div><audio id="micAudio" autoplay playsinline style="display:none"></audio>';
   $('micBtn').onclick=()=>{ micActive?stopVoice():startVoice() };
+  refreshMicLimit();
 }
 
 function micRef(){ return doc(db,'families',family,'children',child,'mic_requests','current') }
@@ -346,6 +401,9 @@ async function startVoice(){
   if(micActive)return;
   micActive=true;micJoining=false;
   setMicUi('<b>Ulanmoqda…</b>Farzand qurilmasi bilan bog‘lanmoqda.','⏳ Ulanmoqda…','liveBtn on');
+  try{ micRemaining=await voiceRemaining() }
+  catch(e){ stopVoice('⚠️ Limitni tekshirib bo‘lmadi. Internetni tekshirib, qayta urinib ko‘ring',true); return }
+  if(micRemaining<=0){ stopVoice('⏳ Bugungi 30 daqiqalik limit tugadi. Ertaga qayta tiklanadi.',true); return }
   const requestId='web_'+Date.now();
   micRequestId=requestId;
   const channelName='oila_'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
@@ -379,7 +437,8 @@ async function joinAgora(d,channelName,requestId){
     await client.subscribe(user,'audio');
     user.audioTrack.play();
     if(micTimer){clearTimeout(micTimer);micTimer=null}
-    setMicUi('<b>🟢 Ovoz eshitilmoqda</b>Farzand qurilmasidan real vaqtda ovoz kelmoqda.','⏹ To‘xtatish','liveBtn on');
+    setMicUi('<b>🟢 Ovoz eshitilmoqda</b>Farzand qurilmasidan real vaqtda ovoz kelmoqda.<br><span id="micLeft"></span>','⏹ To‘xtatish','liveBtn on');
+    micStartCounting();
   });
   client.on('user-unpublished',(user,mediaType)=>{
     if(mediaType==='audio'&&micActive&&micClient===client)setMicUi('<b>⏳ Ovoz kutilmoqda…</b>Farzand qurilmasi qayta ulanmoqda.','⏹ To‘xtatish','liveBtn on');
@@ -393,6 +452,7 @@ async function joinAgora(d,channelName,requestId){
 
 async function stopVoice(msg,fromRemote){
   micActive=false;micJoining=false;
+  micStopCounting();
   if(micTimer){clearTimeout(micTimer);micTimer=null}
   if(micUnsub){micUnsub();micUnsub=null}
   if(!fromRemote&&micRequestId){
@@ -400,7 +460,8 @@ async function stopVoice(msg,fromRemote){
   }
   micRequestId=null;
   if(micClient){ const c=micClient; micClient=null; try{ c.removeAllListeners(); await c.leave() }catch(e){} }
-  setMicUi('<b>'+(msg||'Ovoz eshitish o‘chirilgan')+'</b>'+MIC_HINT,'🎙️ Eshitishni boshlash','liveBtn off');
+  setMicUi('<b>'+(msg||'Ovoz eshitish o‘chirilgan')+'</b>'+MIC_HINT+micLimitNote,'🎙️ Eshitishni boshlash','liveBtn off');
+  setTimeout(async()=>{ try{const r=await voiceRemaining();micLimitNote=isAdminUser?'<br>♾️ Cheksiz (admin)':'<br>⏱ Bugun qoldi: '+fmtTime(r)+' / '+fmtTime(VOICE_DAILY);if(!micActive&&$('micTxt')){const b=$('micTxt').querySelector('b');$('micTxt').innerHTML='<b>'+(b?b.innerHTML:'Ovoz eshitish o‘chirilgan')+'</b>'+MIC_HINT+micLimitNote}}catch(e){} },1500);
 }
 window.addEventListener('pagehide',()=>{ if(micActive&&micRequestId){ try{updateDoc(micRef(),{status:'stop_requested',updatedAt:Date.now()})}catch(e){} } });
 $('close').onclick=()=>$('lightbox').classList.remove('active');
