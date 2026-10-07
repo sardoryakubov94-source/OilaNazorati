@@ -1,13 +1,25 @@
 package uz.oilanazorati.parentcontrol.service
 
+import uz.oilanazorati.parentcontrol.BuildConfig
+
 /**
- * Agora (Ovoz funksiyasi uchun, WebRTC o'rniga — 3-oktabr).
+ * Agora (Ovoz funksiyasi). Agora Console'dagi loyiha "Secure" rejimda
+ * (App Certificate yoqilgan), shuning uchun har ulanishda token yaratiladi.
  *
- * "Testing mode: App ID"da ishlatiladi (token shart emas). Agar kelajakda
- * Agora Console'da xavfsizlik tokenini (token-based authentication) yoqsangiz,
- * bu yerga token generatsiya qiluvchi backend chaqiruvi qo'shish kerak bo'ladi
- * — hozircha App ID yetarli.
+ * APP_ID va APP_CERT build vaqtida GitHub Secrets'dan (AGORA_APP_ID,
+ * AGORA_APP_CERT) olinadi va repoda saqlanmaydi.
  */
 object AgoraConfig {
-    const val APP_ID = "a985be3f5ec247bb9d847d2938cf06f2"
+    private const val FALLBACK_APP_ID = "b70d448dd24b4570b12d420e916c62f1"
+
+    val APP_ID: String = BuildConfig.AGORA_APP_ID.ifBlank { FALLBACK_APP_ID }
+
+    private const val TOKEN_TTL_SECONDS = 2 * 60 * 60
+
+    /** Ulanish uchun token. Sertifikat berilmagan bo'lsa null (faqat testing rejim uchun). */
+    fun token(channelName: String): String? {
+        val cert = BuildConfig.AGORA_APP_CERT
+        if (cert.isBlank()) return null
+        return AgoraTokenBuilder.buildRtcToken(APP_ID, cert, channelName, 0, TOKEN_TTL_SECONDS)
+    }
 }

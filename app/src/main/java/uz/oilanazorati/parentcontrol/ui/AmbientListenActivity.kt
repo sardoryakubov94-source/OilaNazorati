@@ -254,7 +254,7 @@ class AmbientListenActivity : AppCompatActivity() {
                 }
             }
 
-            val joinResult = rtc.joinChannel(null, channelName, 0, options)
+            val joinResult = rtc.joinChannel(AgoraConfig.token(channelName), channelName, 0, options)
             if (joinResult != Constants.ERR_OK) {
                 throw IllegalStateException("Agora joinChannel failed: $joinResult")
             }
