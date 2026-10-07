@@ -170,7 +170,11 @@ class AgoraMicService : Service() {
             options.publishMicrophoneTrack = true
             options.autoSubscribeAudio = false
             options.autoSubscribeVideo = false
-            val joinResult = rtc.joinChannel(AgoraConfig.token(channelName), channelName, 0, options)
+            val token = AgoraConfig.token(channelName)
+            // Veb-panel (iPhone/kompyuter) shu token bilan kanalga tinglovchi bo'lib kiradi.
+            // Sertifikat veb-sahifada saqlanmaydi — token faqat shu oila hujjatida turadi.
+            publishWebToken(requestId, token)
+            val joinResult = rtc.joinChannel(token, channelName, 0, options)
             if (joinResult != Constants.ERR_OK) {
                 throw IllegalStateException("Agora joinChannel failed: $joinResult")
             }
@@ -178,6 +182,16 @@ class AgoraMicService : Service() {
             crashlytics.recordException(t)
             stopSession("failed", t.message ?: "Agora ishga tushmadi")
         }
+    }
+
+    private fun publishWebToken(requestId: String, token: String?) {
+        val family = FirebaseRepo.familyCode ?: return
+        val child = FirebaseRepo.childId ?: FirebaseAuth.getInstance().currentUser?.uid ?: return
+        if (token.isNullOrBlank()) return
+        db.collection("families").document(family).collection("children").document(child)
+            .collection("mic_requests").document("current")
+            .update(mapOf("requestId" to requestId, "agoraAppId" to AgoraConfig.APP_ID, "agoraToken" to token))
+            .addOnFailureListener { crashlytics.recordException(it) }
     }
 
     private fun stopSession(status: String, error: String? = null) {

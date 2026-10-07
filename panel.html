@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#111827"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Oila Nazorati">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="agora-rtc.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f5f7fb;color:#111827;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{max-width:720px;margin:auto;padding:0 14px}.top{position:sticky;top:0;z-index:20;background:rgba(245,247,251,.96);backdrop-filter:blur(18px);border-bottom:1px solid #e3e8ef}.head{height:68px;display:flex;align-items:center;gap:10px}.logo{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;overflow:hidden}.head b{font-size:16px}.head small{display:block;color:#8993a2;font-size:11px}.head button{margin-left:auto;border:1px solid #dce2eb;background:#fff;border-radius:10px;padding:8px 11px;font-weight:800;color:#596578}.screen{display:none;padding:24px 0 100px}.screen.active{display:block}.card{background:#fff;border:1px solid #e1e6ee;border-radius:22px;padding:22px;box-shadow:0 12px 40px #1018280d}h1,h2{letter-spacing:-.035em;margin:0 0 10px}h1{font-size:29px}h2{font-size:23px}.muted{color:#697586;font-size:14px;line-height:1.6}.primary{width:100%;border:0;border-radius:13px;background:#111827;color:#fff;padding:14px;font-size:14px;font-weight:850;cursor:pointer}.code{width:100%;padding:14px;border:1px solid #dce2eb;border-radius:13px;text-align:center;font-size:18px;font-weight:850;letter-spacing:.12em;margin:8px 0 12px}.err{color:#dc2626;font-size:13px;margin:10px 0}.hero{background:linear-gradient(145deg,#111827,#26364d);color:#fff;border-radius:24px;padding:24px;margin-bottom:14px}.hero p{color:#c6d0dc}.hero button{background:#fff;color:#111827;border:0;border-radius:12px;padding:12px 16px;font-weight:850}.steps{display:grid;gap:9px;margin:15px 0}.step{display:flex;gap:12px;padding:13px;border:1px solid #e3e8ef;border-radius:14px;background:#fff}.num{min-width:30px;height:30px;border-radius:9px;background:#eef2ff;color:#4d6fd6;display:grid;place-items:center;font-weight:900}.step b{font-size:13px}.step p{margin:3px 0 0;color:#697586;font-size:12px}.children{display:grid;gap:10px}.child{width:100%;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid #e1e6ee;background:#fff;border-radius:16px;padding:15px}.av{width:42px;height:42px;border-radius:12px;background:#eef2ff;color:#4d6fd6;display:grid;place-items:center;font-weight:900}.child b{display:block}.child small{color:#8993a2}.title{display:flex;align-items:center;gap:10px;margin-bottom:15px}.title button{margin-left:auto;border:0;background:none;color:#4d6fd6;font-weight:800}.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:16px}.tabs button{border:1px solid #dce2eb;background:#fff;color:#596578;border-radius:13px;padding:12px 3px 10px;font-size:10px;font-weight:850}.tabs button.active{background:#111827;color:#fff;border-color:#111827}
@@ -323,12 +324,16 @@ async function risk(){const x=await sub('risk_events','capturedAt',100);$('conte
 }).join(''):'<div class="empty">Hozircha jiddiy xavf signali aniqlanmadi.</div>')}
 async function shots(){const cd=await getDoc(doc(db,'families',family,'children',child));const cv=cd.data()||{};const active=cv.screenProjectionActive===true;const upd=cv.screenProjectionUpdatedAt;const bannerText=active?'🟢 Ekran nazorati ulangan':'🔴 Ekran nazorati ulanmagan'+(upd?' ('+fmt(upd)+')':'')+' — farzand qurilmasida ilova ochilishi kerak';const banner='<div class="empty" style="margin-bottom:12px;text-align:left">'+bannerText+'</div>';const q=query(collection(db,'families',family,'children',child,'screenshots'),orderBy('capturedAt','desc'),limit(100));const x=(await getDocs(q)).docs.map(d=>({id:d.id,...d.data()}));$('content').innerHTML=banner+(x.length?'<div class="ssgrid">'+x.map(v=>'<button class="ss" data-id="'+esc(v.id)+'">▣<small>'+esc(v.appLabel||'Ilova')+'</small><small>'+fmt(v.capturedAt)+'</small></button>').join('')+'</div>':'<div class="empty">Screenshot topilmadi.</div>');document.querySelectorAll('.ss').forEach(b=>b.onclick=async()=>{try{const d=await getDoc(doc(db,'families',family,'children',child,'screenshot_data',b.dataset.id));const v=d.data();const blob=v?.image;if(blob){const b64=typeof blob.toBase64==='function'?blob.toBase64():btoa(String.fromCharCode(...blob.toUint8Array()));$('shot').src='data:image/jpeg;base64,'+b64;$('lightbox').classList.add('active')}}catch(e){console.error(e)}})}
 
-// --- Ovoz (WebRTC jonli eshitish) ---
-// Firestore'ga faqat signalizatsiya ma'lumotlari (SDP taklif/javob va ICE
-// manzillari — bir necha kilobayt) yoziladi, ovozning o'zi esa to'g'ridan-to'g'ri
-// (peer-to-peer) uzatiladi. Bu eski usuldan farqli o'laroq Firestore
-// yozish/o'qish limitini deyarli sarflamaydi.
-let micPc=null,micUnsub=null,micActive=false,micRequestId=null,micAppliedCandidates=new Set(),micDocReady=false,micPendingCandidates=[];
+// --- Ovoz (Agora jonli eshitish) ---
+// So'rov Firestore'ga yoziladi; farzand qurilmasi Agora kanaliga kirib, shu kanal
+// uchun token yaratadi va so'rov hujjatiga yozadi. Panel shu token bilan Agora Web
+// SDK orqali kanalga tinglovchi bo'lib qo'shiladi. Sertifikat sahifada saqlanmaydi.
+let micClient=null,micUnsub=null,micActive=false,micRequestId=null,micTimer=null,micJoining=false;
+const MIC_HINT='Yoqsangiz, farzand qurilmasidan real vaqtda ovoz eshitiladi (internet orqali).';
+function setMicUi(html,btn,cls){
+  if($('micTxt'))$('micTxt').innerHTML=html;
+  if($('micBtn')){$('micBtn').textContent=btn;$('micBtn').className=cls}
+}
 
 async function voice(){
   $('content').innerHTML='<div class="liveRow"><div class="liveTxt" id="micTxt"><b>Ovoz eshitish o‘chirilgan</b>Yoqsangiz, farzand qurilmasidan real vaqtda ovoz eshitiladi (internet orqali, to‘g‘ridan-to‘g‘ri).</div><button id="micBtn" class="liveBtn off">🎙️ Eshitishni boshlash</button></div><audio id="micAudio" autoplay playsinline style="display:none"></audio>';
@@ -339,73 +344,65 @@ function micRef(){ return doc(db,'families',family,'children',child,'mic_request
 
 async function startVoice(){
   if(micActive)return;
-  micActive=true;
-  micAppliedCandidates=new Set();
-  micDocReady=false;
-  micPendingCandidates=[];
-  if($('micTxt'))$('micTxt').innerHTML='<b>Ulanmoqda…</b>Farzand qurilmasi bilan bog‘lanmoqda.';
-  if($('micBtn')){$('micBtn').textContent='⏳ Ulanmoqda…';$('micBtn').className='liveBtn on'}
+  micActive=true;micJoining=false;
+  setMicUi('<b>Ulanmoqda…</b>Farzand qurilmasi bilan bog‘lanmoqda.','⏳ Ulanmoqda…','liveBtn on');
   const requestId='web_'+Date.now();
   micRequestId=requestId;
+  const channelName='oila_'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
   try{
-    micPc=new RTCPeerConnection({iceServers:[
-      {urls:'stun:stun.l.google.com:19302'},
-      {urls:'stun:stun1.l.google.com:19302'},
-      {urls:'stun:stun.relay.metered.ca:80'},
-      {urls:'turn:standard.relay.metered.ca:80',username:'af995878e6ecdbb7cba4b5c7',credential:'osjSuj4NtjUsvY99'},
-      {urls:'turn:standard.relay.metered.ca:80?transport=tcp',username:'af995878e6ecdbb7cba4b5c7',credential:'osjSuj4NtjUsvY99'},
-      {urls:'turn:standard.relay.metered.ca:443',username:'af995878e6ecdbb7cba4b5c7',credential:'osjSuj4NtjUsvY99'},
-      {urls:'turns:standard.relay.metered.ca:443?transport=tcp',username:'af995878e6ecdbb7cba4b5c7',credential:'osjSuj4NtjUsvY99'}
-    ]});
-    micPc.addTransceiver('audio',{direction:'recvonly'});
-    micPc.ontrack=(e)=>{ const a=$('micAudio'); if(a)a.srcObject=e.streams[0] };
-    micPc.onicecandidate=(e)=>{
-      if(!e.candidate)return;
-      const c={candidate:e.candidate.candidate,sdpMid:e.candidate.sdpMid,sdpMLineIndex:e.candidate.sdpMLineIndex};
-      if(micDocReady)updateDoc(micRef(),{parentCandidates:arrayUnion(c)}).catch(()=>{});
-      else micPendingCandidates.push(c);
-    };
-    micPc.onconnectionstatechange=()=>{
-      if(!micPc)return;
-      if(micPc.connectionState==='connected'){ if($('micTxt'))$('micTxt').innerHTML='<b>🟢 Ovoz eshitilmoqda</b>Farzand qurilmasidan real vaqtda ovoz kelmoqda.'; if($('micBtn')){$('micBtn').textContent='⏹ To‘xtatish';$('micBtn').className='liveBtn on'} }
-      if(micPc.connectionState==='failed'||micPc.connectionState==='disconnected'||micPc.connectionState==='closed'){ if(micActive)stopVoice('🔴 Ulanish uzildi') }
-    };
-    const offer=await micPc.createOffer();
-    await micPc.setLocalDescription(offer);
-    await setDoc(micRef(),{requestId,status:'requested',transport:'webrtc',webrtcOffer:offer.sdp,parentCandidates:[],childCandidates:[],updatedAt:Date.now()});
-    micDocReady=true;
-    micPendingCandidates.forEach(c=>updateDoc(micRef(),{parentCandidates:arrayUnion(c)}).catch(()=>{}));
-    micPendingCandidates=[];
-    micUnsub=onSnapshot(micRef(),(snap)=>{
-      const d=snap.data(); if(!d||d.requestId!==requestId||!micPc)return;
+    if(typeof AgoraRTC==='undefined')throw new Error('Agora kutubxonasi yuklanmadi, sahifani yangilang');
+    AgoraRTC.setLogLevel(3);
+    AgoraRTC.onAudioAutoplayFailed=()=>{ if(micActive)setMicUi('<b>🔈 Ovozni yoqish uchun ekranga bir marta bosing</b>Brauzer ovozni avtomatik yoqishga ruxsat bermadi.','⏹ To‘xtatish','liveBtn on') };
+    await setDoc(micRef(),{requestId,status:'requested',transport:'agora',channelName,requestedByUid:auth.currentUser?auth.currentUser.uid:'',updatedAt:Date.now()});
+    micTimer=setTimeout(()=>{ if(micActive)stopVoice('🔴 Farzand qurilmasi javob bermadi (internet yoki ilova o‘chiq)') },30000);
+    micUnsub=onSnapshot(micRef(),async(snap)=>{
+      const d=snap.data(); if(!d||d.requestId!==requestId||!micActive)return;
       if(d.status==='failed'){ stopVoice('🔴 '+(d.error||'Ulanmadi'),true); return }
-      if(d.webrtcAnswer&&!micPc.currentRemoteDescription){
-        micPc.setRemoteDescription({type:'answer',sdp:d.webrtcAnswer}).catch(e=>console.error(e));
+      if(d.status==='stopped'){ stopVoice('Ovoz to‘xtatildi',true); return }
+      if(d.agoraToken&&d.agoraAppId&&!micClient&&!micJoining){
+        micJoining=true;
+        try{ await joinAgora(d,channelName,requestId) }
+        catch(e){ console.error(e); if(micActive&&micRequestId===requestId)stopVoice('🔴 Ulanishda xato: '+(e.message||e)) }
       }
-      (d.childCandidates||[]).forEach(c=>{
-        if(!c||!c.candidate||micAppliedCandidates.has(c.candidate))return;
-        micAppliedCandidates.add(c.candidate);
-        micPc.addIceCandidate({candidate:c.candidate,sdpMid:c.sdpMid,sdpMLineIndex:c.sdpMLineIndex}).catch(()=>{});
-      });
-    });
+    },e=>{ if(micActive)stopVoice('🔴 '+(e.message||'Ulanish xatosi')) });
   }catch(e){
     console.error(e);
-    stopVoice('🔴 Ulanishda xato: '+(e.message||e));
+    stopVoice(e&&e.code==='permission-denied'?'🔒 Ovoz eshitish faqat Premium uchun':'🔴 Ulanishda xato: '+(e.message||e),true);
   }
 }
 
+async function joinAgora(d,channelName,requestId){
+  const client=AgoraRTC.createClient({mode:'live',codec:'vp8'});
+  micClient=client;
+  client.on('user-published',async(user,mediaType)=>{
+    if(mediaType!=='audio'||!micActive||micClient!==client)return;
+    await client.subscribe(user,'audio');
+    user.audioTrack.play();
+    if(micTimer){clearTimeout(micTimer);micTimer=null}
+    setMicUi('<b>🟢 Ovoz eshitilmoqda</b>Farzand qurilmasidan real vaqtda ovoz kelmoqda.','⏹ To‘xtatish','liveBtn on');
+  });
+  client.on('user-unpublished',(user,mediaType)=>{
+    if(mediaType==='audio'&&micActive&&micClient===client)setMicUi('<b>⏳ Ovoz kutilmoqda…</b>Farzand qurilmasi qayta ulanmoqda.','⏹ To‘xtatish','liveBtn on');
+  });
+  client.on('connection-state-change',(cur)=>{
+    if(cur==='DISCONNECTED'&&micActive&&micRequestId===requestId&&micClient===client)stopVoice('🔴 Ulanish uzildi');
+  });
+  await client.setClientRole('audience');
+  await client.join(d.agoraAppId,channelName,d.agoraToken,null);
+}
+
 async function stopVoice(msg,fromRemote){
-  micActive=false;
+  micActive=false;micJoining=false;
+  if(micTimer){clearTimeout(micTimer);micTimer=null}
   if(micUnsub){micUnsub();micUnsub=null}
   if(!fromRemote&&micRequestId){
     updateDoc(micRef(),{status:'stop_requested',updatedAt:Date.now()}).catch(()=>{});
   }
   micRequestId=null;
-  if(micPc){ try{micPc.close()}catch(e){} micPc=null }
-  const audio=$('micAudio'); if(audio)audio.srcObject=null;
-  if($('micTxt'))$('micTxt').innerHTML='<b>'+(msg||'Ovoz eshitish o‘chirilgan')+'</b>Yoqsangiz, farzand qurilmasidan real vaqtda ovoz eshitiladi (internet orqali, to‘g‘ridan-to‘g‘ri).';
-  if($('micBtn')){$('micBtn').textContent='🎙️ Eshitishni boshlash';$('micBtn').className='liveBtn off'}
+  if(micClient){ const c=micClient; micClient=null; try{ c.removeAllListeners(); await c.leave() }catch(e){} }
+  setMicUi('<b>'+(msg||'Ovoz eshitish o‘chirilgan')+'</b>'+MIC_HINT,'🎙️ Eshitishni boshlash','liveBtn off');
 }
+window.addEventListener('pagehide',()=>{ if(micActive&&micRequestId){ try{updateDoc(micRef(),{status:'stop_requested',updatedAt:Date.now()})}catch(e){} } });
 $('close').onclick=()=>$('lightbox').classList.remove('active');
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(console.error);
 </script>
