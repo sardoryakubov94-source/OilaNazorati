@@ -95,6 +95,23 @@ android {
         viewBinding true
         buildConfig true
     }
+    // APK hajmini kamaytirish: Agora'ning ixtiyoriy "extension" kutubxonalari
+    // (fazoviy ovoz, AI shovqin/exo bostirish, ffmpeg, ovoz effektlari).
+    // Ilova faqat oddiy mikrofon->tinglash uchun Agora'dan foydalanadi va bu
+    // funksiyalarning birortasini chaqirmaydi, shuning uchun ular kerak emas
+    // (Agora hujjatlarida ham ishlatilmasa o'chirish tavsiya etilgan).
+    // Kerak bo'lib qolsa, tegishli qatorni shu yerdan olib tashlash kifoya.
+    packaging {
+        jniLibs {
+            excludes += [
+                '**/libagora_spatial_audio_extension.so',
+                '**/libagora_ai_noise_suppression_extension.so',
+                '**/libagora_ai_echo_cancellation_extension.so',
+                '**/libagora_ffmpeg_extension.so',
+                '**/libagora_audio_beauty_extension.so'
+            ]
+        }
+    }
     androidResources {
         // nsfw_classifier.tflite mmap orqali (FileChannel.map) to'g'ridan-to'g'ri
         // o'qiladi — bu APK ichida siqilmagan holda saqlanishini talab qiladi,
