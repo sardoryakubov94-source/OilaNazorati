@@ -9,6 +9,7 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.Typeface
 import android.os.Bundle
 import android.view.Gravity
+import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.firestore.ListenerRegistration
@@ -39,7 +40,7 @@ class RiskAlertsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(20))
+            setPadding(dp(16), dp(14), dp(16), 0)
             setBackgroundColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_bg))
         }
         val header = LinearLayout(this).apply {
@@ -67,14 +68,24 @@ class RiskAlertsActivity : AppCompatActivity() {
             isAllCaps = false
             setOnClickListener { finish() }
         })
+        // Sarlavha (Xavfsizlik signallari + Orqaga) doim yuqorida turadi.
         root.addView(header)
-        root.addView(TextView(this).apply {
-            text = "Faqat muhim xavf signallari ko'rsatiladi: 18+ video yoki rasmlar bola tomonidan izlansa yoki ko'rilsa, intim suhbatlar olib borilsa, intim video yoki rasmlar yuborilsa yoki qabul qilinsa, o'z joniga qasd qilish yoki giyohvand moddalari bo'yicha bola telefonida aktiv qidiruv yoki suhbat olib borilganda — ushbu bo'limda barchasi qayd etiladi. Skrinshotlar va suhbatlarni ota-onalar shu yerda ko'rishlari mumkin."
+
+        // Izoh matni ro'yxat bilan birga yuqoriga siljiydi va sarlavha ostida yo'qoladi;
+        // "Ogohlantirish" / "Screenshot" bo'limlari esa sarlavha tagida qotib qoladi.
+        // Shunda ro'yxatga ko'proq ekran joyi qoladi.
+        val description = TextView(this).apply {
+            text = "Faqat muhim xavf signallari ko'rsatiladi: 18+ video yoki rasmlar bola tomonidan izlansa yoki ko'rilsa, intim suhbatlar olib borilsa, intim video yoki rasmlar yuborilsa yoki qabul qilinsa, 1XBET va boshqa qimor o'yinlari ochilsa yoki qidirilsa, o'z joniga qasd qilish yoki giyohvand moddalari bo'yicha bola telefonida aktiv qidiruv yoki suhbat olib borilganda — ushbu bo'limda barchasi qayd etiladi. Skrinshotlar va suhbatlarni ota-onalar shu yerda ko'rishlari mumkin."
             textSize = 12f
             setTextColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
             setPadding(0, dp(6), 0, dp(12))
-        })
-        val tabRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        }
+        val tabsHeight = dp(58)
+        val tabRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, 0, 0, dp(10))
+            setBackgroundColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_bg))
+        }
         tabAlerts = tabButton("⚠️ Ogohlantirish") { selectTab("alerts") }.apply {
             layoutParams = LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginEnd = dp(6) }
         }
@@ -83,11 +94,28 @@ class RiskAlertsActivity : AppCompatActivity() {
         }
         tabRow.addView(tabAlerts)
         tabRow.addView(tabShots)
-        root.addView(tabRow, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(10) })
+
         val scroll = ScrollView(this)
-        list = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        scroll.addView(list)
-        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        val content = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        content.addView(description)
+        // Bo'limlar tugmalari uchun joy (haqiqiy tugmalar ustida suzib turadi)
+        val tabSpacer = View(this)
+        content.addView(tabSpacer, LinearLayout.LayoutParams(-1, tabsHeight))
+        list = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, 0, 0, dp(20))
+        }
+        content.addView(list)
+        scroll.addView(content)
+
+        val frame = FrameLayout(this)
+        frame.addView(scroll, FrameLayout.LayoutParams(-1, -1))
+        frame.addView(tabRow, FrameLayout.LayoutParams(-1, tabsHeight))
+        root.addView(frame, LinearLayout.LayoutParams(-1, 0, 1f))
+
+        val stickTabs = { tabRow.translationY = maxOf(0, tabSpacer.top - scroll.scrollY).toFloat() }
+        scroll.viewTreeObserver.addOnScrollChangedListener { stickTabs() }
+        tabSpacer.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> stickTabs() }
         setContentView(root)
         updateTabStyles()
         listener = FirebaseRepo.listenRiskEvents { events ->

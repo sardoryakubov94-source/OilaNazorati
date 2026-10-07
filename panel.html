@@ -314,7 +314,7 @@ async function apps(){const x=await sub('app_usage','boshlanishMs',300);
   $('content').innerHTML='<h3 style="margin:4px 0 8px">Eng ko\\u2018p ishlatilgan ilovalar</h3>'+top+'<h3 style="margin:18px 0 8px">So\\u2018nggi faoliyat</h3>'+recent;
 }
 async function notif(){const x=await sub('notifications','vaqtMs',100);$('content').innerHTML=x.length?x.map(v=>'<div class="row"><div class="rowtop"><b>'+esc(v.ilovaNomi||v.ilovaPaket||'Ilova')+'</b><span class="badge">'+fmt(v.vaqtMs)+'</span></div><p>'+esc(v.sarlavha||'')+(v.matn?' — '+esc(v.matn):'')+'</p></div>').join(''):'<div class="empty">Bildirishnomalar topilmadi.</div>'}
-async function riskAlertsHtml(){const x=await sub('risk_events','capturedAt',100);return '<div class="empty" style="margin-bottom:12px;text-align:left">Faqat muhim xavf signallari ko\u2018rsatiladi: 18+ tasvir/video, intim suhbat yoki media, o\u2018z joniga qasd yoki giyohvand moddalar bo\u2018yicha aktiv qidiruv/suhbat aniqlansa — shu yerda qayd etiladi.</div>'+(x.length?x.map(v=>{
+async function riskAlertsHtml(){const x=await sub('risk_events','capturedAt',100);return '<div class="empty" style="margin-bottom:12px;text-align:left">Faqat muhim xavf signallari ko\u2018rsatiladi: 18+ tasvir/video, intim suhbat yoki media, 1XBET va boshqa qimor o\u2018yinlari ochilsa yoki qidirilsa, o\u2018z joniga qasd yoki giyohvand moddalar bo\u2018yicha aktiv qidiruv/suhbat aniqlansa — shu yerda qayd etiladi.</div>'+(x.length?x.map(v=>{
   const high=v.severity==='HIGH';
   const dot=high?'🔴':'🟠';
   const sevClass=high?'miss':'out';
