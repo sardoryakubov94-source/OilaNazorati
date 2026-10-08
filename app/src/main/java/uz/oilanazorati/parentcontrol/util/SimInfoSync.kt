@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import uz.oilanazorati.parentcontrol.model.RiskEvent
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 
 /**
@@ -63,6 +64,9 @@ object SimInfoSync {
     private const val KEY_FINGERPRINT = "fingerprint"
     private const val KEY_LAST_WRITE_MS = "last_write_ms"
     private const val KEY_CONFIRMED_NUMBER = "confirmed_number" // 1-usul (Hint) natijasi — asosiy/1-SIM uchun
+    private const val KEY_CONFIRMED_SUB_ID = "confirmed_sub_id" // Hint raqami qaysi SIM (subscription) uchun tasdiqlangan
+    private const val KEY_SIM_SET = "sim_set" // oxirgi muvaffaqiyatli yozilgan SIM'lar to'plami (almashtirishni aniqlash uchun)
+    private const val SIM_SWAP_MIN_GAP_MS = 10_000L // SIM almashganda 30 daqiqalik himoya o'rniga faqat shu qisqa oraliq
     private const val KEY_NUMBER_PREFIX = "number_" // 2-usul (USSD) natijasi — subscriptionId bo'yicha aniq
     private const val KEY_USSD_TRIES_PREFIX = "ussd_tries_"
     private const val KEY_USSD_LAST_TRY_PREFIX = "ussd_last_try_"
@@ -156,12 +160,18 @@ object SimInfoSync {
         }
 
         val confirmedPrimaryNumber = prefs.getString(KEY_CONFIRMED_NUMBER, "") ?: ""
+        // Eski o'rnatishlarda Hint raqami SIM'ga bog'lanmagan edi — hozirgi 1-SIM'ga bog'laymiz.
+        if (confirmedPrimaryNumber.isNotBlank() && !prefs.contains(KEY_CONFIRMED_SUB_ID) && subscriptions.isNotEmpty()) {
+            prefs.edit().putInt(KEY_CONFIRMED_SUB_ID, subscriptions[0].subscriptionId).apply()
+        }
+        val confirmedSubId = prefs.getInt(KEY_CONFIRMED_SUB_ID, Int.MIN_VALUE)
 
-        val sims = subscriptions.mapIndexed { index, info ->
+        val sims = subscriptions.map { info ->
             val perSubscriptionNumber = prefs.getString(KEY_NUMBER_PREFIX + info.subscriptionId, "") ?: ""
-            // 2-usul (USSD, aniq subscription'ga bog'langan) ustunroq;
-            // topilmasa 1-usul (Hint, faqat 1-SIM uchun) ishlatiladi.
-            val number = perSubscriptionNumber.ifBlank { if (index == 0) confirmedPrimaryNumber else "" }
+            // USSD/to'g'ridan-to'g'ri natija (aniq subscription'ga bog'langan) ustunroq; topilmasa
+            // Hint raqami — FAQAT shu raqam tasdiqlangan SIM'ga (SIM almashsa eski raqam yangi SIM'ga
+            // yopishib qolmasligi uchun).
+            val number = perSubscriptionNumber.ifBlank { if (confirmedSubId == info.subscriptionId) confirmedPrimaryNumber else "" }
             mapOf(
                 "slot" to info.simSlotIndex,
                 "subscriptionId" to info.subscriptionId,
@@ -179,11 +189,25 @@ object SimInfoSync {
 
         // 1-himoya: hech narsa o'zgarmagan bo'lsa — yozilmaydi.
         val sameAsLastWritten = prefs.getString(KEY_FINGERPRINT, null) == fingerprint
+
+        // SIM'lar to'plami (qo'shildi / olib tashlandi / almashtirildi) — raqam topilishidan farqli,
+        // bu haqiqiy SIM almashishi: ota-onaga DARHOL ma'lum qilinadi.
+        val simSet = subscriptions.map { it.subscriptionId }.sorted().joinToString(",")
+        var previousSimSet = prefs.getString(KEY_SIM_SET, null)
+        if (previousSimSet == null && sameAsLastWritten) {
+            prefs.edit().putString(KEY_SIM_SET, simSet).apply() // eski o'rnatish: jim bazaviy qiymat
+            previousSimSet = simSet
+        }
+        val simSwapped = previousSimSet != null && previousSimSet != simSet
+
         if (!sameAsLastWritten) {
-            // 2-himoya: "o'zgarish" juda tez-tez qayd etilsa ham, oxirgi
-            // yozuvdan beri MIN_WRITE_INTERVAL_MS o'tmaguncha yozilmaydi.
+            // 2-himoya: "o'zgarish" juda tez-tez qayd etilsa ham, oxirgi yozuvdan beri
+            // MIN_WRITE_INTERVAL_MS o'tmaguncha yozilmaydi — LEKIN haqiqiy SIM almashishi bundan
+            // mustasno (faqat qisqa SIM_SWAP_MIN_GAP_MS oraliq), aks holda ota-ona 30 daqiqagacha
+            // bilmay qolishi mumkin edi.
             val lastWriteMs = prefs.getLong(KEY_LAST_WRITE_MS, 0L)
-            if (nowMs - lastWriteMs >= MIN_WRITE_INTERVAL_MS) {
+            val gap = nowMs - lastWriteMs
+            if (gap >= MIN_WRITE_INTERVAL_MS || (simSwapped && gap >= SIM_SWAP_MIN_GAP_MS)) {
                 val childRef = FirebaseFirestore.getInstance()
                     .collection("families").document(familyCode)
                     .collection("children").document(childId)
@@ -200,7 +224,9 @@ object SimInfoSync {
                         prefs.edit()
                             .putString(KEY_FINGERPRINT, fingerprint)
                             .putLong(KEY_LAST_WRITE_MS, nowMs)
+                            .putString(KEY_SIM_SET, simSet)
                             .apply()
+                        if (simSwapped) logSimChange(sims)
                     }
             }
         }
@@ -214,6 +240,29 @@ object SimInfoSync {
             val hasNumber = !(prefs.getString(KEY_NUMBER_PREFIX + info.subscriptionId, "").isNullOrBlank())
             if (!hasNumber) handler.postDelayed({ maybeAttemptUssdLookup(context, info) }, index * USSD_SIM_STAGGER_MS)
         }
+    }
+
+    /** SIM almashganini "Xavfsizlik signallari" ro'yxatiga qizil signal sifatida yozadi. */
+    private fun logSimChange(sims: List<Map<String, Any>>) {
+        val now = System.currentTimeMillis()
+        val current = if (sims.isEmpty()) "SIM kartasi yo'q" else sims.joinToString(", ") { sim ->
+            val op = sim["operator"] as? String ?: "Noma'lum operator"
+            val num = (sim["phoneNumber"] as? String).orEmpty()
+            if (num.isBlank()) op else "$op ($num)"
+        }
+        FirebaseRepo.logRiskEvent(
+            RiskEvent(
+                id = "sim_$now",
+                category = "SIM_CHANGE",
+                severity = "HIGH",
+                confidence = 100,
+                source = "sim",
+                appName = "SIM karta",
+                summary = "SIM karta almashtirildi yoki olib tashlandi",
+                contextText = "Hozirgi SIM: $current",
+                capturedAt = now
+            )
+        )
     }
 
     private fun resetUssdCountersIfCodesChanged(prefs: android.content.SharedPreferences) {
@@ -247,9 +296,13 @@ object SimInfoSync {
      * fingerprint+vaqt himoyasidan o'tadi. */
     fun applyConfirmedNumber(context: Context, number: String) {
         if (number.isBlank()) return
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+        val firstSubId = try {
+            context.getSystemService(SubscriptionManager::class.java)?.activeSubscriptionInfoList?.firstOrNull()?.subscriptionId
+        } catch (_: Throwable) { null }
+        val editor = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString(KEY_CONFIRMED_NUMBER, number.trim())
-            .apply()
+        if (firstSubId != null) editor.putInt(KEY_CONFIRMED_SUB_ID, firstSubId) else editor.remove(KEY_CONFIRMED_SUB_ID)
+        editor.apply()
         syncNow(context)
     }
 
