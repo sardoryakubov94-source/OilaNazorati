@@ -117,51 +117,55 @@ object RiskAnalysisEngine {
         return ignoredSourcePackages.any { p.contains(it) }
     }
 
+    private fun termsOf(summary: String): List<String> =
+        Regex("aniqlangan so'z: (.*)\\)").find(summary)?.groupValues?.get(1)
+            ?.split(",")?.map { it.trim().lowercase(Locale.ROOT) }?.filter { it.isNotEmpty() } ?: emptyList()
+
+    /** Eski so'z-asosli signal tizim/klaviatura oynasidan kelgan bo'lsa — takror/shovqin, yashiriladi. */
+    fun isNoiseSource(summary: String, packageName: String): Boolean =
+        summary.contains("(aniqlangan so'z:") && isIgnoredPackage(packageName)
+
     /**
-     * Avval saqlangan (eski) so'z-asosli signallar ham yangi qoidalarga mos kelmasa — ro'yxatda
-     * ko'rsatilmaydi (ma'lumot o'chirilmaydi). Rasm/video tahlilidan kelgan signallarga tegilmaydi.
+     * Avval QIZIL deb saqlangan, lekin faqat bitta noaniq (zaif) so'zdan chiqqan eski signallar
+     * ro'yxatda SARIQ ko'rsatiladi (ma'lumotning o'zi o'zgarmaydi).
      */
-    fun isLikelyFalseAlarm(severity: String, summary: String, packageName: String): Boolean {
-        if (!summary.contains("(aniqlangan so'z:")) return false
-        if (severity != "HIGH") return true
-        if (isIgnoredPackage(packageName)) return true
-        val terms = Regex("aniqlangan so'z: (.*)\\)").find(summary)?.groupValues?.get(1)
-            ?.split(",")?.map { it.trim().lowercase(Locale.ROOT) }?.filter { it.isNotEmpty() } ?: return false
-        return terms.isNotEmpty() && terms.size < 2 && terms.all { it in weakTermSet }
+    fun effectiveSeverity(severity: String, summary: String): String {
+        if (severity != "HIGH" || !summary.contains("(aniqlangan so'z:")) return severity
+        val terms = termsOf(summary)
+        return if (terms.size == 1 && terms[0] in weakTermSet) "MEDIUM" else severity
     }
 
     fun analyze(vararg rawParts: String): RiskAnalysis? {
         val text = rawParts.filter { it.isNotBlank() }.joinToString(" ").lowercase(Locale.ROOT)
         if (text.isBlank()) return null
 
+        // Ikki daraja:
+        //  • QIZIL (HIGH)   — aniq/kuchli so'z (porno, 1xbet, narkotik, o'z joniga qasd va h.k.)
+        //  • SARIQ (MEDIUM) — faqat oddiy so'z ichida kelgan noaniq (zaif) so'z ("18+", "sex",
+        //    "intim", "drug" ...): aniq xavfli mazmun tasdiqlanmagan, shuning uchun sariq.
+        data class Match(val rule: Rule, val hits: List<String>, val weakOnly: Boolean)
         val matches = rules.mapNotNull { rule ->
             val strong = rule.terms.filter { term -> containsWholeTerm(text, term) }
             val weak = rule.weakTerms.filter { term -> containsWholeTerm(text, term) }
-            // Bitta zaif so'z ("18+", "sex" va h.k.) yolg'iz o'zi yolg'on signal beradi — talab qilinadi:
-            // kamida bitta kuchli so'z YOKI kamida ikkita zaif so'z.
-            if (strong.isEmpty() && weak.size < 2) null
-            else (strong + weak).let { hits -> Triple(rule, hits.size, hits) }
-        }.sortedByDescending { it.first.weight * it.second }
+            if (strong.isEmpty() && weak.isEmpty()) null
+            else Match(rule, strong + weak, strong.isEmpty())
+        }.sortedWith(compareByDescending<Match> { !it.weakOnly }.thenByDescending { it.rule.weight * it.hits.size })
 
         val top = matches.firstOrNull() ?: return null
-        val rule = top.first
-        val matched = top.second
-        val matchedTerms = top.third
+        val rule = top.rule
+        val matched = top.hits.size
+        val matchedTerms = top.hits
 
-        // Bir signalning o'zi yetarlicha yuqori bo'lmasa, "E'tibor" holati.
         // Bir nechta mos signal va kuchli kalit so'zlar confidence'ni oshiradi.
-        val confidence = (55 + rule.weight + (matched - 1) * 8 +
-            if (matches.size > 1) 8 else 0).coerceAtMost(98)
+        // Faqat BITTA zaif so'z bo'lsa — doim sariq (78%): aniq xavf tasdiqlanmagan.
+        val confidence = if (top.weakOnly && matched < 2) 78 else
+            (55 + rule.weight + (matched - 1) * 8 + if (matches.size > 1) 8 else 0).coerceAtMost(98)
 
         val severity = when {
             confidence >= 88 -> "HIGH"
             confidence >= 72 -> "MEDIUM"
             else -> "LOW"
         }
-
-        // Faqat jiddiy (qizil) signallar qayd etiladi. Sariq (o'rtacha) signallar asosan yolg'on
-        // bo'lib chiqqani uchun (masalan "urish", "o'ldirish" kabi oddiy so'zlar) olib tashlandi.
-        if (severity != "HIGH") return null
 
         val summary = when (rule.category) {
             "ADULT_SEXUAL" -> "18+ / seksual mazmundagi faoliyat signali"

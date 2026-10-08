@@ -315,21 +315,22 @@ async function apps(){const x=await sub('app_usage','boshlanishMs',300);
 }
 async function notif(){const x=await sub('notifications','vaqtMs',100);$('content').innerHTML=x.length?x.map(v=>'<div class="row"><div class="rowtop"><b>'+esc(v.ilovaNomi||v.ilovaPaket||'Ilova')+'</b><span class="badge">'+fmt(v.vaqtMs)+'</span></div><p>'+esc(v.sarlavha||'')+(v.matn?' — '+esc(v.matn):'')+'</p></div>').join(''):'<div class="empty">Bildirishnomalar topilmadi.</div>'}
 const RISK_WEAK=new Set(['18+','18 plus','sex','nud','intim','intimate','meth','drug']);
-function riskFalseAlarm(v){
-  const sm=String(v.summary||'');
-  if(!sm.includes("(aniqlangan so'z:"))return false;
-  if(v.severity!=='HIGH')return true;
+function riskNoise(v){
   const pk=String(v.packageName||'').toLowerCase();
-  if(['com.android.systemui','honeyboard','inputmethod','keyboard','launcher'].some(x=>pk.includes(x)))return true;
-  const m=/aniqlangan so'z: (.*)\)/.exec(sm);if(!m)return false;
-  const terms=m[1].split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
-  return terms.length>0&&terms.length<2&&terms.every(x=>RISK_WEAK.has(x));
+  return String(v.summary||'').includes("(aniqlangan so'z:")&&['com.android.systemui','honeyboard','inputmethod','keyboard','launcher'].some(x=>pk.includes(x));
 }
-async function riskAlertsHtml(){const x=(await sub('risk_events','capturedAt',100)).filter(v=>!riskFalseAlarm(v));return '<div class="empty" style="margin-bottom:12px;text-align:left">Faqat muhim xavf signallari ko\u2018rsatiladi: 18+ tasvir/video, intim suhbat yoki media, 1XBET va boshqa qimor o\u2018yinlari ochilsa yoki qidirilsa, o\u2018z joniga qasd yoki giyohvand moddalar bo\u2018yicha aktiv qidiruv/suhbat aniqlansa — shu yerda qayd etiladi.</div>'+(x.length?x.map(v=>{
-  const high=v.severity==='HIGH';
+function riskSeverity(v){
+  const sm=String(v.summary||'');
+  if(v.severity!=='HIGH'||!sm.includes("(aniqlangan so'z:"))return v.severity;
+  const m=/aniqlangan so'z: (.*)\)/.exec(sm);if(!m)return v.severity;
+  const terms=m[1].split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+  return terms.length===1&&RISK_WEAK.has(terms[0])?'MEDIUM':v.severity;
+}
+async function riskAlertsHtml(){const x=(await sub('risk_events','capturedAt',100)).filter(v=>!riskNoise(v));return '<div class="empty" style="margin-bottom:12px;text-align:left">Faqat muhim xavf signallari ko\u2018rsatiladi: 18+ tasvir/video, intim suhbat yoki media, 1XBET va boshqa qimor o\u2018yinlari ochilsa yoki qidirilsa, o\u2018z joniga qasd yoki giyohvand moddalar bo\u2018yicha aktiv qidiruv/suhbat aniqlansa — shu yerda qayd etiladi.</div>'+(x.length?x.map(v=>{
+  const high=riskSeverity(v)==='HIGH';
   const dot=high?'🔴':'🟠';
   const sevClass=high?'miss':'out';
-  const title=String(v.summary||'').split(" (aniqlangan so'z:")[0].trim();
+  const title=(high?'':'Shubhali (aniq emas): ')+String(v.summary||'').split(" (aniqlangan so'z:")[0].trim();
   const tm=/aniqlangan so'z: (.*)\)/.exec(v.summary||'');const term=tm?tm[1].trim():'';
   const mediaLabel=v.mediaType==='VIDEO'?'Video':'Rasm';
   const mediaLine=v.mediaType?'<p>'+(v.mediaState==='HIDDEN_SENSITIVE'?'🔒 '+mediaLabel+' yuborilgan/ko‘rilgan — sezgir mazmun yashirilgan':'📎 '+mediaLabel+' media signali mavjud')+'</p>':'';
