@@ -288,7 +288,7 @@ class RiskAlertsActivity : AppCompatActivity() {
 
     private fun render(allEvents: List<RiskEvent>) {
         list.removeAllViews()
-        val events = allEvents.filterNot { RiskAnalysisEngine.isNoiseSource(it.summary, it.packageName) }
+        val events = allEvents.filterNot { RiskAnalysisEngine.isLikelyFalseAlarm(it.severity, it.summary, it.packageName) }
         if (events.isEmpty()) {
             list.addView(TextView(this).apply {
                 text = "Hozircha jiddiy xavf signali aniqlanmadi."
@@ -306,17 +306,16 @@ class RiskAlertsActivity : AppCompatActivity() {
                 setBackgroundColor(getColor(uz.oilanazorati.parentcontrol.R.color.color_surface))
                 elevation = dp(2).toFloat()
             }
-            val severity = RiskAnalysisEngine.effectiveSeverity(event.severity, event.summary)
-            val dot = if (severity == "HIGH") "🔴" else "🟠"
+            val dot = if (event.severity == "HIGH") "🔴" else "🟠"
             // Eski yozuvlarda sarlavha oxirida "(aniqlangan so'z: ...)" va juda uzun matn bor —
             // ularni ham qisqa va tushunarli ko'rinishga keltiramiz.
             val shortTitle = event.summary.substringBefore(" (aniqlangan so'z:").trim()
             val term = Regex("aniqlangan so'z: (.*)\\)").find(event.summary)?.groupValues?.get(1)?.trim().orEmpty()
             card.addView(TextView(this).apply {
-                text = if (severity == "HIGH") "$dot $shortTitle" else "$dot Shubhali (aniq emas): $shortTitle"
+                text = "$dot $shortTitle"
                 textSize = 15f
                 setTypeface(typeface, Typeface.BOLD)
-                setTextColor(if (severity == "HIGH") 0xFFE74C3C.toInt() else 0xFFF39C12.toInt())
+                setTextColor(if (event.severity == "HIGH") 0xFFE74C3C.toInt() else 0xFFF39C12.toInt())
             })
             card.addView(TextView(this).apply {
                 val time = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault()).format(Date(event.capturedAt))
