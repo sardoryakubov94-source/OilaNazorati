@@ -29,5 +29,7 @@
   }
 }
 
-/* Replace only the installation warning image on the public website. */
-.guide-step-img{content:url('icons/play-protect-warning-new.svg');object-fit:contain;width:100%;height:auto;max-height:none;}
+/* Replace only the installation warning image on the public website.
+   Faqat 02-qadamdagi yagona ogohlantirish rasmi (to'g'ridan-to'g'ri .guide-step-with-img ichida);
+   .guide-step-img-group ichidagi 3 ta haqiqiy skrinshotga tegmaydi. */
+.guide-step-with-img > .guide-step-img{content:url('icons/play-protect-warning-new.svg');object-fit:contain;width:100%;height:auto;max-height:none;}
