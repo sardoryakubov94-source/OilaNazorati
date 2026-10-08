@@ -19,7 +19,9 @@ object RiskAnalysisEngine {
         val category: String,
         val weight: Int,
         val terms: List<String>,
-        val sensitive: Boolean = false
+        val sensitive: Boolean = false,
+        /** "Zaif" so'zlar: bittasi yolg'iz o'zi signal BERMAYDI (kamida 2 ta yoki kuchli so'z bilan birga). */
+        val weakTerms: List<String> = emptyList()
     )
 
     /*
@@ -31,11 +33,16 @@ object RiskAnalysisEngine {
      */
     private val rules = listOf(
         Rule("ADULT_SEXUAL", 35, listOf(
-            "18+", "18 plus", "porn", "porno", "pornograf", "seks", "sex",
-            "yalang'och", "yalangoch", "nud", "nude", "nsfw", "erotic",
-            "erotik", "intim", "intimate", "adult content", "adult video",
-            "adult photo", "sex video", "sex photo", "голая", "порно", "секс"
-        ), true),
+            "porn", "porno", "pornograf", "seks", "yalang'och", "yalangoch", "nude",
+            "nsfw", "erotic", "erotik", "adult content", "adult video", "adult photo",
+            "sex video", "sex photo", "голая", "порно", "секс",
+            "18+ video", "18+ rasm", "18+ foto", "18+ kino", "18+ film", "18+ видео",
+            "18+ контент", "18 plus video"
+        ), true, weakTerms = listOf(
+            // "18+" kanal/ilova yorlig'ida, "sex" o'zbekchada "ishlab chiqarish sexi",
+            // "intim" ko'plab oddiy so'zlarda uchraydi — yolg'iz o'zi signal emas.
+            "18+", "18 plus", "sex", "nud", "intim", "intimate"
+        )),
         Rule("SEXUAL_IMAGE_REQUEST", 45, listOf(
             "yalang'och rasmingni", "yalangoch rasmingni", "intim rasmingni",
             "intim rasm yubor", "yalang'och foto", "yalangoch foto",
@@ -67,8 +74,8 @@ object RiskAnalysisEngine {
         )),
         Rule("DRUGS", 40, listOf(
             "narkotik", "giyohvand", "marixuana", "marihuana", "kokain",
-            "geroin", "meth", "mdma", "drug", "наркотик"
-        )),
+            "geroin", "mdma", "наркотик"
+        ), weakTerms = listOf("meth", "drug")),
         // MUHIM: "kill" va "murder" ataylab OLIB TASHLANDI — bular
         // o'yinlarda (masalan juda mashhur "Among Us" o'yinida "murder",
         // ko'plab otishma o'yinlarida "kill/nice kill") kundalik atama
@@ -100,13 +107,40 @@ object RiskAnalysisEngine {
         return (if (start > 0) "…" else "") + clean.substring(start, end).trim() + (if (end < clean.length) "…" else "")
     }
 
+    // Tizim interfeysi, klaviatura va launcher oynalari o'zi emas, boshqa ilova matnini
+    // ko'rsatadi — ular nomi bilan signal yozilsa, bitta ekran 3-4 marta takrorlanadi.
+    private val ignoredSourcePackages = listOf("com.android.systemui", "honeyboard", "inputmethod", "keyboard", "launcher")
+    private val weakTermSet = setOf("18+", "18 plus", "sex", "nud", "intim", "intimate", "meth", "drug")
+
+    fun isIgnoredPackage(packageName: String): Boolean {
+        val p = packageName.lowercase(Locale.ROOT)
+        return ignoredSourcePackages.any { p.contains(it) }
+    }
+
+    /**
+     * Avval saqlangan (eski) so'z-asosli signallar ham yangi qoidalarga mos kelmasa — ro'yxatda
+     * ko'rsatilmaydi (ma'lumot o'chirilmaydi). Rasm/video tahlilidan kelgan signallarga tegilmaydi.
+     */
+    fun isLikelyFalseAlarm(severity: String, summary: String, packageName: String): Boolean {
+        if (!summary.contains("(aniqlangan so'z:")) return false
+        if (severity != "HIGH") return true
+        if (isIgnoredPackage(packageName)) return true
+        val terms = Regex("aniqlangan so'z: (.*)\\)").find(summary)?.groupValues?.get(1)
+            ?.split(",")?.map { it.trim().lowercase(Locale.ROOT) }?.filter { it.isNotEmpty() } ?: return false
+        return terms.isNotEmpty() && terms.size < 2 && terms.all { it in weakTermSet }
+    }
+
     fun analyze(vararg rawParts: String): RiskAnalysis? {
         val text = rawParts.filter { it.isNotBlank() }.joinToString(" ").lowercase(Locale.ROOT)
         if (text.isBlank()) return null
 
         val matches = rules.mapNotNull { rule ->
-            val hits = rule.terms.filter { term -> containsWholeTerm(text, term) }
-            if (hits.isEmpty()) null else Triple(rule, hits.size, hits)
+            val strong = rule.terms.filter { term -> containsWholeTerm(text, term) }
+            val weak = rule.weakTerms.filter { term -> containsWholeTerm(text, term) }
+            // Bitta zaif so'z ("18+", "sex" va h.k.) yolg'iz o'zi yolg'on signal beradi — talab qilinadi:
+            // kamida bitta kuchli so'z YOKI kamida ikkita zaif so'z.
+            if (strong.isEmpty() && weak.size < 2) null
+            else (strong + weak).let { hits -> Triple(rule, hits.size, hits) }
         }.sortedByDescending { it.first.weight * it.second }
 
         val top = matches.firstOrNull() ?: return null
@@ -124,6 +158,10 @@ object RiskAnalysisEngine {
             confidence >= 72 -> "MEDIUM"
             else -> "LOW"
         }
+
+        // Faqat jiddiy (qizil) signallar qayd etiladi. Sariq (o'rtacha) signallar asosan yolg'on
+        // bo'lib chiqqani uchun (masalan "urish", "o'ldirish" kabi oddiy so'zlar) olib tashlandi.
+        if (severity != "HIGH") return null
 
         val summary = when (rule.category) {
             "ADULT_SEXUAL" -> "18+ / seksual mazmundagi faoliyat signali"

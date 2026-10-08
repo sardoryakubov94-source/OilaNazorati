@@ -543,12 +543,20 @@ class AccessibilityScreenshotService : AccessibilityService() {
         lastRiskScanAt = uptime
         val packageName = event.packageName?.toString()?.takeIf { it.isNotBlank() } ?: return
         if (packageName == applicationContext.packageName) return
+        if (RiskAnalysisEngine.isIgnoredPackage(packageName)) return
         val parts = ArrayList<String>()
         event.text?.forEach { if (!it.isNullOrBlank()) parts.add(it.toString()) }
         event.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
         event.className?.toString()?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
         val videoFlag = booleanArrayOf(false)
-        runCatching { rootInActiveWindow?.let { root -> collectVisibleText(root, parts, 0, videoFlag) } }
+        // Faqat hodisa egasi bo'lgan ilovaning oynasi o'qiladi (klaviatura/tizim hodisasi
+        // orqali boshqa ilova matni shu paket nomi bilan yozilib ketmasligi uchun).
+        runCatching {
+            rootInActiveWindow?.let { root ->
+                val rootPackage = root.packageName?.toString()
+                if (rootPackage == null || rootPackage == packageName) collectVisibleText(root, parts, 0, videoFlag)
+            }
+        }
 
         // Video ko'rinishi (VideoView/PlayerView/...) aniqlansa — davriy kadr
         // tekshiruvini boshlaymiz (yoki davom ettiramiz, agar allaqachon shu
@@ -561,10 +569,10 @@ class AccessibilityScreenshotService : AccessibilityService() {
         val analysis = RiskAnalysisEngine.analyze(*parts.toTypedArray()) ?: return
         val mediaType = RiskAnalysisEngine.detectMediaMarker(parts)
         val now = System.currentTimeMillis()
-        val dedupeKey = "${packageName}|${analysis.category}|${mediaType}|${analysis.summary}"
+        val dedupeKey = "${analysis.category}|${analysis.summary}"
         val previous = recentRiskEvents[dedupeKey]
-        recentRiskEvents.entries.removeAll { now - it.value > 60_000L }
-        if (previous != null && now - previous < 60_000L) return
+        recentRiskEvents.entries.removeAll { now - it.value > 180_000L }
+        if (previous != null && now - previous < 180_000L) return
         recentRiskEvents[dedupeKey] = now
         val appName = runCatching {
             packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()

@@ -286,8 +286,9 @@ class RiskAlertsActivity : AppCompatActivity() {
         }
     }
 
-    private fun render(events: List<RiskEvent>) {
+    private fun render(allEvents: List<RiskEvent>) {
         list.removeAllViews()
+        val events = allEvents.filterNot { RiskAnalysisEngine.isLikelyFalseAlarm(it.severity, it.summary, it.packageName) }
         if (events.isEmpty()) {
             list.addView(TextView(this).apply {
                 text = "Hozircha jiddiy xavf signali aniqlanmadi."
