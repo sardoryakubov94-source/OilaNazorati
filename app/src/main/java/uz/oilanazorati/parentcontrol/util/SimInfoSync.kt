@@ -68,21 +68,35 @@ object SimInfoSync {
     private const val KEY_USSD_LAST_TRY_PREFIX = "ussd_last_try_"
 
     private const val MIN_WRITE_INTERVAL_MS = 30 * 60 * 1000L // 30 daqiqa
-    private const val MAX_USSD_TRIES = 3
-    private const val USSD_RETRY_COOLDOWN_MS = 24 * 60 * 60 * 1000L // 24 soat
+    private const val MAX_USSD_TRIES = 4
+    private const val USSD_RETRY_COOLDOWN_MS = 6 * 60 * 60 * 1000L // 6 soat
+    private const val USSD_SIM_STAGGER_MS = 25_000L // 2-SIM so'rovi 1-SIM'dan keyin (bir vaqtda 2 ta USSD sessiya bo'lmaydi)
 
-    // Operatorlarning OMMAVIY "raqamimni bilish" USSD kodlari. Manba:
-    // operatorlarning ochiq yordam sahifalari. Bular vaqt o'tishi bilan
-    // o'zgarishi mumkin — shuning uchun bu FAQAT qo'shimcha, ixtiyoriy
-    // urinish, yagona manba emas (1-usul asosiy hisoblanadi).
-    private val USSD_NUMBER_CODES = listOf(
-        "ucell" to "*120#",
-        "beeline" to "11010#",
-        "uzmobile" to "*110#",
-        "mobiuz" to "*110#",
-        "perfectum" to "*110#",
-        "humans" to "*110#"
+    // USSD kodlari ro'yxati o'zgarganda oshiriladi — eski (xato kodlar bilan sarflangan)
+    // urinishlar nolga tushadi va yangi kodlar bilan qayta sinaladi.
+    private const val USSD_CODES_VERSION = 2
+    private const val KEY_USSD_CODES_VERSION = "ussd_codes_version"
+
+    // Operatorlarning "o'z raqamimni bilish" USSD kodlari. Har bir operator uchun bir nechta
+    // nomzod bo'lishi mumkin — urinishlar navbat bilan sinaydi.
+    //  • Mobiuz (UMS): *150#  — operatorning rasmiy USSD ro'yxatida ("узнать свой абонентский номер")
+    //  • Beeline:      *148#  — operator kodlari ro'yxatida ("узнать свой номер телефона")
+    //  • Ucell:        *450#  ("Kim men" xizmati) — ochiq ro'yxatlarda; *120# eski nomzod sifatida qoldi
+    //  • Uzmobile/Humans/Perfectum: tasdiqlangan kod topilmadi — eski nomzod saqlandi (kafolat yo'q)
+    private val USSD_NUMBER_CODES: List<Pair<String, List<String>>> = listOf(
+        "ucell" to listOf("*450#", "*120#"),
+        "beeline" to listOf("*148#"),
+        "mobiuz" to listOf("*150#"),
+        "ums" to listOf("*150#"),
+        "uzmobile" to listOf("*110#"),
+        "uztelecom" to listOf("*110#"),
+        "perfectum" to listOf("*110#"),
+        "humans" to listOf("*110#")
     )
+
+    // O'zbekiston mobil raqamlarining 2 xonali operator kodlari.
+    private val UZ_MOBILE_CODES = setOf("20", "33", "50", "55", "70", "71", "77", "88", "90", "91", "93", "94", "95", "97", "98", "99")
+    private val NUMBER_REGEX = Regex("""(?<!\d)(?:\+?\s*998)?[\s\-.()]*(\d{2})[\s\-.()]*(\d{3})[\s\-.()]*(\d{2})[\s\-.()]*(\d{2})(?!\d)""")
 
     @Volatile
     private var listenerRegistered = false
@@ -129,6 +143,18 @@ object SimInfoSync {
         }
 
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        resetUssdCountersIfCodesChanged(prefs)
+
+        // 0-usul (bepul, USSD'siz): tizim/SIM raqamni o'zi bersa — shuni olamiz. Ko'p O'zbekiston
+        // SIM kartalarida bo'sh keladi, lekin ba'zi telefon/SIM'larda ishlaydi. Faqat haqiqiy
+        // O'zbekiston raqamiga o'xshasa qabul qilinadi.
+        subscriptions.forEach { info ->
+            val key = KEY_NUMBER_PREFIX + info.subscriptionId
+            if (prefs.getString(key, "").isNullOrBlank()) {
+                tryDirectNumber(context, info)?.let { prefs.edit().putString(key, it).apply() }
+            }
+        }
+
         val confirmedPrimaryNumber = prefs.getString(KEY_CONFIRMED_NUMBER, "") ?: ""
 
         val sims = subscriptions.mapIndexed { index, info ->
@@ -183,10 +209,36 @@ object SimInfoSync {
         // qattiq cheklangan holda sinab ko'ramiz. Bu yerning o'zi HECH QANDAY
         // Firestore yozuvi qilmaydi — faqat muvaffaqiyatli bo'lsa
         // applyConfirmedNumber() chaqiriladi (yuqoridagi himoyalar ostida).
-        subscriptions.forEach { info ->
+        val handler = Handler(Looper.getMainLooper())
+        subscriptions.forEachIndexed { index, info ->
             val hasNumber = !(prefs.getString(KEY_NUMBER_PREFIX + info.subscriptionId, "").isNullOrBlank())
-            if (!hasNumber) maybeAttemptUssdLookup(context, info)
+            if (!hasNumber) handler.postDelayed({ maybeAttemptUssdLookup(context, info) }, index * USSD_SIM_STAGGER_MS)
         }
+    }
+
+    private fun resetUssdCountersIfCodesChanged(prefs: android.content.SharedPreferences) {
+        if (prefs.getInt(KEY_USSD_CODES_VERSION, 0) == USSD_CODES_VERSION) return
+        val editor = prefs.edit()
+        prefs.all.keys.filter { it.startsWith(KEY_USSD_TRIES_PREFIX) || it.startsWith(KEY_USSD_LAST_TRY_PREFIX) }
+            .forEach { editor.remove(it) }
+        editor.putInt(KEY_USSD_CODES_VERSION, USSD_CODES_VERSION).apply()
+    }
+
+    @Suppress("DEPRECATION")
+    private fun tryDirectNumber(context: Context, info: SubscriptionInfo): String? {
+        val candidates = mutableListOf<String>()
+        try { info.number?.let { candidates += it } } catch (_: Throwable) {}
+        try {
+            val base = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            base.createForSubscriptionId(info.subscriptionId).line1Number?.let { candidates += it }
+        } catch (_: Throwable) {}
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            try {
+                context.getSystemService(SubscriptionManager::class.java)
+                    ?.getPhoneNumber(info.subscriptionId)?.let { candidates += it }
+            } catch (_: Throwable) {}
+        }
+        return candidates.firstNotNullOfOrNull { extractPhoneNumber(it) }
     }
 
     /** 1-USUL natijasi: Google Phone Number Hint oynasidan tasdiqlangan
@@ -225,7 +277,8 @@ object SimInfoSync {
         if (now - lastTry < USSD_RETRY_COOLDOWN_MS) return
 
         val operatorName = (info.carrierName?.toString() ?: "").lowercase()
-        val code = USSD_NUMBER_CODES.firstOrNull { operatorName.contains(it.first) }?.second ?: return
+        val codes = USSD_NUMBER_CODES.firstOrNull { operatorName.contains(it.first) }?.second ?: return
+        val code = codes[tries % codes.size]
 
         // Urinish sanaladi (muvaffaqiyatli yoki muvaffaqiyatsiz bo'lishidan
         // qat'i nazar) — cheksiz qayta urinishning oldini oladi.
@@ -233,9 +286,9 @@ object SimInfoSync {
 
         try {
             val baseManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-            val tm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                try { baseManager.createForSubscriptionId(info.subscriptionId) } catch (_: Throwable) { baseManager }
-            } else baseManager
+            // Aniq shu SIM (subscription) orqali yuboriladi — ikki SIM'li telefonlarda javob
+            // boshqa SIM'ga tushib qolmasligi uchun (oldin faqat Android 12+ da shunday edi).
+            val tm = try { baseManager.createForSubscriptionId(info.subscriptionId) } catch (_: Throwable) { baseManager }
 
             tm.sendUssdRequest(code, object : TelephonyManager.UssdResponseCallback() {
                 override fun onReceiveUssdResponse(telephonyManager: TelephonyManager, request: String, response: CharSequence) {
@@ -255,15 +308,16 @@ object SimInfoSync {
         }
     }
 
-    /** Operator USSD javobidan O'zbekiston mobil raqamiga o'xshash
-     * ketma-ketlikni ajratib oladi (heuristika — operator javob matni
-     * turlicha bo'lishi mumkin, shuning uchun kafolat yo'q). */
-    private fun extractPhoneNumber(responseText: String): String? {
-        val digitsOnly = responseText.filter { it.isDigit() }
-        val match = Regex("998\\d{9}").find(digitsOnly)
-            ?: Regex("9\\d{8}").find(digitsOnly)
-            ?: return null
-        val digits = match.value
-        return if (digits.startsWith("998")) "+$digits" else "+998$digits"
+    /** Matndan O'zbekiston mobil raqamini ajratib oladi ("90 123 45 67", "+998901234567",
+     * "(90) 123-45-67" va h.k.). Faqat haqiqiy operator kodi (90, 91, 93, 97 ...) bilan
+     * boshlansa qabul qilinadi — balans/sana kabi tasodifiy raqamlar adashtirmasin. */
+    internal fun extractPhoneNumber(text: String): String? {
+        for (m in NUMBER_REGEX.findAll(text)) {
+            val code = m.groupValues[1]
+            if (code in UZ_MOBILE_CODES) {
+                return "+998" + code + m.groupValues[2] + m.groupValues[3] + m.groupValues[4]
+            }
+        }
+        return null
     }
 }
