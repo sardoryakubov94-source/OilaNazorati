@@ -66,7 +66,23 @@ object SimInfoSync {
     private const val KEY_CONFIRMED_NUMBER = "confirmed_number" // 1-usul (Hint) natijasi — asosiy/1-SIM uchun
     private const val KEY_CONFIRMED_SUB_ID = "confirmed_sub_id" // Hint raqami qaysi SIM (subscription) uchun tasdiqlangan
     private const val KEY_SIM_SET = "sim_set" // oxirgi muvaffaqiyatli yozilgan SIM'lar to'plami (almashtirishni aniqlash uchun)
-    private const val SIM_SWAP_MIN_GAP_MS = 10_000L // SIM almashganda 30 daqiqalik himoya o'rniga faqat shu qisqa oraliq
+    private const val SIM_SWAP_MIN_GAP_MS = 10 * 60 * 1000L // haqiqiy SIM almashishi: ko'pi bilan 10 daqiqada bitta yozuv
+    private const val SIM_SWAP_SETTLE_MS = 30_000L // SIM chiqarilib-qo'yilganda oraliq holatlar bitta yozuvga birlashsin
+    private const val DIRECT_TRY_COOLDOWN_MS = 6 * 60 * 60 * 1000L // tizimdan raqamni o'qishga urinish: 6 soatda 1 marta
+    private const val KEY_DIRECT_TRY_PREFIX = "direct_try_"
+
+    @Volatile private var pendingSwapSet: String? = null
+    @Volatile private var pendingSwapSince = 0L
+    @Volatile private var resyncScheduled = false
+    private val ussdPending = java.util.Collections.synchronizedSet(mutableSetOf<Int>())
+    private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
+
+    /** Cheklov/kutish tufayli kechiktirilgan yozuv yo'qolmasin: vaqti kelganda bir marta qayta tekshiriladi. */
+    private fun scheduleResync(context: Context, delayMs: Long) {
+        if (resyncScheduled) return
+        resyncScheduled = true
+        mainHandler.postDelayed({ resyncScheduled = false; syncNow(context.applicationContext) }, delayMs.coerceAtLeast(1_000L))
+    }
     private const val KEY_NUMBER_PREFIX = "number_" // 2-usul (USSD) natijasi — subscriptionId bo'yicha aniq
     private const val KEY_USSD_TRIES_PREFIX = "ussd_tries_"
     private const val KEY_USSD_LAST_TRY_PREFIX = "ussd_last_try_"
@@ -152,9 +168,12 @@ object SimInfoSync {
         // 0-usul (bepul, USSD'siz): tizim/SIM raqamni o'zi bersa — shuni olamiz. Ko'p O'zbekiston
         // SIM kartalarida bo'sh keladi, lekin ba'zi telefon/SIM'larda ishlaydi. Faqat haqiqiy
         // O'zbekiston raqamiga o'xshasa qabul qilinadi.
+        val directNow = System.currentTimeMillis()
         subscriptions.forEach { info ->
             val key = KEY_NUMBER_PREFIX + info.subscriptionId
-            if (prefs.getString(key, "").isNullOrBlank()) {
+            val tryKey = KEY_DIRECT_TRY_PREFIX + info.subscriptionId
+            if (prefs.getString(key, "").isNullOrBlank() && directNow - prefs.getLong(tryKey, 0L) >= DIRECT_TRY_COOLDOWN_MS) {
+                prefs.edit().putLong(tryKey, directNow).apply()
                 tryDirectNumber(context, info)?.let { prefs.edit().putString(key, it).apply() }
             }
         }
@@ -200,6 +219,17 @@ object SimInfoSync {
         }
         val simSwapped = previousSimSet != null && previousSimSet != simSet
 
+        // SIM chiqarilib-qo'yilganda tizim bir necha oraliq holat yuboradi (bo'sh -> yangi SIM ...).
+        // Yakuniy holat 30 soniya o'zgarmaguncha kutamiz — hammasi BITTA yozuv bo'ladi.
+        if (simSwapped && !sameAsLastWritten) {
+            if (pendingSwapSet != simSet) { pendingSwapSet = simSet; pendingSwapSince = nowMs }
+            val settleLeft = SIM_SWAP_SETTLE_MS - (nowMs - pendingSwapSince)
+            if (settleLeft > 0) {
+                scheduleResync(context, settleLeft + 500L)
+                return
+            }
+        }
+
         if (!sameAsLastWritten) {
             // 2-himoya: "o'zgarish" juda tez-tez qayd etilsa ham, oxirgi yozuvdan beri
             // MIN_WRITE_INTERVAL_MS o'tmaguncha yozilmaydi — LEKIN haqiqiy SIM almashishi bundan
@@ -207,7 +237,12 @@ object SimInfoSync {
             // bilmay qolishi mumkin edi.
             val lastWriteMs = prefs.getLong(KEY_LAST_WRITE_MS, 0L)
             val gap = nowMs - lastWriteMs
-            if (gap >= MIN_WRITE_INTERVAL_MS || (simSwapped && gap >= SIM_SWAP_MIN_GAP_MS)) {
+            val writeAllowed = gap >= MIN_WRITE_INTERVAL_MS || (simSwapped && gap >= SIM_SWAP_MIN_GAP_MS)
+            if (!writeAllowed) {
+                // Yozuv cheklovi tufayli kechiktirildi — yo'qolmasligi uchun cheklov tugaganda qayta tekshiramiz.
+                scheduleResync(context, (if (simSwapped) SIM_SWAP_MIN_GAP_MS else MIN_WRITE_INTERVAL_MS) - gap + 1_000L)
+            }
+            if (writeAllowed) {
                 val childRef = FirebaseFirestore.getInstance()
                     .collection("families").document(familyCode)
                     .collection("children").document(childId)
@@ -226,6 +261,7 @@ object SimInfoSync {
                             .putLong(KEY_LAST_WRITE_MS, nowMs)
                             .putString(KEY_SIM_SET, simSet)
                             .apply()
+                        pendingSwapSet = null
                         if (simSwapped) logSimChange(sims)
                     }
             }
@@ -235,10 +271,15 @@ object SimInfoSync {
         // qattiq cheklangan holda sinab ko'ramiz. Bu yerning o'zi HECH QANDAY
         // Firestore yozuvi qilmaydi — faqat muvaffaqiyatli bo'lsa
         // applyConfirmedNumber() chaqiriladi (yuqoridagi himoyalar ostida).
-        val handler = Handler(Looper.getMainLooper())
         subscriptions.forEachIndexed { index, info ->
             val hasNumber = !(prefs.getString(KEY_NUMBER_PREFIX + info.subscriptionId, "").isNullOrBlank())
-            if (!hasNumber) handler.postDelayed({ maybeAttemptUssdLookup(context, info) }, index * USSD_SIM_STAGGER_MS)
+            // Bir SIM uchun bir vaqtda bitta rejalashtirilgan urinish (tez-tez sync chaqirilsa ham to'planib qolmaydi)
+            if (!hasNumber && ussdPending.add(info.subscriptionId)) {
+                mainHandler.postDelayed({
+                    ussdPending.remove(info.subscriptionId)
+                    maybeAttemptUssdLookup(context, info)
+                }, index * USSD_SIM_STAGGER_MS)
+            }
         }
     }
 

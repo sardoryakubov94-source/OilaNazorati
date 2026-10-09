@@ -80,6 +80,7 @@ async function requestScreenshot() {
           clearInterval(timer);
           setStatus('✅ Screenshot tayyor', true);
           busy = false;
+          document.body.dataset.ssForce = '1';
           document.querySelector('[data-tab="ss"]')?.click();
           setTimeout(() => setStatus('📸 Screenshot olish'), 2500);
         } else if (status === 'failed' || Date.now() - started > 45000) {

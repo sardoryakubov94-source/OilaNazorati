@@ -125,7 +125,6 @@ class RiskAlertsActivity : AppCompatActivity() {
                 if (activeTab == "alerts") render(events)
             }
         }
-        loadRiskShots()
     }
 
     private fun rounded(fill: Int, stroke: Int): GradientDrawable = GradientDrawable().apply {
@@ -158,7 +157,7 @@ class RiskAlertsActivity : AppCompatActivity() {
         updateTabStyles()
         if (tab == "alerts") render(lastEvents) else {
             renderShots()
-            if (System.currentTimeMillis() - shotsLoadedAt > 20_000L) loadRiskShots()
+            if (System.currentTimeMillis() - shotsLoadedAt > 60_000L) loadRiskShots()
         }
     }
 

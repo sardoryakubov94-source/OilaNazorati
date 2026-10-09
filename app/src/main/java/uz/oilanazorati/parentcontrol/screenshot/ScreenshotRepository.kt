@@ -66,14 +66,30 @@ object ScreenshotRepository {
             dataRef.set(mapOf("image" to Blob.fromBytes(imageBytes), "contentType" to "image/jpeg", "byteSize" to imageBytes.size.toLong(), "createdAt" to System.currentTimeMillis())).continueWithTask { metaRef.set(finalMeta) }.addOnSuccessListener { onResult(true) }.addOnFailureListener { dataRef.delete(); onResult(false) }
         } catch (_: Exception) { onResult(false) }
     }
-    fun fetchHistory(onResult: (List<ScreenshotMetadata>) -> Unit) { val col = childDoc()?.collection("screenshots") ?: return onResult(emptyList()); col.orderBy("capturedAt", com.google.firebase.firestore.Query.Direction.DESCENDING).limit(200).get().addOnSuccessListener { onResult(it.documents.mapNotNull { d -> d.toObject(ScreenshotMetadata::class.java) }) }.addOnFailureListener { onResult(emptyList()) } }
+    // Tarix 60 soniya xotirada saqlanadi: Screenshot va Xavf signali ekranlari bir xil ro'yxatni
+    // qayta-qayta o'qimasin (Firebase o'qish kvotasini tejash). O'chirilganda/yangilashda tozalanadi.
+    private var historyCache: List<ScreenshotMetadata>? = null
+    private var historyCacheAt = 0L
+    fun invalidateHistoryCache() { historyCache = null }
+    fun fetchHistory(forceRefresh: Boolean = false, onResult: (List<ScreenshotMetadata>) -> Unit) {
+        val cached = historyCache
+        if (!forceRefresh && cached != null && System.currentTimeMillis() - historyCacheAt < 60_000L) { onResult(cached); return }
+        val col = childDoc()?.collection("screenshots") ?: return onResult(emptyList())
+        col.orderBy("capturedAt", com.google.firebase.firestore.Query.Direction.DESCENDING).limit(100).get()
+            .addOnSuccessListener { snap ->
+                val list = snap.documents.mapNotNull { d -> d.toObject(ScreenshotMetadata::class.java) }
+                historyCache = list; historyCacheAt = System.currentTimeMillis()
+                onResult(list)
+            }
+            .addOnFailureListener { onResult(emptyList()) }
+    }
     fun loadImageBytes(id: String, onResult: (ByteArray?) -> Unit) { val child = childDoc() ?: return onResult(null); child.collection("screenshot_data").document(id).get().addOnSuccessListener { onResult(it.getBlob("image")?.toBytes()) }.addOnFailureListener { onResult(null) } }
     fun deleteScreenshot(id: String, onResult: (Boolean) -> Unit = {}) {
         val child = childDoc() ?: return onResult(false)
         val dataRef = child.collection("screenshot_data").document(id)
         val metaRef = child.collection("screenshots").document(id)
         db.batch().delete(dataRef).delete(metaRef).commit()
-            .addOnSuccessListener { onResult(true) }
+            .addOnSuccessListener { invalidateHistoryCache(); onResult(true) }
             .addOnFailureListener { onResult(false) }
     }
     private fun prepareImage(file: File): ByteArray {

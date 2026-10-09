@@ -20,7 +20,9 @@ data class PremiumRequest(
     val tolovIzohi: String = "",
     val tolovSkrinshotiBase64: String = "",
     val createdAtMs: Long = 0L,
-    val halQilinganMs: Long = 0L
+    val halQilinganMs: Long = 0L,
+    /** Egasi tomonidan boshqa adminlardan yashirilgan (premium holatiga ta'sir qilmaydi). */
+    val adminHidden: Boolean = false
 )
 
 /** Hozirda premium'ga ega (parents/{uid}.premium == true) foydalanuvchi. */
@@ -28,7 +30,9 @@ data class PremiumParent(
     val uid: String = "",
     val ismi: String = "",
     val email: String = "",
-    val oxirgiKirishMs: Long = 0L
+    val oxirgiKirishMs: Long = 0L,
+    /** Egasi tomonidan boshqa adminlardan yashirilgan (foydalanuvchi premiumda qoladi). */
+    val adminHidden: Boolean = false
 )
 
 /** Admin tomonidan qo'shilgan to'lov kartasi (UZCARD/HUMO va h.k.). */

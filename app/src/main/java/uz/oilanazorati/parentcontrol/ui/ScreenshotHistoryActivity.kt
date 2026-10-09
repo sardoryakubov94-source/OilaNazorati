@@ -154,7 +154,7 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
         }
         box.addView(statusText)
 
-        box.addView(iconButton("Tarixni yangilash", android.R.drawable.ic_popup_sync) { loadHistory() }.apply {
+        box.addView(iconButton("Tarixni yangilash", android.R.drawable.ic_popup_sync) { loadHistory(true) }.apply {
             layoutParams = LinearLayout.LayoutParams(-1, dp(44)).apply { bottomMargin = dp(10) }
         })
 
@@ -248,13 +248,13 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
         when (status) {
             "requested" -> { activeRequestId = requestId; requestButton.isEnabled = false; requestButton.text = "Screenshot kutilmoqda..."; statusText.text = "So'rov yuborildi." }
             "processing" -> { activeRequestId = requestId; requestButton.isEnabled = false; requestButton.text = "Screenshot olinmoqda..."; statusText.text = "Bola qurilmasi screenshotni tayyorlamoqda..." }
-            "completed" -> { activeRequestId = null; requestButton.isEnabled = true; requestButton.text = "Hozir screenshot olish"; statusText.text = "Screenshot tayyor. Tarix yangilandi."; loadHistory() }
-            "failed" -> { activeRequestId = null; requestButton.isEnabled = true; requestButton.text = "Hozir screenshot olish"; statusText.text = message.ifBlank { "Screenshot olish o'z vaqtida yakunlanmadi. Bola qurilmasida ekran ruxsati va internetni tekshiring." }; loadHistory() }
+            "completed" -> { activeRequestId = null; requestButton.isEnabled = true; requestButton.text = "Hozir screenshot olish"; statusText.text = "Screenshot tayyor. Tarix yangilandi."; loadHistory(true) }
+            "failed" -> { activeRequestId = null; requestButton.isEnabled = true; requestButton.text = "Hozir screenshot olish"; statusText.text = message.ifBlank { "Screenshot olish o'z vaqtida yakunlanmadi. Bola qurilmasida ekran ruxsati va internetni tekshiring." }; loadHistory(true) }
         }
     }
 
-    private fun loadHistory() {
-        ScreenshotRepository.fetchHistory { list ->
+    private fun loadHistory(force: Boolean = false) {
+        ScreenshotRepository.fetchHistory(force) { list ->
             runOnUiThread {
                 // Xavf signali screenshotlari bu yerda EMAS — ular "Xavfsizlik signallari" bo'limining
                 // "Screenshot" bo'limida saqlanadi.

@@ -12,6 +12,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import uz.oilanazorati.parentcontrol.R
+import uz.oilanazorati.parentcontrol.model.PremiumParent
+import uz.oilanazorati.parentcontrol.model.PremiumRequest
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.util.AdminConfig
 
@@ -38,6 +40,13 @@ class AdminPanelActivity : AppCompatActivity() {
     private lateinit var tabPremiumUsers: Button
     private lateinit var tabCards: Button
 
+    // Faqat EGASI (asosiy admin) premium tarixini boshqa adminlardan yashira/ko'rsata oladi.
+    // Yashirilgan foydalanuvchilar premiumda qoladi, ma'lumot o'chirilmaydi; faqat boshqa
+    // adminlarning ro'yxatida (premium foydalanuvchilar va to'lov so'rovlari) ko'rinmaydi.
+    private var isOwner = false
+    private var rawUsers: List<PremiumParent> = emptyList()
+    private var rawRequests: List<Pair<String, PremiumRequest>> = emptyList()
+
     private val messagesAdapter = AdminSupportMessageAdapter { docId, msg -> showReplyDialog(docId, msg.adminJavobi) }
     private val premiumAdapter = AdminPremiumRequestAdapter(
         onApprove = { docId, req ->
@@ -48,9 +57,10 @@ class AdminPanelActivity : AppCompatActivity() {
         },
         onReject = { docId ->
             FirebaseRepo.rejectPremiumRequest(docId) { }
-        }
+        },
+        onToggleHide = { docId, req -> toggleRequestHidden(docId, req) }
     )
-    private val premiumUsersAdapter = AdminPremiumUserAdapter { user ->
+    private val premiumUsersAdapter = AdminPremiumUserAdapter(onRevoke = { user ->
         val nomi = user.ismi.ifBlank { user.email.ifBlank { user.uid } }
         AlertDialog.Builder(this)
             .setTitle("Premiumni bekor qilish")
@@ -63,7 +73,7 @@ class AdminPanelActivity : AppCompatActivity() {
             }
             .setNegativeButton("Yo'q", null)
             .show()
-    }
+    }, onToggleHide = { user -> toggleUserHidden(user) })
     private val cardsAdapter = AdminCardAdapter { card ->
         AlertDialog.Builder(this)
             .setTitle("Kartani o'chirish")
@@ -117,11 +127,69 @@ class AdminPanelActivity : AppCompatActivity() {
         findViewById<View>(R.id.btnAddCard).setOnClickListener { showAddCardDialog() }
 
         FirebaseRepo.listenAllSupportMessages { list -> messagesAdapter.setData(list) }
-        FirebaseRepo.listenAllPremiumRequests { list -> premiumAdapter.setData(list) }
-        FirebaseRepo.listenPremiumParents { list -> premiumUsersAdapter.setData(list) }
+        isOwner = AdminConfig.isOwner()
+        FirebaseRepo.listenAllPremiumRequests { list -> rawRequests = list; refreshPremiumLists() }
+        FirebaseRepo.listenPremiumParents { list -> rawUsers = list; refreshPremiumLists() }
         FirebaseRepo.listenAdminCards { list -> cardsAdapter.setData(list) }
 
         showTab(0)
+    }
+
+    /** Egasi hammasini (yashirilganlari belgilangan holda) ko'radi; boshqa adminlar — yashirilmaganlarni. */
+    private fun refreshPremiumLists() {
+        val hiddenUids = rawUsers.filter { it.adminHidden }.map { it.uid }.toSet()
+        premiumUsersAdapter.isOwner = isOwner
+        premiumAdapter.isOwner = isOwner
+        premiumAdapter.hiddenUids = hiddenUids
+        premiumUsersAdapter.setData(if (isOwner) rawUsers else rawUsers.filterNot { it.adminHidden })
+        premiumAdapter.setData(
+            if (isOwner) rawRequests
+            else rawRequests.filterNot { it.second.adminHidden || it.second.fromUid in hiddenUids }
+        )
+    }
+
+    private fun toggleUserHidden(user: PremiumParent) {
+        if (!isOwner) return
+        val nomi = user.ismi.ifBlank { user.email.ifBlank { user.uid } }
+        val hide = !user.adminHidden
+        AlertDialog.Builder(this)
+            .setTitle(if (hide) "Boshqa adminlardan yashirish" else "Qayta ko'rsatish")
+            .setMessage(
+                if (hide) "\"$nomi\" va uning to'lov tarixi boshqa adminlarga ko'rinmaydi. Foydalanuvchi premiumda QOLADI, hech narsa o'chirilmaydi — faqat siz ko'rasiz."
+                else "\"$nomi\" va uning to'lov tarixi boshqa adminlarga yana ko'rinadi."
+            )
+            .setPositiveButton("Ha") { _, _ ->
+                FirebaseRepo.setPremiumUserHidden(user.uid, hide) { ok ->
+                    Toast.makeText(this, if (ok) (if (hide) "Boshqa adminlardan yashirildi" else "Qayta ko'rsatildi") else "Xato yuz berdi", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Yo'q", null)
+            .show()
+    }
+
+    private fun toggleRequestHidden(docId: String, req: PremiumRequest) {
+        if (!isOwner) return
+        val userHidden = rawUsers.any { it.uid == req.fromUid && it.adminHidden }
+        val hiddenNow = req.adminHidden || userHidden
+        val message = when {
+            !hiddenNow -> "Bu to'lov so'rovi boshqa adminlarga ko'rinmaydi. Hech narsa o'chirilmaydi, faqat siz ko'rasiz."
+            userHidden -> "Bu foydalanuvchi yashirilgan: qayta ko'rsatsangiz, uning BARCHA so'rovlari boshqa adminlarga ko'rinadi."
+            else -> "Bu to'lov so'rovi boshqa adminlarga yana ko'rinadi."
+        }
+        AlertDialog.Builder(this)
+            .setTitle(if (hiddenNow) "Qayta ko'rsatish" else "Boshqa adminlardan yashirish")
+            .setMessage(message)
+            .setPositiveButton("Ha") { _, _ ->
+                val done: (Boolean) -> Unit = { ok ->
+                    Toast.makeText(this, if (ok) "Bajarildi" else "Xato yuz berdi", Toast.LENGTH_SHORT).show()
+                }
+                when {
+                    userHidden -> FirebaseRepo.setPremiumUserHidden(req.fromUid, false, done)
+                    else -> FirebaseRepo.setPremiumRequestHidden(docId, !req.adminHidden, done)
+                }
+            }
+            .setNegativeButton("Yo'q", null)
+            .show()
     }
 
     private fun showTab(index: Int) {

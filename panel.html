@@ -325,7 +325,15 @@ function riskFalseAlarm(v){
   const terms=m[1].split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
   return terms.length>0&&terms.length<2&&terms.every(x=>RISK_WEAK.has(x));
 }
-async function riskAlertsHtml(){const x=(await sub('risk_events','capturedAt',100)).filter(v=>!riskFalseAlarm(v));return '<div class="empty" style="margin-bottom:12px;text-align:left">Faqat muhim xavf signallari ko\u2018rsatiladi: 18+ tasvir/video, intim suhbat yoki media, 1XBET va boshqa qimor o\u2018yinlari ochilsa yoki qidirilsa, o\u2018z joniga qasd yoki giyohvand moddalar bo\u2018yicha aktiv qidiruv/suhbat aniqlansa — shu yerda qayd etiladi.</div>'+(x.length?x.map(v=>{
+let riskEvCache={t:0,data:null,key:''};
+async function riskEventsCached(){
+  const ck=family+'/'+child;
+  if(riskEvCache.key===ck&&riskEvCache.data&&Date.now()-riskEvCache.t<60000)return riskEvCache.data;
+  const d=await sub('risk_events','capturedAt',100);
+  riskEvCache={t:Date.now(),data:d,key:ck};
+  return d;
+}
+async function riskAlertsHtml(){const x=(await riskEventsCached()).filter(v=>!riskFalseAlarm(v));return '<div class="empty" style="margin-bottom:12px;text-align:left">Faqat muhim xavf signallari ko\u2018rsatiladi: 18+ tasvir/video, intim suhbat yoki media, 1XBET va boshqa qimor o\u2018yinlari ochilsa yoki qidirilsa, o\u2018z joniga qasd yoki giyohvand moddalar bo\u2018yicha aktiv qidiruv/suhbat aniqlansa — shu yerda qayd etiladi.</div>'+(x.length?x.map(v=>{
   const high=v.severity==='HIGH';
   const dot=high?'🔴':'🟠';
   const sevClass=high?'miss':'out';
@@ -351,9 +359,15 @@ function riskSnippet(t,term,r=70){
 // kind yo'q, ular avvalgi qoidalar bo'yicha aniqlanadi.
 let ssSub='manual',riskSub='alerts';
 const shotKind=v=>v.kind?v.kind:((v.thresholdMinute||0)>0?'auto':((v.riskCategory||v.sensitiveEvidence)?'risk':'manual'));
-async function loadShotMeta(){
-  const q=query(collection(db,'families',family,'children',child,'screenshots'),orderBy('capturedAt','desc'),limit(200));
-  return(await getDocs(q)).docs.map(d=>({id:d.id,...d.data()}));
+let shotMetaCache={t:0,data:null,key:''};
+async function loadShotMeta(force){
+  // 60 soniya xotirada saqlanadi: ichki bo'limlar almashganda Firebase'dan qayta o'qilmasin.
+  const ck=family+'/'+child;
+  if(!force&&shotMetaCache.key===ck&&shotMetaCache.data&&Date.now()-shotMetaCache.t<60000)return shotMetaCache.data;
+  const q=query(collection(db,'families',family,'children',child,'screenshots'),orderBy('capturedAt','desc'),limit(100));
+  const data=(await getDocs(q)).docs.map(d=>({id:d.id,...d.data()}));
+  shotMetaCache={t:Date.now(),data,key:ck};
+  return data;
 }
 function subTabsHtml(cur,items){
   return'<div class="subtabs">'+items.map(([k,l])=>'<button type="button" class="subtab'+(cur===k?' on':'')+'" data-sub="'+k+'">'+l+'</button>').join('')+'</div>';
@@ -370,7 +384,8 @@ async function shots(){
   const active=cv.screenProjectionActive===true;const upd=cv.screenProjectionUpdatedAt;
   const bannerText=active?'🟢 Ekran nazorati ulangan':'🔴 Ekran nazorati ulanmagan'+(upd?' ('+fmt(upd)+')':'')+' — farzand qurilmasida ilova ochilishi kerak';
   const banner='<div class="empty" style="margin-bottom:12px;text-align:left">'+bannerText+'</div>';
-  const all=await loadShotMeta();
+  const force=document.body.dataset.ssForce==='1';document.body.dataset.ssForce='';
+  const all=await loadShotMeta(force);
   const manual=all.filter(v=>shotKind(v)==='manual'),auto=all.filter(v=>shotKind(v)==='auto');
   const tabs=subTabsHtml(ssSub,[['manual','📸 Hozir olingan ('+manual.length+')'],['auto','📊 Top ilovalar ('+auto.length+')']]);
   const list=ssSub==='auto'
@@ -400,6 +415,7 @@ async function risk(){
 // SDK orqali kanalga tinglovchi bo'lib qo'shiladi. Sertifikat sahifada saqlanmaydi.
 let micClient=null,micUnsub=null,micActive=false,micRequestId=null,micTimer=null,micJoining=false;
 let micRemaining=0,micConnectedAt=0,micFlushed=0,micTicker=null,micLimitNote='';
+let micUsageDay='',micUsedBase=0,micSegStart=0;
 const MIC_HINT='Yoqsangiz, farzand qurilmasidan real vaqtda ovoz eshitiladi (internet orqali).';
 // Kunlik limit: har bir ota-ona hisobiga kuniga 30 daqiqa, Toshkent vaqti (UTC+5) bo'yicha
 // yarim tunda qayta tiklanadi. Adminlar uchun cheklov yo'q. Ma'lumot parents/{uid}
@@ -414,16 +430,13 @@ async function voiceRemaining(){
   const used=d.voiceDay===dayKey()?(Number(d.voiceSeconds)||0):0;
   return Math.max(0,VOICE_DAILY-used);
 }
-async function addVoiceUsage(sec){
-  if(isAdminUser||sec<=0||!auth.currentUser)return;
-  const ref=doc(db,'parents',auth.currentUser.uid);
-  await runTransaction(db,async tx=>{
-    const snap=await tx.get(ref);
-    const d=snap.exists()?snap.data():{};
-    const today=dayKey();
-    const used=d.voiceDay===today?(Number(d.voiceSeconds)||0):0;
-    tx.set(ref,{voiceDay:today,voiceSeconds:used+sec},{merge:true});
-  });
+function flushVoiceUsage(elapsed){
+  // Jami sarfni BITTA yozuv bilan saqlaydi (o'qish/tranzaksiyasiz — Firebase kvotasini tejash).
+  if(isAdminUser||!auth.currentUser)return;
+  const today=dayKey();
+  if(today!==micUsageDay){micUsageDay=today;micUsedBase=0;micSegStart=micFlushed}
+  const used=micUsedBase+Math.max(0,elapsed-micSegStart);
+  setDoc(doc(db,'parents',auth.currentUser.uid),{voiceDay:today,voiceSeconds:used},{merge:true}).catch(()=>{});
 }
 async function refreshMicLimit(){
   try{
@@ -434,7 +447,7 @@ async function refreshMicLimit(){
 }
 function micStartCounting(){
   if(micTicker)return;
-  micConnectedAt=Date.now();micFlushed=0;
+  micConnectedAt=Date.now();micFlushed=0;micSegStart=0;
   micTicker=setInterval(()=>{
     if(!micActive||!micConnectedAt)return;
     const el=$('micLeft');
@@ -442,15 +455,15 @@ function micStartCounting(){
     const elapsed=Math.floor((Date.now()-micConnectedAt)/1000);
     const left=micRemaining-elapsed;
     if(el)el.textContent='⏱ Qolgan vaqt: '+fmtTime(left);
-    if(elapsed-micFlushed>=15){ const dlt=elapsed-micFlushed;micFlushed=elapsed;addVoiceUsage(dlt).catch(()=>{}) }
+    if(elapsed-micFlushed>=60){ flushVoiceUsage(elapsed);micFlushed=elapsed }
     if(left<=0)stopVoice('⏳ Kunlik 30 daqiqalik limit tugadi. Ertaga qayta tiklanadi.');
   },1000);
 }
 function micStopCounting(){
   if(micTicker){clearInterval(micTicker);micTicker=null}
   if(!isAdminUser&&micConnectedAt){
-    const rest=Math.floor((Date.now()-micConnectedAt)/1000)-micFlushed;
-    if(rest>0)addVoiceUsage(rest).catch(()=>{});
+    const elapsedNow=Math.floor((Date.now()-micConnectedAt)/1000);
+    if(elapsedNow>micFlushed)flushVoiceUsage(elapsedNow);
   }
   micConnectedAt=0;micFlushed=0;
 }
@@ -474,6 +487,7 @@ async function startVoice(){
   try{ micRemaining=await voiceRemaining() }
   catch(e){ stopVoice('⚠️ Limitni tekshirib bo‘lmadi. Internetni tekshirib, qayta urinib ko‘ring',true); return }
   if(micRemaining<=0){ stopVoice('⏳ Bugungi 30 daqiqalik limit tugadi. Ertaga qayta tiklanadi.',true); return }
+  micUsageDay=dayKey();micUsedBase=isAdminUser?0:VOICE_DAILY-micRemaining;
   const requestId='web_'+Date.now();
   micRequestId=requestId;
   const channelName='oila_'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);

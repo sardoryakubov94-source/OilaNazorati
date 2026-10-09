@@ -14,10 +14,15 @@ import uz.oilanazorati.parentcontrol.model.PremiumRequest
 
 class AdminPremiumRequestAdapter(
     private val onApprove: (docId: String, req: PremiumRequest) -> Unit,
-    private val onReject: (docId: String) -> Unit
+    private val onReject: (docId: String) -> Unit,
+    private val onToggleHide: (docId: String, req: PremiumRequest) -> Unit
 ) : RecyclerView.Adapter<AdminPremiumRequestAdapter.VH>() {
 
     private var items: List<Pair<String, PremiumRequest>> = emptyList()
+    /** Faqat egasi uchun true. */
+    var isOwner: Boolean = false
+    /** Yashirilgan foydalanuvchilar (ularning barcha so'rovlari yashirin hisoblanadi). */
+    var hiddenUids: Set<String> = emptySet()
 
     fun setData(newItems: List<Pair<String, PremiumRequest>>) {
         items = newItems
@@ -30,6 +35,7 @@ class AdminPremiumRequestAdapter(
         val screenshot: ImageView = view.findViewById(R.id.reqScreenshot)
         val approveBtn: Button = view.findViewById(R.id.btnApprove)
         val rejectBtn: Button = view.findViewById(R.id.btnReject)
+        val hideBtn: Button = view.findViewById(R.id.btnHide)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -39,7 +45,8 @@ class AdminPremiumRequestAdapter(
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val (docId, req) = items[position]
-        holder.email.text = req.fromEmail
+        val hiddenNow = req.adminHidden || req.fromUid in hiddenUids
+        holder.email.text = if (isOwner && hiddenNow) "${req.fromEmail}\n🙈 yashirilgan (faqat sizga ko'rinadi)" else req.fromEmail
 
         when (req.holati) {
             "tolandi" -> {
@@ -74,6 +81,9 @@ class AdminPremiumRequestAdapter(
         holder.rejectBtn.isEnabled = isPending
         holder.approveBtn.setOnClickListener { onApprove(docId, req) }
         holder.rejectBtn.setOnClickListener { onReject(docId) }
+        holder.hideBtn.visibility = if (isOwner) View.VISIBLE else View.GONE
+        holder.hideBtn.text = if (hiddenNow) "👁 Boshqa adminlarga qayta ko'rsatish" else "🙈 Boshqa adminlardan yashirish"
+        holder.hideBtn.setOnClickListener { onToggleHide(docId, req) }
     }
 
     override fun getItemCount() = items.size

@@ -656,13 +656,32 @@ object FirebaseRepo {
                     uid = doc.id,
                     ismi = doc.getString("ismi").orEmpty(),
                     email = doc.getString("email").orEmpty(),
-                    oxirgiKirishMs = doc.getLong("oxirgiKirishMs") ?: 0L
+                    oxirgiKirishMs = doc.getLong("oxirgiKirishMs") ?: 0L,
+                    adminHidden = doc.getBoolean("adminHidden") == true
                 )
             }?.sortedByDescending { it.oxirgiKirishMs } ?: emptyList())
         }
     }
 
     /** Ko'rsatilgan foydalanuvchidan premium huquqini olib tashlaydi. */
+    /**
+     * Egasi uchun: foydalanuvchini (va uning barcha to'lov so'rovlarini) boshqa adminlardan yashiradi
+     * yoki qayta ko'rsatadi. Ma'lumot O'CHIRILMAYDI va premium huquqi O'ZGARMAYDI.
+     */
+    fun setPremiumUserHidden(uid: String, hidden: Boolean, onResult: (Boolean) -> Unit) {
+        db.collection("premium_requests").whereEqualTo("fromUid", uid).get()
+            .addOnSuccessListener { snap ->
+                val batch = db.batch()
+                batch.set(db.collection("parents").document(uid), mapOf("adminHidden" to hidden), SetOptions.merge())
+                snap.documents.forEach { batch.update(it.reference, "adminHidden", hidden) }
+                batch.commit().addOnSuccessListener { onResult(true) }.addOnFailureListener { onResult(false) }
+            }
+            .addOnFailureListener { onResult(false) }
+    }
+    fun setPremiumRequestHidden(reqId: String, hidden: Boolean, onResult: (Boolean) -> Unit) {
+        db.collection("premium_requests").document(reqId).update("adminHidden", hidden)
+            .addOnSuccessListener { onResult(true) }.addOnFailureListener { onResult(false) }
+    }
     fun revokePremium(uid: String, onResult: (Boolean) -> Unit) {
         db.collection("parents").document(uid).update("premium", false)
             .addOnSuccessListener {

@@ -50,6 +50,16 @@ object VoiceLimit {
             .addOnFailureListener { onResult(false, null) }
     }
 
+    /**
+     * Bugungi jami sarflangan soniyani BITTA yozuv bilan saqlaydi (o'qishsiz — Firebase kvotasini tejash uchun).
+     * Qiymat = sessiya boshidagi sarf + shu sessiyada o'tgan vaqt (chaqiruvchi hisoblaydi).
+     */
+    fun setUsage(usedSeconds: Int) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        db.collection("parents").document(uid)
+            .set(mapOf("voiceDay" to dayKey(), "voiceSeconds" to usedSeconds.coerceAtLeast(0)), SetOptions.merge())
+    }
+
     /** Sarflangan soniyalarni qo'shadi (kun almashgan bo'lsa noldan boshlaydi). Adminlar uchun chaqirilmaydi. */
     fun addUsage(seconds: Int) {
         if (seconds <= 0) return

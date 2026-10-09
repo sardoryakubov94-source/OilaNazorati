@@ -41,6 +41,7 @@ import java.util.UUID
  * deyarli mumkin emas.
  */
 class AmbientListenActivity : AppCompatActivity() {
+    private val USAGE_FLUSH_SECONDS = 60
     private val crashlytics = FirebaseCrashlytics.getInstance()
     private val db = FirebaseFirestore.getInstance()
     private var requestListener: ListenerRegistration? = null
@@ -56,6 +57,10 @@ class AmbientListenActivity : AppCompatActivity() {
     private var remainingAtStart = 0
     private var connectedAtMs = 0L
     private var flushedSeconds = 0
+    // Sarfni o'qimasdan yozish uchun: sessiya boshidagi sarf, kun va kun almashgandagi boshlanish nuqtasi
+    private var usageDay = ""
+    private var usedBase = 0
+    private var segmentStartElapsed = 0
     private val ticker = Handler(Looper.getMainLooper())
     private val tick = object : Runnable {
         override fun run() {
@@ -202,6 +207,9 @@ class AmbientListenActivity : AppCompatActivity() {
                     }
                     isAdminUser = admin
                     remainingAtStart = remaining
+                    usageDay = VoiceLimit.dayKey()
+                    usedBase = if (admin) 0 else VoiceLimit.DAILY_SECONDS - remaining
+                    segmentStartElapsed = 0
                     if (!admin && remaining <= 0) {
                         status.text = "⏳ Bugungi 30 daqiqalik limit tugadi. Ertaga qayta tiklanadi"
                         limitInfo.text = "⏱ Bugun qoldi: 00:00 / ${VoiceLimit.format(VoiceLimit.DAILY_SECONDS)}"
@@ -247,11 +255,22 @@ class AmbientListenActivity : AppCompatActivity() {
         val elapsed = elapsedSeconds()
         val left = remainingAtStart - elapsed
         status.text = "🔴 Jonli ovoz · ⏱ ${VoiceLimit.format(left)}"
-        if (elapsed - flushedSeconds >= 15) {
-            VoiceLimit.addUsage(elapsed - flushedSeconds)
+        if (elapsed - flushedSeconds >= USAGE_FLUSH_SECONDS) {
+            flushUsage(elapsed)
             flushedSeconds = elapsed
         }
         if (left <= 0) stopListening("⏳ Kunlik 30 daqiqalik limit tugadi. Ertaga qayta tiklanadi")
+    }
+
+    /** Jami sarfni BITTA yozuv bilan saqlaydi. Kun almashgan bo'lsa, yangi kundan boshlaydi. */
+    private fun flushUsage(elapsed: Int) {
+        val today = VoiceLimit.dayKey()
+        if (today != usageDay) {
+            usageDay = today
+            usedBase = 0
+            segmentStartElapsed = flushedSeconds
+        }
+        VoiceLimit.setUsage(usedBase + (elapsed - segmentStartElapsed).coerceAtLeast(0))
     }
 
     /** Sanashni to'xtatadi va saqlanmagan soniyalarni yozadi. */
@@ -259,7 +278,7 @@ class AmbientListenActivity : AppCompatActivity() {
         ticker.removeCallbacks(tick)
         if (!isAdminUser && connectedAtMs != 0L) {
             val rest = elapsedSeconds() - flushedSeconds
-            if (rest > 0) VoiceLimit.addUsage(rest)
+            if (rest > 0) flushUsage(elapsedSeconds())
         }
         connectedAtMs = 0L
         flushedSeconds = 0
