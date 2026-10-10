@@ -572,6 +572,14 @@ object FirebaseRepo {
             .addOnSuccessListener { onResult(true) }.addOnFailureListener { onResult(false) }
     }
 
+    /** Foydalanuvchining o'z premium so'rovlari (eng yangisi birinchi). Holat o'zgarsa darrov yangilanadi. */
+    fun listenMyPremiumRequests(onChange: (List<PremiumRequest>) -> Unit): com.google.firebase.firestore.ListenerRegistration? {
+        val uid = auth.currentUser?.uid ?: return null
+        return db.collection("premium_requests").whereEqualTo("fromUid", uid).addSnapshotListener { snap, _ ->
+            if (snap == null) return@addSnapshotListener
+            onChange(snap.documents.mapNotNull { it.toObject(PremiumRequest::class.java) }.sortedByDescending { it.createdAtMs })
+        }
+    }
     fun sendPremiumRequest(izoh: String, skrinshotBase64: String, onResult: (Boolean) -> Unit) {
         val user = auth.currentUser ?: return onResult(false)
         val req = PremiumRequest(

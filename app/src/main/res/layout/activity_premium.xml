@@ -192,6 +192,17 @@
         android:textSize="12sp"
         android:layout_marginBottom="16dp"/>
 
+    <TextView
+        android:id="@+id/requestStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_card"
+        android:padding="14dp"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="12dp"
+        android:visibility="gone"/>
+
     <Button
         android:id="@+id/btnSendPremiumRequest"
         android:layout_width="match_parent"
