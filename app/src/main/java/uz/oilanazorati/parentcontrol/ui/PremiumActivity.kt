@@ -41,6 +41,7 @@ class PremiumActivity : AppCompatActivity() {
     // So'rov holati: qayta-qayta yuborishning oldini olish va foydalanuvchiga holatni ko'rsatish uchun
     private lateinit var requestStatusText: TextView
     private lateinit var sendButton: Button
+    private lateinit var attachButton: Button
     private var latestStatus: String? = null   // eng yangi so'rov: kutilmoqda | tolandi | rad_etildi
     private var statusLoaded = false
     private var sending = false
@@ -65,7 +66,8 @@ class PremiumActivity : AppCompatActivity() {
         cardsList.layoutManager = LinearLayoutManager(this)
         cardsList.adapter = cardAdapter
 
-        findViewById<View>(R.id.btnAttachScreenshot).setOnClickListener {
+        attachButton = findViewById(R.id.btnAttachScreenshot)
+        attachButton.setOnClickListener {
             pickImageLauncher.launch("image/*")
         }
         requestStatusText = findViewById(R.id.requestStatusText)
@@ -126,21 +128,22 @@ class PremiumActivity : AppCompatActivity() {
 
     /** Holat kartasi va "yuborish" tugmasining ko'rinishini yangilaydi. */
     private fun updateRequestUi() {
-        // Premium allaqachon tasdiqlangan bo'lsa, eski "tolandi" holati bannerga aylanadi;
-        // premium bekor qilingan bo'lsa (premiumLoaded && !isPremiumNow) — qayta yuborish mumkin.
-        val approvedActive = latestStatus == "tolandi" && isPremiumNow
-        val pending = latestStatus == "kutilmoqda"
-        val rejected = latestStatus == "rad_etildi"
+        val ready = statusLoaded && premiumLoaded
+        // Premium allaqachon FAOL bo'lsa (bir martalik to'lov) — oldingi takroriy/kutilayotgan so'rovlar
+        // ahamiyatsiz: foydalanuvchiga faqat "Premium faol" ko'rsatiladi.
+        val premiumActive = ready && isPremiumNow
+        val pending = ready && !isPremiumNow && latestStatus == "kutilmoqda"
+        val rejected = ready && !isPremiumNow && latestStatus == "rad_etildi"
 
         when {
+            premiumActive -> {
+                requestStatusText.text = "✅ Premium faol.\nBarcha imkoniyatlar ochilgan — qo'shimcha to'lov yoki so'rov kerak emas."
+                requestStatusText.setTextColor(0xFF2ECC71.toInt())
+                requestStatusText.visibility = View.VISIBLE
+            }
             pending -> {
                 requestStatusText.text = "⏳ So'rovingiz yuborildi.\nAdmin to'lovingizni ko'rib chiqmoqda — iltimos, biroz kuting. Qayta yuborish shart emas."
                 requestStatusText.setTextColor(0xFFF39C12.toInt())
-                requestStatusText.visibility = View.VISIBLE
-            }
-            approvedActive -> {
-                requestStatusText.text = "✅ So'rovingiz tasdiqlandi — Premium faollashtirildi."
-                requestStatusText.setTextColor(0xFF2ECC71.toInt())
                 requestStatusText.visibility = View.VISIBLE
             }
             rejected -> {
@@ -151,16 +154,23 @@ class PremiumActivity : AppCompatActivity() {
             else -> requestStatusText.visibility = View.GONE
         }
 
+        attachButton.isEnabled = !premiumActive && !pending
+        if (premiumActive) screenshotStatusText.text = "Premium faol — to'lov skrinshoti kerak emas"
+
         when {
             sending -> { sendButton.isEnabled = false; sendButton.text = "⏳ Yuborilmoqda..." }
-            !statusLoaded -> { sendButton.isEnabled = false; sendButton.text = "Yuklanmoqda..." }
+            !ready -> { sendButton.isEnabled = false; sendButton.text = "Yuklanmoqda..." }
+            premiumActive -> { sendButton.isEnabled = false; sendButton.text = "✅ Premium faol" }
             pending -> { sendButton.isEnabled = false; sendButton.text = "⏳ So'rov ko'rib chiqilmoqda" }
-            approvedActive -> { sendButton.isEnabled = false; sendButton.text = "✅ Premium faol" }
             else -> { sendButton.isEnabled = true; sendButton.text = "To'lov qildim — so'rov yuborish" }
         }
     }
 
     private fun sendRequest() {
+        if (isPremiumNow) {
+            Toast.makeText(this, "Premium allaqachon faol — qayta to'lov kerak emas", Toast.LENGTH_SHORT).show()
+            return
+        }
         if (sending || latestStatus == "kutilmoqda") {
             Toast.makeText(this, "So'rovingiz allaqachon yuborilgan — admin ko'rib chiqmoqda", Toast.LENGTH_SHORT).show()
             return
