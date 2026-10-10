@@ -338,7 +338,9 @@ class AccessibilityScreenshotService : AccessibilityService() {
     }
 
     private fun currentForegroundInfo(usm: UsageStatsManager, now: Long): Pair<String, Long>? {
-        val events = usm.queryEvents((now - 24 * 60 * 60_000L).coerceAtLeast(0L), now)
+        // 24 soat o'rniga 6 soat: har 60 soniyada o'qiladigan hodisalar soni 4 baravar kam. Ekran o'chganda
+        // ilova fonga o'tadi, shuning uchun uzluksiz sessiya amalda 6 soatdan oshmaydi.
+        val events = usm.queryEvents((now - 6 * 60 * 60_000L).coerceAtLeast(0L), now)
         val event = android.app.usage.UsageEvents.Event()
         val starts = HashMap<String, Long>()
         var currentPkg: String? = null
@@ -417,12 +419,14 @@ class AccessibilityScreenshotService : AccessibilityService() {
     // MUHIM — batareya va Firebase kvotasini tejash qoidalari:
     // 1) Faqat VIDEO KO'RINISHI aniqlangan ilovada ishga tushadi (har doim
     //    emas), 2) kamida 15 soniyalik oraliq bilan (tez-tez emas),
-    // 3) uzluksiz eng ko'p MAX_VIDEO_SAMPLES marta (keyin to'xtaydi,
-    //    qayta aniqlanishi kerak), 4) ENG MUHIMI — xavf TOPILMASA hech
+    // 3) dastlabki MAX_VIDEO_SAMPLES (12) kadr 15 soniyada bir marta, undan keyin
+    //    video davom etsa SIYRAK rejim (40 soniyada bir marta) — avval to'xtab darrov
+    //    qayta boshlanib, doimiy 15 soniyalik og'ir tekshiruvga aylanardi, 4) ENG MUHIMI — xavf TOPILMASA hech
     //    qanday fayl yozilmaydi, Firestore'ga yozilmaydi, Storage'ga
     //    yuklanmaydi: kadr faqat xotirada tekshirilib, darhol tashlanadi.
     private val VIDEO_SAMPLE_INTERVAL_MS = 15_000L
-    private val MAX_VIDEO_SAMPLES = 12 // ~3 daqiqa uzluksiz kuzatish chegarasi
+    private val VIDEO_SAMPLE_SLOW_INTERVAL_MS = 40_000L // dastlabki tezkor kadrlardan keyingi siyrak oraliq
+    private val MAX_VIDEO_SAMPLES = 12 // ~3 daqiqa tezkor kuzatish, keyin siyrak rejim
 
     private var videoWatchPackage: String? = null
     private var videoWatchCount: Int = 0
@@ -446,12 +450,11 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private fun scheduleVideoSample() {
         val runnable = Runnable { runVideoFrameCheck() }
         videoWatchRunnable = runnable
-        mainHandler.postDelayed(runnable, VIDEO_SAMPLE_INTERVAL_MS)
+        mainHandler.postDelayed(runnable, if (videoWatchCount < MAX_VIDEO_SAMPLES) VIDEO_SAMPLE_INTERVAL_MS else VIDEO_SAMPLE_SLOW_INTERVAL_MS)
     }
 
     private fun runVideoFrameCheck() {
         val target = videoWatchPackage ?: return
-        if (videoWatchCount >= MAX_VIDEO_SAMPLES) { stopVideoWatch(); return }
         if (captureRunning || !isScreenInteractive()) { stopVideoWatch(); return }
         val stillForeground = runCatching { rootInActiveWindow?.packageName?.toString() == target }.getOrDefault(false)
         if (!stillForeground) { stopVideoWatch(); return }
@@ -541,6 +544,9 @@ class AccessibilityScreenshotService : AccessibilityService() {
         if (uptime < manualCaptureUntil) return
         if (uptime - lastRiskScanAt < RISK_SCAN_MIN_INTERVAL_MS) return
         lastRiskScanAt = uptime
+        // Ekran o'chiq bo'lsa ekranda ko'rinadigan matn yo'q — tahlil kerak emas (bildirishnomalar
+        // SocialNotificationListenerService orqali alohida kuzatiladi).
+        if ((getSystemService(Context.POWER_SERVICE) as? PowerManager)?.isInteractive == false) return
         val packageName = event.packageName?.toString()?.takeIf { it.isNotBlank() } ?: return
         if (packageName == applicationContext.packageName) return
         if (RiskAnalysisEngine.isIgnoredPackage(packageName)) return
@@ -663,7 +669,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
 
     companion object {
         const val ACTION_TEST_SCREENSHOT = "uz.oilanazorati.action.ACCESSIBILITY_SCREENSHOT_TEST"
-        const val AUTO_WATCH_INTERVAL_MS = 30_000L
+        const val AUTO_WATCH_INTERVAL_MS = 60_000L // 15-60 daqiqalik chegara uchun 1 daqiqalik aniqlik yetarli (batareya)
         const val RISK_SCAN_MIN_INTERVAL_MS = 1_500L
         const val AUTO_BURST_INTERVAL_MS = 60_000L
         const val AUTO_BURST_COUNT = 3

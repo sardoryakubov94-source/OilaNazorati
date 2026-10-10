@@ -36,7 +36,7 @@ class ScreenCaptureService : Service() {
     private var waitingRemoteRequestId: String? = null
     private val pollRunnable = object : Runnable { override fun run() { if (pending == null || captureInProgress) return; val image = imageReader?.acquireLatestImage(); if (image != null) processImage(image) else handler.postDelayed(this, CAPTURE_POLL_INTERVAL_MS) } }
     private val captureTimeoutRunnable = Runnable { onCaptureTimeout() }
-    private val evalRunnable = object : Runnable { override fun run() { if (!AccessibilityScreenshotService.isServiceEnabled(this@ScreenCaptureService)) evaluateAndQueue(); handler.postDelayed(this, 30_000L) } }
+    private val evalRunnable = object : Runnable { override fun run() { if (!AccessibilityScreenshotService.isServiceEnabled(this@ScreenCaptureService)) evaluateAndQueue(); handler.postDelayed(this, 60_000L) } }
 
     data class PendingCapture(val packageName: String, val threshold: Int, val usageSeconds: Long, val key: String, val remoteRequestId: String? = null)
 
