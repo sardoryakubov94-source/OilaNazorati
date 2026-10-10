@@ -142,7 +142,7 @@ class PremiumActivity : AppCompatActivity() {
                 requestStatusText.visibility = View.VISIBLE
             }
             pending -> {
-                requestStatusText.text = "⏳ So'rovingiz yuborildi.\nAdmin to'lovingizni ko'rib chiqmoqda — iltimos, biroz kuting. Qayta yuborish shart emas."
+                requestStatusText.text = "⏳ So'rovingiz yuborildi.\nAdmin to'lovingizni ko'rib chiqmoqda — iltimos, biroz kuting."
                 requestStatusText.setTextColor(0xFFF39C12.toInt())
                 requestStatusText.visibility = View.VISIBLE
             }
