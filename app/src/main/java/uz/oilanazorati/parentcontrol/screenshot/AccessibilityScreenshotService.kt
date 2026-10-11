@@ -99,6 +99,8 @@ class AccessibilityScreenshotService : AccessibilityService() {
     // band qilmasin: aks holda screenshot javobi kechikib, ota-ona tomonida "vaqtida yakunlanmadi" bo'lardi.
     private var manualCaptureUntil = 0L
     private var lastRiskScanAt = 0L
+    private var lastScanPackage: String? = null
+    private var lastScanHash = 0
 
     private fun queueRemoteCapture(requestId: String, attempt: Int = 0): Unit {
         if (!settings.enabled) return
@@ -542,7 +544,8 @@ class AccessibilityScreenshotService : AccessibilityService() {
         // aylanib chiqish asosiy oqimni band qilib, screenshot so'rovlarini sekinlashtirardi.
         val uptime = android.os.SystemClock.uptimeMillis()
         if (uptime < manualCaptureUntil) return
-        if (uptime - lastRiskScanAt < RISK_SCAN_MIN_INTERVAL_MS) return
+        val minGap = if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) RISK_SCAN_WINDOW_CHANGE_MS else RISK_SCAN_MIN_INTERVAL_MS
+        if (uptime - lastRiskScanAt < minGap) return
         lastRiskScanAt = uptime
         // Ekran o'chiq bo'lsa ekranda ko'rinadigan matn yo'q — tahlil kerak emas (bildirishnomalar
         // SocialNotificationListenerService orqali alohida kuzatiladi).
@@ -572,6 +575,11 @@ class AccessibilityScreenshotService : AccessibilityService() {
         else if (videoWatchPackage != null && videoWatchPackage != packageName) stopVideoWatch()
 
         if (parts.isEmpty()) return
+        // Mazmun oldingi o'qishdagi bilan bir xil bo'lsa — qayta tahlil qilishning ma'nosi yo'q.
+        val contentHash = parts.joinToString("\u0001").hashCode()
+        if (packageName == lastScanPackage && contentHash == lastScanHash) return
+        lastScanPackage = packageName
+        lastScanHash = contentHash
         val analysis = RiskAnalysisEngine.analyze(*parts.toTypedArray()) ?: return
         val mediaType = RiskAnalysisEngine.detectMediaMarker(parts)
         val now = System.currentTimeMillis()
@@ -637,18 +645,27 @@ class AccessibilityScreenshotService : AccessibilityService() {
         "VideoView", "PlayerView", "ExoPlayerView", "StyledPlayerView", "TextureView"
     )
 
+    // Har bir getChild() — boshqa ilova jarayoniga alohida so'rov (IPC). Murakkab ekranlarda
+    // (brauzer, Telegram, WebView) daraxt minglab tugundan iborat bo'lishi mumkin — bu ham
+    // bizning, ham ochiq turgan ilovaning batareyasini ko'p yeydi. Shuning uchun: ko'rinmaydigan
+    // tugunlar o'tkazib yuboriladi va bitta o'qishda tugunlar soni chegaralanadi.
+    private val MAX_SCAN_NODES = 400
+
     private fun collectVisibleText(
         node: android.view.accessibility.AccessibilityNodeInfo,
-        out: MutableList<String>, depth: Int, videoFlag: BooleanArray
+        out: MutableList<String>, depth: Int, videoFlag: BooleanArray,
+        budget: IntArray = intArrayOf(MAX_SCAN_NODES)
     ) {
-        if (depth > 8) return
+        if (depth > 8 || budget[0] <= 0 || !node.isVisibleToUser) return
+        budget[0]--
         node.text?.toString()?.takeIf { it.isNotBlank() }?.let { out.add(it) }
         node.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { out.add(it) }
         node.className?.toString()?.let { cls -> if (VIDEO_VIEW_HINTS.any { cls.contains(it) }) videoFlag[0] = true }
         for (i in 0 until node.childCount) {
+            if (budget[0] <= 0) break
             runCatching {
                 node.getChild(i)?.let { child ->
-                    collectVisibleText(child, out, depth + 1, videoFlag)
+                    collectVisibleText(child, out, depth + 1, videoFlag, budget)
                     child.recycle()
                 }
             }
@@ -670,7 +687,8 @@ class AccessibilityScreenshotService : AccessibilityService() {
     companion object {
         const val ACTION_TEST_SCREENSHOT = "uz.oilanazorati.action.ACCESSIBILITY_SCREENSHOT_TEST"
         const val AUTO_WATCH_INTERVAL_MS = 60_000L // 15-60 daqiqalik chegara uchun 1 daqiqalik aniqlik yetarli (batareya)
-        const val RISK_SCAN_MIN_INTERVAL_MS = 1_500L
+        const val RISK_SCAN_MIN_INTERVAL_MS = 3_000L // kontent hodisalari uchun
+        const val RISK_SCAN_WINDOW_CHANGE_MS = 1_000L // yangi oyna/ekranga o'tilganda tezroq
         const val AUTO_BURST_INTERVAL_MS = 60_000L
         const val AUTO_BURST_COUNT = 3
         const val BUSY_MESSAGE = "⏳ Qurilma hozir boshqa screenshot bilan band edi. Bir necha soniyadan so'ng qayta urinib ko'ring."
