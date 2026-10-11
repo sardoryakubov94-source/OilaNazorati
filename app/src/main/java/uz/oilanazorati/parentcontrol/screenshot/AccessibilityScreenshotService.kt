@@ -427,8 +427,12 @@ class AccessibilityScreenshotService : AccessibilityService() {
     //    qanday fayl yozilmaydi, Firestore'ga yozilmaydi, Storage'ga
     //    yuklanmaydi: kadr faqat xotirada tekshirilib, darhol tashlanadi.
     private val VIDEO_SAMPLE_INTERVAL_MS = 15_000L
-    private val VIDEO_SAMPLE_SLOW_INTERVAL_MS = 40_000L // dastlabki tezkor kadrlardan keyingi siyrak oraliq
-    private val MAX_VIDEO_SAMPLES = 12 // ~3 daqiqa tezkor kuzatish, keyin siyrak rejim
+    private val VIDEO_SAMPLE_SLOW_INTERVAL_MS = 45_000L // dastlabki tezkor kadrlardan keyingi siyrak oraliq
+    private val MAX_VIDEO_SAMPLES = 8 // ~2 daqiqa tezkor kuzatish, keyin siyrak rejim
+    // Belgilangan video kadr ketma-ket deyarli bir xil bo'ladi: har safar xiralashtirish, JPEG siqish va
+    // yuklash (batareya + internet) o'rniga bir xil ilovadan dalil 2 daqiqada bir marta yuboriladi.
+    private val VIDEO_EVIDENCE_COOLDOWN_MS = 120_000L
+    private val lastVideoEvidenceAt = HashMap<String, Long>()
 
     private var videoWatchPackage: String? = null
     private var videoWatchCount: Int = 0
@@ -501,6 +505,10 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private fun processVideoFrame(bitmap: Bitmap, packageName: String) {
         val verdict = runCatching { MediaRiskAnalyzer.analyze(applicationContext, bitmap) }.getOrNull()
         if (verdict == null) { runCatching { bitmap.recycle() }; return }
+        val uptimeNow = android.os.SystemClock.uptimeMillis()
+        val lastEvidence = lastVideoEvidenceAt[packageName]
+        if (lastEvidence != null && uptimeNow - lastEvidence < VIDEO_EVIDENCE_COOLDOWN_MS) { runCatching { bitmap.recycle() }; return }
+        lastVideoEvidenceAt[packageName] = uptimeNow
         try {
             val now = System.currentTimeMillis()
             val appName = runCatching {

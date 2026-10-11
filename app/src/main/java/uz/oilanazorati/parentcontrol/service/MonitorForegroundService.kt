@@ -355,7 +355,9 @@ class MonitorForegroundService : Service() {
                     val start = openTimestamps.remove(event.packageName)
                     if (start != null) {
                         val durationSec = ((event.timeStamp - start) / 1000).coerceAtLeast(0)
-                        if (durationSec >= 3) {
+                        // 10 soniyadan qisqa o'tishlar (ilovalar orasida tez almashish) yozilmaydi: har bir yozuv
+                        // internetni uyg'otadi, bunday qisqa yozuvlar esa foydali ma'lumot bermaydi.
+                        if (durationSec >= 10) {
                             FirebaseRepo.logAppUsage(
                                 AppUsageEvent(
                                     ilovaNomi = appLabelFor(event.packageName),
