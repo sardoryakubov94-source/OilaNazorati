@@ -20,4 +20,5 @@
     <color name="color_stat_sms">#E3F1FD</color>
     <color name="color_stat_contacts">#F1E8FA</color>
     <color name="color_stat_screenshot">#FDF0DC</color>
+    <color name="color_button">#0A6CF0</color>
 </resources>
