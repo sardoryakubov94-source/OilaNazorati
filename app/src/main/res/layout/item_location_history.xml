@@ -29,7 +29,7 @@
         android:layout_weight="1"
         android:layout_marginStart="12dp"
         android:textSize="13sp"
-        android:textColor="#666666"
+        android:textColor="@color/color_text_secondary"
         android:text="0.0, 0.0"/>
 
     <TextView
@@ -37,7 +37,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="🧭 Yo'nalish"
-        android:textColor="#2ECC71"
+        android:textColor="@color/color_success_text"
         android:textStyle="bold"
         android:textSize="12sp"
         android:padding="8dp"

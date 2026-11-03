@@ -120,9 +120,9 @@ class ParentDashboardActivity : AppCompatActivity() {
             tag = "risk_alerts_card"
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(18, 16, 18, 16)
+            setPadding(dp(16), dp(14), dp(16), dp(14))
             background = GradientDrawable().apply {
-                cornerRadius = 22f
+                cornerRadius = dp(22).toFloat()
                 setColor(androidx.core.content.ContextCompat.getColor(
                     this@ParentDashboardActivity,
                     uz.oilanazorati.parentcontrol.R.color.color_surface
@@ -140,11 +140,7 @@ class ParentDashboardActivity : AppCompatActivity() {
             }
         }
 
-        val icon = TextView(this).apply {
-            text = "⚠️"
-            textSize = 28f
-            setPadding(0, 0, 14, 0)
-        }
+        val icon = iconTile(uz.oilanazorati.parentcontrol.R.drawable.ic_shield_alert, 0xFFF59E0B.toInt())
         val texts = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
@@ -192,13 +188,13 @@ class ParentDashboardActivity : AppCompatActivity() {
             tag = "ambient_audio_card"
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(18, 16, 18, 16)
+            setPadding(dp(16), dp(14), dp(16), dp(14))
             // Boshqa kartalar kabi mavzuga mos rang (kunduzgi: oq, tungi: to'q
             // jigarrang) ishlatiladi — ilgari doim oq (Color.WHITE) bo'lgani
             // uchun tungi mavzuda boshqa kartalardan ajralib, "yopishib"
             // ko'rinardi.
             background = GradientDrawable().apply {
-                cornerRadius = 22f
+                cornerRadius = dp(22).toFloat()
                 setColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_surface))
             }
             elevation = 3f
@@ -225,7 +221,7 @@ class ParentDashboardActivity : AppCompatActivity() {
                 bottomMargin = (12 * density).toInt()
             }
         }
-        val icon = TextView(this).apply { text = "🎙️"; textSize = 28f; setPadding(0, 0, 14, 0) }
+        val icon = iconTile(uz.oilanazorati.parentcontrol.R.drawable.ic_mic_wave, androidx.core.content.ContextCompat.getColor(this, uz.oilanazorati.parentcontrol.R.color.color_primary))
         val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) }
         texts.addView(TextView(this).apply {
             text = "Ovoz"
@@ -245,6 +241,24 @@ class ParentDashboardActivity : AppCompatActivity() {
         content.addView(card, if (premiumIndex >= 0) premiumIndex + 1 else 1)
     }
 
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+
+    private fun iconTile(iconRes: Int, tint: Int): View {
+        val tile = android.widget.FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(46), dp(46)).apply { marginEnd = dp(14) }
+            background = GradientDrawable().apply {
+                cornerRadius = dp(14).toFloat()
+                setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(tint, 40))
+            }
+        }
+        tile.addView(android.widget.ImageView(this).apply {
+            setImageResource(iconRes)
+            setColorFilter(tint)
+            layoutParams = android.widget.FrameLayout.LayoutParams(dp(24), dp(24), Gravity.CENTER)
+        })
+        return tile
+    }
+
     private fun installSimInfoCard() {
         val scroll = binding.root.getChildAt(0) as? android.widget.ScrollView ?: return
         val content = scroll.getChildAt(0) as? LinearLayout ?: return
@@ -254,9 +268,9 @@ class ParentDashboardActivity : AppCompatActivity() {
         val card = LinearLayout(this).apply {
             tag = "sim_info_card"
             orientation = LinearLayout.VERTICAL
-            setPadding(18, 16, 18, 16)
+            setPadding(dp(16), dp(14), dp(16), dp(14))
             background = GradientDrawable().apply {
-                cornerRadius = 22f
+                cornerRadius = dp(22).toFloat()
                 setColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_surface))
             }
             elevation = 3f
@@ -266,7 +280,7 @@ class ParentDashboardActivity : AppCompatActivity() {
             }
         }
         val title = TextView(this).apply {
-            text = "📱 SIM / telefon raqamlari"
+            text = "SIM / telefon raqamlari"
             textSize = 15f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_text_primary))
@@ -274,10 +288,16 @@ class ParentDashboardActivity : AppCompatActivity() {
         simCardText = TextView(this).apply {
             text = "Raqam aniqlanmadi. Farzand telefonidan SIM ma'lumoti kutilmoqda."
             textSize = 12f
-            setPadding(0, 6, 0, 0)
+            setPadding(0, dp(10), 0, 0)
             setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
         }
-        card.addView(title); card.addView(simCardText)
+        val titleRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(iconTile(uz.oilanazorati.parentcontrol.R.drawable.ic_sim_card, 0xFF14B8A6.toInt()))
+            addView(title)
+        }
+        card.addView(titleRow); card.addView(simCardText)
         val ambientCard = content.findViewWithTag<View>("ambient_audio_card")
         val idx = content.indexOfChild(ambientCard)
         content.addView(card, if (idx >= 0) idx + 1 else content.childCount)

@@ -11,7 +11,7 @@
         android:id="@+id/reqEmail"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#2ECC71"
+        android:textColor="@color/color_success_text"
         android:textStyle="bold"
         android:textSize="13sp"/>
 

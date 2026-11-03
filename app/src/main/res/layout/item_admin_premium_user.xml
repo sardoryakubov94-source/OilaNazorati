@@ -11,7 +11,7 @@
         android:id="@+id/puIsmi"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#2ECC71"
+        android:textColor="@color/color_success_text"
         android:textStyle="bold"
         android:textSize="13sp"/>
 
@@ -19,7 +19,7 @@
         android:id="@+id/puEmail"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#8B96A5"
+        android:textColor="@color/color_text_secondary"
         android:textSize="11sp"
         android:layout_marginTop="2dp"/>
 
@@ -27,7 +27,7 @@
         android:id="@+id/puOxirgiKirish"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#8B96A5"
+        android:textColor="@color/color_text_secondary"
         android:textSize="11sp"
         android:layout_marginTop="2dp"/>
 

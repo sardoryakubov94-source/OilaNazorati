@@ -42,7 +42,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="12sp"
-            android:textColor="#666666"
+            android:textColor="@color/color_text_secondary"
             android:text="Qabul qilingan"/>
 
         <TextView
@@ -50,7 +50,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textSize="13sp"
-            android:textColor="#B7C0CC"
+            android:textColor="@color/color_text_secondary"
             android:maxLines="1"
             android:ellipsize="end"
             android:layout_marginTop="2dp"/>

@@ -12,7 +12,6 @@ import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 
 enum class NavTab { HOME, CALLS, SMS, LOCATION, APPS, SCREENSHOT, SETTINGS }
 
-private const val COLOR_ACTIVE = "#2ECC71"
 
 /**
  * Pastki navigatsiya paneli. Sozlamalar endi pastki tab emas — u
@@ -28,7 +27,7 @@ fun Activity.bindBottomNav(active: NavTab) {
 
     fun highlight(container: LinearLayout, isActive: Boolean) {
         val color = if (isActive) {
-            Color.parseColor(COLOR_ACTIVE)
+            androidx.core.content.ContextCompat.getColor(this, R.color.color_primary)
         } else {
             androidx.core.content.ContextCompat.getColor(this, R.color.color_nav_inactive)
         }

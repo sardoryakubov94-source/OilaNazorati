@@ -80,7 +80,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="● FAOL"
-                        android:textColor="#2ECC71"
+                        android:textColor="@color/color_success_text"
                         android:textSize="11sp"
                         android:textStyle="bold"/>
 
@@ -229,7 +229,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="SO'NGGI JOYLASHUV"
-                        android:textColor="#2ECC71"
+                        android:textColor="@color/color_success_text"
                         android:textStyle="bold"
                         android:textSize="11sp"/>
                 </LinearLayout>
@@ -284,7 +284,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Xaritada ko'rish →"
-                    android:textColor="#2ECC71"
+                    android:textColor="@color/color_success_text"
                     android:textStyle="bold"
                     android:textSize="13sp"
                     android:background="@drawable/bg_pill_theme"
@@ -371,7 +371,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="BUGUNGI NAZORAT"
-            android:textColor="#2ECC71"
+            android:textColor="@color/color_success_text"
             android:textStyle="bold"
             android:textSize="11sp"
             android:paddingStart="16dp"
@@ -448,7 +448,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:text="0 kiruvchi\n0 chiquvchi"
-                    android:textColor="#2ECC71"
+                    android:textColor="@color/color_success_text"
                     android:textSize="8sp"
                     android:minLines="2"
                     android:maxLines="2"
@@ -702,7 +702,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="📞 QO'NG'IROQLAR"
-                    android:textColor="#2ECC71"
+                    android:textColor="@color/color_success_text"
                     android:textStyle="bold"
                     android:textSize="12sp"/>
 
@@ -711,7 +711,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Barchasini ko'rish →"
-                    android:textColor="#2ECC71"
+                    android:textColor="@color/color_success_text"
                     android:textSize="12sp"
                     android:background="@drawable/bg_pill_theme"
                     android:paddingStart="10dp"

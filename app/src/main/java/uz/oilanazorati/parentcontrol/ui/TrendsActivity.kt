@@ -535,14 +535,14 @@ class TrendsActivity : AppCompatActivity() {
             val dataSet = BarDataSet(entries, "Qo'ng'iroqlar soni (soat bo'yicha, 7 kunlik)")
             dataSet.color = Color.parseColor("#2E7D32")
             dataSet.valueTextSize = 9f
-            dataSet.valueTextColor = Color.parseColor("#B8B8B8")
+            dataSet.valueTextColor = Color.parseColor("#8392A8")
 
             binding.hourlyCallChart.apply {
                 data = BarData(dataSet)
                 description.isEnabled = false
                 legend.isEnabled = false
-                xAxis.textColor = Color.parseColor("#B8B8B8")
-                axisLeft.textColor = Color.parseColor("#B8B8B8")
+                xAxis.textColor = Color.parseColor("#8392A8")
+                axisLeft.textColor = Color.parseColor("#8392A8")
                 xAxis.granularity = 1f
                 xAxis.position = XAxis.XAxisPosition.BOTTOM
                 xAxis.valueFormatter = IndexAxisValueFormatter((0..23).map { "$it" })
@@ -577,14 +577,14 @@ class TrendsActivity : AppCompatActivity() {
             val dataSet = BarDataSet(entries, "SMS soni (soat bo'yicha, 7 kunlik)")
             dataSet.color = Color.parseColor("#AD1457")
             dataSet.valueTextSize = 9f
-            dataSet.valueTextColor = Color.parseColor("#B8B8B8")
+            dataSet.valueTextColor = Color.parseColor("#8392A8")
 
             binding.hourlySmsChart.apply {
                 data = BarData(dataSet)
                 description.isEnabled = false
                 legend.isEnabled = false
-                xAxis.textColor = Color.parseColor("#B8B8B8")
-                axisLeft.textColor = Color.parseColor("#B8B8B8")
+                xAxis.textColor = Color.parseColor("#8392A8")
+                axisLeft.textColor = Color.parseColor("#8392A8")
                 xAxis.granularity = 1f
                 xAxis.position = XAxis.XAxisPosition.BOTTOM
                 xAxis.valueFormatter = IndexAxisValueFormatter((0..23).map { "$it" })
@@ -613,14 +613,14 @@ class TrendsActivity : AppCompatActivity() {
             val dataSet = BarDataSet(entries, "Daqiqa (7 kunlik jami)")
             dataSet.color = Color.parseColor("#1565C0")
             dataSet.valueTextSize = 9f
-            dataSet.valueTextColor = Color.parseColor("#B8B8B8")
+            dataSet.valueTextColor = Color.parseColor("#8392A8")
 
             binding.topAppsChart.apply {
                 data = BarData(dataSet)
                 description.isEnabled = false
                 legend.isEnabled = false
-                xAxis.textColor = Color.parseColor("#B8B8B8")
-                axisLeft.textColor = Color.parseColor("#B8B8B8")
+                xAxis.textColor = Color.parseColor("#8392A8")
+                axisLeft.textColor = Color.parseColor("#8392A8")
                 xAxis.granularity = 1f
                 xAxis.position = XAxis.XAxisPosition.BOTTOM
                 xAxis.valueFormatter = IndexAxisValueFormatter(shortLabels)
@@ -669,8 +669,8 @@ class TrendsActivity : AppCompatActivity() {
             data = LineData(dataSet)
             description.isEnabled = false
             legend.isEnabled = false
-            xAxis.textColor = Color.parseColor("#B8B8B8")
-            axisLeft.textColor = Color.parseColor("#B8B8B8")
+            xAxis.textColor = Color.parseColor("#8392A8")
+            axisLeft.textColor = Color.parseColor("#8392A8")
             xAxis.position = XAxis.XAxisPosition.BOTTOM
             xAxis.granularity = 5f
             xAxis.valueFormatter = dayAxisFormatter(rangeStart)
@@ -705,8 +705,8 @@ class TrendsActivity : AppCompatActivity() {
             data = LineData(dataSet)
             description.isEnabled = false
             legend.isEnabled = false
-            xAxis.textColor = Color.parseColor("#B8B8B8")
-            axisLeft.textColor = Color.parseColor("#B8B8B8")
+            xAxis.textColor = Color.parseColor("#8392A8")
+            axisLeft.textColor = Color.parseColor("#8392A8")
             xAxis.position = XAxis.XAxisPosition.BOTTOM
             xAxis.granularity = 5f
             xAxis.valueFormatter = dayAxisFormatter(rangeStart)
@@ -775,8 +775,8 @@ class TrendsActivity : AppCompatActivity() {
             data = LineData(dataSet)
             description.isEnabled = false
             legend.isEnabled = false
-            xAxis.textColor = Color.parseColor("#B8B8B8")
-            axisLeft.textColor = Color.parseColor("#B8B8B8")
+            xAxis.textColor = Color.parseColor("#8392A8")
+            axisLeft.textColor = Color.parseColor("#8392A8")
             xAxis.position = XAxis.XAxisPosition.BOTTOM
             xAxis.granularity = 5f
             xAxis.valueFormatter = dayAxisFormatter(rangeStart)
@@ -810,8 +810,8 @@ class TrendsActivity : AppCompatActivity() {
             data = LineData(dataSet)
             description.isEnabled = false
             legend.isEnabled = false
-            xAxis.textColor = Color.parseColor("#B8B8B8")
-            axisLeft.textColor = Color.parseColor("#B8B8B8")
+            xAxis.textColor = Color.parseColor("#8392A8")
+            axisLeft.textColor = Color.parseColor("#8392A8")
             xAxis.position = XAxis.XAxisPosition.BOTTOM
             xAxis.granularity = 5f
             xAxis.valueFormatter = dayAxisFormatter(rangeStart)
