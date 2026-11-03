@@ -178,13 +178,18 @@ class AmbientListenActivity : AppCompatActivity() {
             setTextColor(getColor(R.color.color_text_secondary))
         }
         waveform = AudioWaveformView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(-1, 0, 1f)
+            val d = resources.displayMetrics.density
+            layoutParams = LinearLayout.LayoutParams(-1, (150 * d).toInt()).apply {
+                topMargin = (20 * d).toInt()
+                bottomMargin = (20 * d).toInt()
+            }
         }
         root.addView(title)
         root.addView(buildTag)
         root.addView(status)
         root.addView(limitInfo)
         root.addView(waveform)
+        root.addView(android.widget.Space(this).apply { layoutParams = LinearLayout.LayoutParams(-1, 0, 1f) })
         root.addView(startButton)
         root.addView(stopButton)
         setContentView(root)
