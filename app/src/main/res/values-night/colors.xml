@@ -1,10 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="color_bg">#101827</color>
-    <color name="color_surface">#172235</color>
-    <color name="color_surface_alt">#223149</color>
-    <color name="color_text_primary">#F3F6FC</color>
-    <color name="color_text_secondary">#A6B4C8</color>
-    <color name="color_border">#2A3A52</color>
-    <color name="color_nav_inactive">#8494AC</color>
+    <!-- Tungi tema -->
+    <color name="color_bg">#0A1326</color>
+    <color name="color_bg_end">#14264A</color>
+    <color name="color_surface">#121D36</color>
+    <color name="color_surface_alt">#1A2848</color>
+    <color name="color_text_primary">#F2F6FF</color>
+    <color name="color_text_secondary">#93A4C2</color>
+    <color name="color_border">#22335A</color>
+    <color name="color_nav_inactive">#7083A6</color>
+    <color name="color_primary">#4DA3FF</color>
+    <color name="color_primary_dark">#2F7DE0</color>
+    <color name="color_input_bg">#16233F</color>
+    <color name="color_input_stroke">#2C4070</color>
+    <color name="color_track">#22335A</color>
+    <color name="color_success_text">#B7F5CE</color>
+    <color name="color_success_bg">#12301F</color>
+    <color name="color_stat_calls">#12302A</color>
+    <color name="color_stat_sms">#12294A</color>
+    <color name="color_stat_contacts">#2A1D4A</color>
+    <color name="color_stat_screenshot">#3A2A12</color>
 </resources>

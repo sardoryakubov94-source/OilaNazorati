@@ -33,14 +33,14 @@
             android:text="Oila Nazorati"
             android:textSize="24sp"
             android:textStyle="bold"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/color_text_primary"
             android:layout_marginBottom="4dp"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Farzandingiz xavfsizligi — bir joyda"
-            android:textColor="#B9A97A"
+            android:textColor="@color/color_text_secondary"
             android:textSize="13sp"
             android:layout_marginBottom="28dp"/>
 
@@ -56,7 +56,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Davom etish uchun parolni kiriting"
-                android:textColor="#D8CBA0"
+                android:textColor="@color/color_text_secondary"
                 android:textAlignment="center"
                 android:textSize="13sp"
                 android:layout_marginBottom="20dp"/>
@@ -65,7 +65,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="PAROL"
-                android:textColor="#B9A97A"
+                android:textColor="@color/color_text_secondary"
                 android:textSize="11sp"
                 android:letterSpacing="0.1"
                 android:layout_marginBottom="8dp"/>
@@ -79,7 +79,7 @@
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:background="@drawable/bg_input_outline"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/color_text_primary"
                 android:textColorHint="#6B5A2E"
                 android:layout_marginBottom="20dp"/>
 
@@ -91,7 +91,7 @@
                 android:textAllCaps="false"
                 android:textSize="16sp"
                 android:textStyle="bold"
-                android:textColor="#1B1305"
+                android:textColor="@color/color_text_primary"
                 android:background="@drawable/bg_button_gold"
                 android:elevation="0dp"
                 android:stateListAnimator="@null"/>
@@ -134,7 +134,7 @@
             android:text="Oila Nazorati"
             android:textSize="22sp"
             android:textStyle="bold"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/color_text_primary"
             android:layout_marginBottom="36dp"/>
 
         <Button
@@ -144,7 +144,7 @@
             android:text="Bu farzandimning telefoni"
             android:textAllCaps="false"
             android:textStyle="bold"
-            android:textColor="#1B1305"
+            android:textColor="@color/color_text_primary"
             android:background="@drawable/bg_button_gold"
             android:layout_marginBottom="14dp"/>
 
@@ -155,7 +155,7 @@
             android:text="Ota-ona panelini ochish"
             android:textAllCaps="false"
             android:textStyle="bold"
-            android:textColor="#F5C542"
+            android:textColor="@color/color_primary"
             android:background="@drawable/bg_login_card"
             android:layout_marginBottom="14dp"/>
 
@@ -165,7 +165,7 @@
             android:layout_height="56dp"
             android:text="✍️ Yordam (Bizga yozing)"
             android:textAllCaps="false"
-            android:textColor="#B9A97A"
+            android:textColor="@color/color_text_secondary"
             android:background="@drawable/bg_login_card"
             android:layout_marginBottom="14dp"/>
 
@@ -196,14 +196,14 @@
             android:text="Ota-ona paneli"
             android:textSize="22sp"
             android:textStyle="bold"
-            android:textColor="#FFFFFF"
+            android:textColor="@color/color_text_primary"
             android:layout_marginBottom="8dp"/>
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Google hisobi bilan kiring"
-            android:textColor="#B9A97A"
+            android:textColor="@color/color_text_secondary"
             android:textAlignment="center"
             android:textSize="13sp"
             android:layout_marginBottom="32dp"/>
@@ -230,7 +230,7 @@
                 android:id="@+id/loginStatusText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="#B9A97A"
+                android:textColor="@color/color_text_secondary"
                 android:textAlignment="center"
                 android:textSize="12sp"
                 android:layout_marginTop="18dp"/>
@@ -241,7 +241,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="← Orqaga"
-            android:textColor="#B9A97A"
+            android:textColor="@color/color_text_secondary"
             android:padding="16dp"
             android:layout_marginTop="8dp"/>
 

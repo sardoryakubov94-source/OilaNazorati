@@ -15,7 +15,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="✍️ Bizga yozing"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/color_text_primary"
         android:textSize="20sp"
         android:textStyle="bold"
         android:layout_marginBottom="16dp"/>
@@ -26,8 +26,8 @@
         android:layout_height="140dp"
         android:gravity="top|start"
         android:hint="Xabaringiz..."
-        android:textColor="#FFFFFF"
-        android:textColorHint="#6B7A90"
+        android:textColor="@color/color_text_primary"
+        android:textColorHint="@color/color_text_secondary"
         android:background="@drawable/bg_card"
         android:padding="12dp"
         android:layout_marginBottom="16dp"/>
@@ -36,7 +36,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="BOG'LANISH UCHUN (IXTIYORIY)"
-        android:textColor="#8B96A5"
+        android:textColor="@color/color_text_secondary"
         android:textSize="11sp"
         android:layout_marginBottom="8dp"/>
 
@@ -46,8 +46,8 @@
         android:layout_height="wrap_content"
         android:hint="+998 90 123 45 67"
         android:inputType="phone"
-        android:textColor="#FFFFFF"
-        android:textColorHint="#6B7A90"
+        android:textColor="@color/color_text_primary"
+        android:textColorHint="@color/color_text_secondary"
         android:background="@drawable/bg_card"
         android:padding="12dp"
         android:layout_marginBottom="20dp"/>
@@ -65,7 +65,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Mening xabarlarim"
-        android:textColor="#E6E9EF"
+        android:textColor="@color/color_text_primary"
         android:textStyle="bold"
         android:textSize="15sp"
         android:layout_marginBottom="10dp"/>
@@ -75,7 +75,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Hali xabar yuborilmagan"
-        android:textColor="#8B96A5"
+        android:textColor="@color/color_text_secondary"
         android:visibility="gone"
         android:layout_marginBottom="16dp"/>
 

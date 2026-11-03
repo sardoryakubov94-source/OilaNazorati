@@ -204,10 +204,10 @@ class AdminPanelActivity : AppCompatActivity() {
         tabPremium.setBackgroundResource(if (index == 1) activeBg else inactiveBg)
         tabPremiumUsers.setBackgroundResource(if (index == 2) activeBg else inactiveBg)
         tabCards.setBackgroundResource(if (index == 3) activeBg else inactiveBg)
-        tabMessages.setTextColor(if (index == 0) 0xFF0D1117.toInt() else 0xFFE6E9EF.toInt())
-        tabPremium.setTextColor(if (index == 1) 0xFF0D1117.toInt() else 0xFFE6E9EF.toInt())
-        tabPremiumUsers.setTextColor(if (index == 2) 0xFF0D1117.toInt() else 0xFFE6E9EF.toInt())
-        tabCards.setTextColor(if (index == 3) 0xFF0D1117.toInt() else 0xFFE6E9EF.toInt())
+        tabMessages.setTextColor(if (index == 0) 0xFFFFFFFF.toInt() else androidx.core.content.ContextCompat.getColor(this, R.color.color_text_primary))
+        tabPremium.setTextColor(if (index == 1) 0xFFFFFFFF.toInt() else androidx.core.content.ContextCompat.getColor(this, R.color.color_text_primary))
+        tabPremiumUsers.setTextColor(if (index == 2) 0xFFFFFFFF.toInt() else androidx.core.content.ContextCompat.getColor(this, R.color.color_text_primary))
+        tabCards.setTextColor(if (index == 3) 0xFFFFFFFF.toInt() else androidx.core.content.ContextCompat.getColor(this, R.color.color_text_primary))
     }
 
     private fun showReplyDialog(docId: String, existingReply: String) {

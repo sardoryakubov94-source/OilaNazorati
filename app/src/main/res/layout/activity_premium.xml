@@ -15,7 +15,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="⭐ Premium"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/color_text_primary"
         android:textSize="20sp"
         android:textStyle="bold"
         android:layout_marginBottom="16dp"/>
@@ -33,7 +33,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Premium quyidagi qo'shimcha imkoniyatlarni ochadi:"
-            android:textColor="#B7F5CE"
+            android:textColor="@color/color_success_text"
             android:textStyle="bold"
             android:textSize="14sp"
             android:layout_marginBottom="10dp"/>
@@ -42,7 +42,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="1. Kiruvchi va chiquvchi qo'ng'iroqlar hamda SMS xabarlarning telefon raqamlari — kontaktdan tashqari (saqlanmagan raqamlar) ham qo'shimcha ko'rinib turadi."
-            android:textColor="#DCE9E0"
+            android:textColor="@color/color_text_primary"
             android:textSize="13sp"
             android:layout_marginBottom="8dp"/>
 
@@ -50,7 +50,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="2. SMS xabarlarning barchasini to'liq o'qish imkoniyati."
-            android:textColor="#DCE9E0"
+            android:textColor="@color/color_text_primary"
             android:textSize="13sp"
             android:layout_marginBottom="8dp"/>
 
@@ -58,7 +58,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="3. Ijtimoiy tarmoqlardan kelgan xabarlarni bildirishnomani o'qish orqali kuzatib borish imkoniyati."
-            android:textColor="#DCE9E0"
+            android:textColor="@color/color_text_primary"
             android:textSize="13sp"
             android:layout_marginBottom="8dp"/>
 
@@ -66,7 +66,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="4. Eng ko'p foydalaniladigan ilovalardan har 15-30-60 daqiqada 3-5 tagacha ekran screenshotlarini ko'rish imkoniyati."
-            android:textColor="#DCE9E0"
+            android:textColor="@color/color_text_primary"
             android:textSize="13sp"
             android:layout_marginBottom="8dp"/>
 
@@ -74,7 +74,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="5. 1 ta oila kodi orqali bir nechta bola qurilmasini qo'shib kuzatish, bir nechta oila kodi yaratish va boshqa oilalarni qo'shish."
-            android:textColor="#DCE9E0"
+            android:textColor="@color/color_text_primary"
             android:textSize="13sp"/>
 
         <TextView
@@ -82,7 +82,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
             android:text="6. 🎙️ Jonli ovoz — bitta tugmani bosish bilan farzandingiz atrofida nima bo'layotganini shu zahoti eshiting. U qayerda, kim bilan, qanday muhitda ekanini bilish uchun ortiq savol berish shart emas — faqat tinglang."
-            android:textColor="#DCE9E0"
+            android:textColor="@color/color_text_primary"
             android:textSize="13sp"/>
 
     </LinearLayout>
@@ -139,7 +139,7 @@
         android:id="@+id/premiumStatusText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#8B96A5"
+        android:textColor="@color/color_text_secondary"
         android:textSize="13sp"
         android:layout_marginBottom="16dp"/>
 
@@ -148,7 +148,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Bir martalik to'lov. Bir marta to'lab, butunlay Premium foydalanuvchi bo'ling:"
-        android:textColor="#8B96A5"
+        android:textColor="@color/color_text_secondary"
         android:textSize="13sp"
         android:layout_marginBottom="4dp"/>
 
@@ -156,7 +156,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="199 000 so'm"
-        android:textColor="#FFFFFF"
+        android:textColor="@color/color_text_primary"
         android:textStyle="bold"
         android:textSize="26sp"
         android:layout_marginBottom="18dp"/>
@@ -166,7 +166,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="TO'LOV KARTALARI"
-        android:textColor="#8B96A5"
+        android:textColor="@color/color_text_secondary"
         android:textSize="12sp"
         android:layout_marginBottom="8dp"/>
 
@@ -188,7 +188,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Hali skrinshot biriktirilmagan"
-        android:textColor="#8B96A5"
+        android:textColor="@color/color_text_secondary"
         android:textSize="12sp"
         android:layout_marginBottom="16dp"/>
 

@@ -89,7 +89,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:padding="16dp"
-        android:textColor="#888888"
+        android:textColor="@color/color_text_secondary"
         android:text="Bu kun uchun joylashuv ma'lumoti topilmadi"
         android:visibility="gone"/>
 

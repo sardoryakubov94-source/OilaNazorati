@@ -1,10 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="color_bg">#F4F7FB</color>
+    <!-- Kunduzgi tema -->
+    <color name="color_bg">#EEF2F8</color>
+    <color name="color_bg_end">#E3EAF6</color>
     <color name="color_surface">#FFFFFF</color>
-    <color name="color_surface_alt">#EAF0F7</color>
-    <color name="color_text_primary">#17243A</color>
-    <color name="color_text_secondary">#718096</color>
-    <color name="color_border">#E3EAF2</color>
+    <color name="color_surface_alt">#F1F5FB</color>
+    <color name="color_text_primary">#0F1B33</color>
+    <color name="color_text_secondary">#6B7A90</color>
+    <color name="color_border">#E4EAF3</color>
     <color name="color_nav_inactive">#9AA8BA</color>
+    <color name="color_primary">#0A84FF</color>
+    <color name="color_primary_dark">#0A5FD0</color>
+    <color name="color_input_bg">#F4F7FC</color>
+    <color name="color_input_stroke">#D5DEEB</color>
+    <color name="color_track">#E4EAF3</color>
+    <color name="color_success_text">#15803D</color>
+    <color name="color_success_bg">#E6F6EE</color>
+    <color name="color_stat_calls">#E4F6EC</color>
+    <color name="color_stat_sms">#E3F1FD</color>
+    <color name="color_stat_contacts">#F1E8FA</color>
+    <color name="color_stat_screenshot">#FDF0DC</color>
 </resources>

@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.OilaNazorati" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">#2864D7</item>
-        <item name="colorPrimaryDark">#1747A6</item>
+        <item name="colorPrimary">@color/color_primary</item>
+        <item name="colorPrimaryDark">@color/color_primary_dark</item>
         <item name="colorAccent">#27B5A5</item>
         <item name="android:windowBackground">@color/color_bg</item>
-        <item name="android:statusBarColor">#F4F7FB</item>
-        <item name="android:navigationBarColor">#FFFFFF</item>
+        <item name="android:statusBarColor">@color/color_bg</item>
+        <item name="android:navigationBarColor">@color/color_surface</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>
