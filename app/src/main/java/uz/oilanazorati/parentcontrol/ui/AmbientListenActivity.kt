@@ -189,11 +189,7 @@ class AmbientListenActivity : AppCompatActivity() {
         root.addView(status)
         root.addView(limitInfo)
         root.addView(waveform)
-        root.addView(android.widget.Space(this).apply { val d = resources.displayMetrics.density
-            layoutParams = LinearLayout.LayoutParams(-1, (150 * d).toInt()).apply {
-                topMargin = (20 * d).toInt()
-                bottomMargin = (12 * d).toInt()
-            } })
+        root.addView(android.widget.Space(this).apply { layoutParams = LinearLayout.LayoutParams(-1, 0, 1f) })
         root.addView(startButton)
         root.addView(stopButton)
         setContentView(root)
