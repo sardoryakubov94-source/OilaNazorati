@@ -27,15 +27,17 @@ class StatusTextView(context: Context) : TextView(context) {
         )
 
     override fun setText(text: CharSequence?, type: TextView.BufferType?) {
-        var clean = text?.toString()
+        var clean: String = text?.toString() ?: ""
         var icon: Ico? = null
-        if (clean != null) {
-            for (i in icons) {
-                if (clean.startsWith(i.prefix)) { icon = i; clean = clean.removePrefix(i.prefix).trimStart(' ', '\uFE0F'); break }
+        for (i in icons) {
+            if (clean.startsWith(i.prefix)) {
+                icon = i
+                clean = clean.removePrefix(i.prefix).trimStart(' ', '\uFE0F')
+                break
             }
-            clean = clean.replace("⏱️ ", "").replace("⏱ ", "").replace("♾️ ", "").replace("♾ ", "")
         }
-        super.setText(clean ?: text, type)
+        clean = clean.replace("⏱️ ", "").replace("⏱ ", "").replace("♾️ ", "").replace("♾ ", "")
+        super.setText(if (text == null) null else clean, type)
         try {
             val d = icon?.let { androidx.core.content.ContextCompat.getDrawable(context, it.res)?.mutate()?.also { dr -> dr.setTint(it.color) } }
             setCompoundDrawablesRelativeWithIntrinsicBounds(d, null, null, null)
