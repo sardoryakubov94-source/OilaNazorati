@@ -68,6 +68,11 @@ class AmbientListenActivity : AppCompatActivity() {
             if (connectedAtMs != 0L) ticker.postDelayed(this, 1000)
         }
     }
+    // Tezroq boshlash uchun: ekran ochilganda premium va limit oldindan tekshiriladi
+    private var cachedPremium: Boolean? = null
+    private var cachedAdmin = false
+    private var cachedRemaining: Int? = null
+    private var cacheAtMs = 0L
     private lateinit var waveform: AudioWaveformView
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
@@ -134,12 +139,17 @@ class AmbientListenActivity : AppCompatActivity() {
             setBackgroundColor(getColor(R.color.color_bg))
         }
         val title = TextView(this).apply {
-            text = "🎙️ Ovoz"
+            text = "Ovoz"
+            setCompoundDrawablesRelativeWithIntrinsicBounds(
+                ContextCompat.getDrawable(this@AmbientListenActivity, R.drawable.ic_mic_wave)?.mutate()?.also { it.setTint(getColor(R.color.color_primary)) },
+                null, null, null
+            )
+            compoundDrawablePadding = (12 * resources.displayMetrics.density).toInt()
             textSize = 24f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(getColor(R.color.color_text_primary))
         }
-        status = TextView(this).apply {
+        status = StatusTextView(this).apply {
             text = "Tayyor"
             textSize = 14f
             setPadding(0, 18, 0, 18)
@@ -172,7 +182,7 @@ class AmbientListenActivity : AppCompatActivity() {
                 topMargin = (16 * resources.displayMetrics.density).toInt()
             }
         }
-        limitInfo = TextView(this).apply {
+        limitInfo = StatusTextView(this).apply {
             textSize = 13f
             setPadding(0, 0, 0, 12)
             setTextColor(getColor(R.color.color_text_secondary))
@@ -195,6 +205,12 @@ class AmbientListenActivity : AppCompatActivity() {
         setContentView(root)
 
         startButton.setOnClickListener {
+            val fresh = SystemClock.elapsedRealtime() - cacheAtMs < 120_000
+            val rem = cachedRemaining
+            if (cachedPremium == true && rem != null && fresh) {
+                beginWithLimit(cachedAdmin, rem)
+                return@setOnClickListener
+            }
             FirebaseRepo.checkIsPremium { isPremium ->
                 if (!isPremium) {
                     androidx.appcompat.app.AlertDialog.Builder(this)
@@ -210,27 +226,33 @@ class AmbientListenActivity : AppCompatActivity() {
                         status.text = "⚠️ Limitni tekshirib bo'lmadi. Internetni tekshirib, qayta urinib ko'ring"
                         return@load
                     }
-                    isAdminUser = admin
-                    remainingAtStart = remaining
-                    usageDay = VoiceLimit.dayKey()
-                    usedBase = if (admin) 0 else VoiceLimit.DAILY_SECONDS - remaining
-                    segmentStartElapsed = 0
-                    if (!admin && remaining <= 0) {
-                        status.text = "⏳ Bugungi 30 daqiqalik limit tugadi. Ertaga qayta tiklanadi"
-                        limitInfo.text = "⏱ Bugun qoldi: 00:00 / ${VoiceLimit.format(VoiceLimit.DAILY_SECONDS)}"
-                        return@load
-                    }
-                    startListening()
+                    beginWithLimit(admin, remaining)
                 }
             }
         }
         stopButton.setOnClickListener { stopListening() }
         refreshLimitInfo()
+        FirebaseRepo.checkIsPremium { p -> cachedPremium = p }
+    }
+
+    private fun beginWithLimit(admin: Boolean, remaining: Int) {
+        isAdminUser = admin
+        remainingAtStart = remaining
+        usageDay = VoiceLimit.dayKey()
+        usedBase = if (admin) 0 else VoiceLimit.DAILY_SECONDS - remaining
+        segmentStartElapsed = 0
+        if (!admin && remaining <= 0) {
+            status.text = "⏳ Bugungi 30 daqiqalik limit tugadi. Ertaga qayta tiklanadi"
+            limitInfo.text = "⏱ Bugun qoldi: 00:00 / ${VoiceLimit.format(VoiceLimit.DAILY_SECONDS)}"
+            return
+        }
+        startListening()
     }
 
     private fun refreshLimitInfo() {
         VoiceLimit.load { admin, remaining ->
             isAdminUser = admin
+            if (remaining != null) { cachedAdmin = admin; cachedRemaining = remaining; cacheAtMs = SystemClock.elapsedRealtime() }
             limitInfo.text = when {
                 admin -> "♾️ Cheksiz (admin)"
                 remaining == null -> ""
@@ -325,6 +347,21 @@ class AmbientListenActivity : AppCompatActivity() {
             }
         }
 
+        doc.set(mapOf(
+            "requestId" to requestId,
+            "status" to "requested",
+            "transport" to "agora",
+            "channelName" to channelName,
+            "requestedByUid" to (FirebaseAuth.getInstance().currentUser?.uid ?: ""),
+            "updatedAt" to System.currentTimeMillis()
+        )).addOnFailureListener { e ->
+            crashlytics.recordException(e)
+            runOnUiThread {
+                status.text = "❌ So'rov yuborilmadi"
+                resetUi()
+            }
+        }
+
         try {
             val config = RtcEngineConfig()
             config.mContext = applicationContext
@@ -353,27 +390,13 @@ class AmbientListenActivity : AppCompatActivity() {
             options.autoSubscribeAudio = true
             options.autoSubscribeVideo = false
 
-            doc.set(mapOf(
-                "requestId" to requestId,
-                "status" to "requested",
-                "transport" to "agora",
-                "channelName" to channelName,
-                "requestedByUid" to (FirebaseAuth.getInstance().currentUser?.uid ?: ""),
-                "updatedAt" to System.currentTimeMillis()
-            )).addOnFailureListener { e ->
-                crashlytics.recordException(e)
-                runOnUiThread {
-                    status.text = "❌ So'rov yuborilmadi"
-                    resetUi()
-                }
-            }
-
             val joinResult = rtc.joinChannel(AgoraConfig.token(channelName), channelName, 0, options)
             if (joinResult != Constants.ERR_OK) {
                 throw IllegalStateException("Agora joinChannel failed: $joinResult")
             }
         } catch (t: Throwable) {
             crashlytics.recordException(t)
+            requestDoc()?.update(mapOf("status" to "stop_requested", "requestId" to requestId, "updatedAt" to System.currentTimeMillis()))
             status.text = "❌ Ulanishda xato"
             resetUi()
         }
@@ -381,6 +404,7 @@ class AmbientListenActivity : AppCompatActivity() {
 
     private fun stopListening(message: String = "To'xtatildi") {
         stopping = true
+        cacheAtMs = 0L
         val requestId = currentRequestId
         status.text = "⏳ To'xtatilmoqda..."
         stopButton.isEnabled = false
