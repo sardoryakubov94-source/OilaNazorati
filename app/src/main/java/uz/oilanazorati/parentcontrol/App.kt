@@ -10,6 +10,7 @@ class App : Application() {
         super.onCreate()
         restoreSavedPairing(this)
         applySavedTheme(this)
+        uz.oilanazorati.parentcontrol.util.PressFeedback.install(this)
     }
 
     companion object {

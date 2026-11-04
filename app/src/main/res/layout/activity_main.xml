@@ -138,35 +138,35 @@
             android:textColor="@color/color_text_primary"
             android:layout_marginBottom="36dp"/>
 
-        <Button
+        <Button app:backgroundTint="@color/selector_button_dim" app:strokeColor="@color/color_border" app:strokeWidth="1dp"
             android:id="@+id/btnChildDevice"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:text="Bu farzandimning telefoni"
             android:textAllCaps="false"
             android:textStyle="bold"
-            android:textColor="@color/color_text_primary"
+            android:textColor="@color/selector_button_dim_text"
             android:background="@drawable/bg_button_gold"
             android:layout_marginBottom="14dp"/>
 
-        <Button app:backgroundTint="@color/color_surface" app:strokeColor="@color/color_border" app:strokeWidth="1dp"
+        <Button app:backgroundTint="@color/selector_button_dim" app:strokeColor="@color/color_border" app:strokeWidth="1dp"
             android:id="@+id/btnOpenParentDashboard"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:text="Ota-ona panelini ochish"
             android:textAllCaps="false"
             android:textStyle="bold"
-            android:textColor="@color/color_primary"
+            android:textColor="@color/selector_button_dim_text"
             android:background="@drawable/bg_login_card"
             android:layout_marginBottom="14dp"/>
 
-        <Button app:backgroundTint="@color/color_surface" app:strokeColor="@color/color_border" app:strokeWidth="1dp"
+        <Button app:backgroundTint="@color/selector_button_dim" app:strokeColor="@color/color_border" app:strokeWidth="1dp"
             android:id="@+id/btnSupport"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:text="✍️ Yordam (Bizga yozing)"
             android:textAllCaps="false"
-            android:textColor="@color/color_text_secondary"
+            android:textColor="@color/selector_button_dim_text"
             android:background="@drawable/bg_login_card"
             android:layout_marginBottom="14dp"/>
 

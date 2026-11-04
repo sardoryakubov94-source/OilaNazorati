@@ -21,4 +21,5 @@
     <color name="color_stat_contacts">#2A1D4A</color>
     <color name="color_stat_screenshot">#3A2A12</color>
     <color name="color_button">#2F7DE0</color>
+    <color name="color_button_pressed">#1B58B8</color>
 </resources>
