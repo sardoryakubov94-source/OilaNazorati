@@ -26,7 +26,7 @@ class StatusTextView(context: Context) : TextView(context) {
             Ico("⏱", R.drawable.ic_status_timer, 0xFF8FA3C4.toInt())
         )
 
-    override fun setText(text: CharSequence?, type: BufferType?) {
+    override fun setText(text: CharSequence?, type: TextView.BufferType?) {
         var clean = text?.toString()
         var icon: Ico? = null
         if (clean != null) {
