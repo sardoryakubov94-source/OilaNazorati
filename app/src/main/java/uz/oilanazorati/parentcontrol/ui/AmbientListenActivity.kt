@@ -198,8 +198,9 @@ class AmbientListenActivity : AppCompatActivity() {
         root.addView(buildTag)
         root.addView(status)
         root.addView(limitInfo)
-        root.addView(waveform)
+        // Bo'sh joy yuqorida: ovoz to'lqini pastga, tugmalarga yaqinroq chiqadi
         root.addView(android.widget.Space(this).apply { layoutParams = LinearLayout.LayoutParams(-1, 0, 1f) })
+        root.addView(waveform)
         root.addView(startButton)
         root.addView(stopButton)
         setContentView(root)
