@@ -128,6 +128,9 @@ class AmbientListenActivity : AppCompatActivity() {
             crashlytics.log("Agora parent: onError=$err")
             runOnUiThread {
                 if (currentRequestId != null) {
+                    if (isRecordingAudio) stopAudioRecordingAndSave()
+                    isRemoteConnected = false
+                    recordButton.isEnabled = false
                     stopCounting()
                     status.text = "❌ Agora xatosi: $err"
                     waveform.setActive(false)
@@ -509,6 +512,7 @@ class AmbientListenActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        if (isRecordingAudio) stopAudioRecordingAndSave()
         stopCounting()
         if (currentRequestId != null && !stopping) {
             requestDoc()?.update(mapOf("status" to "stop_requested", "updatedAt" to System.currentTimeMillis()))
