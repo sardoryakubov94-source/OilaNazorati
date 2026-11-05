@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.util.AdminConfig
+import uz.oilanazorati.parentcontrol.util.AppPasswordUtil
 
 class SettingsActivity : AppCompatActivity() {
     private val prefsName = "oila_nazorati"
@@ -33,6 +34,7 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<android.view.View>(R.id.rowEnterCode).setOnClickListener { showFamilyManager() }
         findViewById<android.view.View>(R.id.rowNewCode).setOnClickListener { createNewFamilyCode() }
         findViewById<android.view.View>(R.id.rowTheme).setOnClickListener { showThemePickerDialog() }
+        findViewById<android.view.View>(R.id.rowChangePassword).setOnClickListener { showChangePasswordDialog() }
         findViewById<android.view.View>(R.id.premiumBanner).setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
         findViewById<android.view.View>(R.id.btnPremiumCta).setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
 
@@ -45,6 +47,66 @@ class SettingsActivity : AppCompatActivity() {
 
         findViewById<android.view.View>(R.id.rowSignOut).setOnClickListener { confirmSignOut() }
     }
+
+
+    // ---------------- Ilova (kirish) parolini o'zgartirish ----------------
+
+    private fun showChangePasswordDialog() {
+        val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val savedHash = prefs.getString("app_password_hash", null)
+
+        fun pwField(hint: String): EditText = EditText(this).apply {
+            this.hint = hint
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+        }
+
+        val oldField = pwField("Joriy parol")
+        val newField = pwField("Yangi parol (kamida 4 ta raqam)")
+        val confirmField = pwField("Yangi parolni takrorlang")
+
+        val form = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), 0)
+            if (savedHash != null) addView(oldField)
+            addView(newField)
+            addView(confirmField)
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("Ilova parolini o'zgartirish")
+            .setView(form)
+            .setPositiveButton("Saqlash", null)
+            .setNegativeButton("Bekor qilish", null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val old = oldField.text?.toString().orEmpty()
+                val fresh = newField.text?.toString().orEmpty()
+                val confirm = confirmField.text?.toString().orEmpty()
+
+                if (savedHash != null && AppPasswordUtil.hash(old) != savedHash) {
+                    Toast.makeText(this, "Joriy parol noto'g'ri", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                if (fresh.length < 4) {
+                    Toast.makeText(this, "Yangi parol kamida 4 ta raqamdan iborat bo'lsin", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                if (fresh != confirm) {
+                    Toast.makeText(this, "Yangi parollar mos kelmadi", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                prefs.edit().putString("app_password_hash", AppPasswordUtil.hash(fresh)).apply()
+                Toast.makeText(this, "Parol yangilandi", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            }
+        }
+        dialog.show()
+    }
+
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     private fun confirmSignOut() {
         AlertDialog.Builder(this)
