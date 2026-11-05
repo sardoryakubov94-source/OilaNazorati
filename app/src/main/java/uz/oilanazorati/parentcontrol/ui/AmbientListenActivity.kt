@@ -1,13 +1,17 @@
 package uz.oilanazorati.parentcontrol.ui
 
+import android.content.ContentValues
 import android.graphics.Typeface
 import android.os.Bundle
+import android.os.Build
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.provider.MediaStore
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
@@ -19,11 +23,16 @@ import io.agora.rtc2.Constants
 import io.agora.rtc2.IRtcEngineEventHandler
 import io.agora.rtc2.RtcEngine
 import io.agora.rtc2.RtcEngineConfig
+import io.agora.rtc2.audio.AudioRecordingConfiguration
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.service.AgoraConfig
 import uz.oilanazorati.parentcontrol.util.VoiceLimit
 import java.util.UUID
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Ota-ona tomonidagi jonli ovoz — Agora orqali (3-oktabr, WebRTC O'RNIGA).
@@ -76,6 +85,10 @@ class AmbientListenActivity : AppCompatActivity() {
     private lateinit var waveform: AudioWaveformView
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
+    private lateinit var recordButton: Button
+    private var isRemoteConnected = false
+    private var isRecordingAudio = false
+    private var recordingTempFile: File? = null
 
     private val rtcHandler = object : IRtcEngineEventHandler() {
         override fun onJoinChannelSuccess(channel: String?, uid: Int, elapsed: Int) {
@@ -99,6 +112,8 @@ class AmbientListenActivity : AppCompatActivity() {
             }
             runOnUiThread {
                 status.text = "🔴 Jonli ovoz"
+                isRemoteConnected = true
+                recordButton.isEnabled = true
                 waveform.setActive(true)
                 startCounting()
             }
@@ -182,6 +197,13 @@ class AmbientListenActivity : AppCompatActivity() {
                 topMargin = (16 * resources.displayMetrics.density).toInt()
             }
         }
+        recordButton = Button(this).apply {
+            text = "🎙 Ovoz yozishni boshlash"
+            isEnabled = false
+            setTextColor(getColor(R.color.color_text_primary))
+            setBackgroundResource(R.drawable.bg_card_theme)
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = (10 * resources.displayMetrics.density).toInt() }
+        }
         limitInfo = StatusTextView(this).apply {
             textSize = 13f
             setPadding(0, 0, 0, 12)
@@ -203,6 +225,7 @@ class AmbientListenActivity : AppCompatActivity() {
         root.addView(waveform)
         root.addView(startButton)
         root.addView(stopButton)
+        root.addView(recordButton)
         setContentView(root)
 
         startButton.setOnClickListener {
@@ -232,6 +255,7 @@ class AmbientListenActivity : AppCompatActivity() {
             }
         }
         stopButton.setOnClickListener { stopListening() }
+        recordButton.setOnClickListener { if (isRecordingAudio) stopAudioRecordingAndSave() else startAudioRecording() }
         refreshLimitInfo()
         FirebaseRepo.checkIsPremium { p -> cachedPremium = p }
     }
@@ -332,6 +356,7 @@ class AmbientListenActivity : AppCompatActivity() {
         currentRequestId = requestId
         startButton.isEnabled = false
         stopButton.isEnabled = true
+        recordButton.isEnabled = false
         status.text = "⏳ Bola qurilmasidan kutilmoqda..."
         crashlytics.log("Ovoz (Agora): so'rov yuborilmoqda")
 
@@ -416,7 +441,57 @@ class AmbientListenActivity : AppCompatActivity() {
         stopping = false
     }
 
+    private fun startAudioRecording() {
+        val rtc = engine
+        if (rtc == null || currentRequestId == null || !isRemoteConnected) { status.text = "Avval bola ovozi ulanishini kuting"; return }
+        try {
+            val dir = File(cacheDir, "voice-recordings")
+            if (!dir.exists() && !dir.mkdirs()) throw IllegalStateException("Yozuv papkasi yaratilmadi")
+            val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+            val file = File(dir, "OilaNazorati_$stamp.aac")
+            val cfg = AudioRecordingConfiguration(file.absolutePath, Constants.AUDIO_RECORDING_QUALITY_MEDIUM, Constants.AUDIO_RECORDING_POSITION_MIXED_PLAYBACK, 32000, 1)
+            val result = rtc.startAudioRecording(cfg)
+            if (result != Constants.ERR_OK) throw IllegalStateException("Agora recording: $result")
+            recordingTempFile = file; isRecordingAudio = true
+            recordButton.text = "⏹ Yozishni to'xtatish"; status.text = "🔴 Jonli ovoz · 🎙 Yozilmoqda"
+        } catch (t: Throwable) {
+            crashlytics.recordException(t); isRecordingAudio = false; recordingTempFile = null
+            recordButton.text = "🎙 Ovoz yozishni boshlash"; status.text = "❌ Ovoz yozilmadi: ${t.message ?: "xato"}"
+        }
+    }
+
+    private fun stopAudioRecordingAndSave() {
+        if (!isRecordingAudio) return
+        isRecordingAudio = false; recordButton.text = "🎙 Ovoz yozishni boshlash"
+        try {
+            val result = engine?.stopAudioRecording() ?: Constants.ERR_FAILED
+            val file = recordingTempFile; recordingTempFile = null
+            if (result != Constants.ERR_OK || file == null || !file.exists() || file.length() <= 0L) { status.text = "⚠️ Yozuv saqlanmadi"; return }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, file.name); put(MediaStore.MediaColumns.MIME_TYPE, "audio/aac")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/OilaNazorati")
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                }
+                val uri = contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: throw IllegalStateException("Downloads papkasi ochilmadi")
+                try {
+                    contentResolver.openOutputStream(uri)?.use { out -> file.inputStream().use { it.copyTo(out) } } ?: throw IllegalStateException("Faylga yozib bo'lmadi")
+                    contentResolver.update(uri, ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) }, null, null)
+                } catch (t: Throwable) { contentResolver.delete(uri, null, null); throw t }
+            } else {
+                val dir = File(getExternalFilesDir(Environment.DIRECTORY_MUSIC), "OilaNazorati"); if (!dir.exists()) dir.mkdirs()
+                file.copyTo(File(dir, file.name), overwrite = true)
+            }
+            file.delete()
+            android.widget.Toast.makeText(this, "🎧 Yozuv Downloads/OilaNazorati papkasiga saqlandi", android.widget.Toast.LENGTH_LONG).show()
+            status.text = if (isRemoteConnected) "🔴 Jonli ovoz" else "Yozuv saqlandi"
+        } catch (t: Throwable) { crashlytics.recordException(t); status.text = "⚠️ Yozuvni saqlashda xato: ${t.message ?: "xato"}" }
+    }
+
     private fun resetUi(message: String = "Tayyor") {
+        if (isRecordingAudio) stopAudioRecordingAndSave()
+        isRemoteConnected = false
+        recordButton.isEnabled = false
         stopCounting()
         ticker.postDelayed({ refreshLimitInfo() }, 1500)
         waveform.setActive(false)
@@ -428,6 +503,8 @@ class AmbientListenActivity : AppCompatActivity() {
         currentRequestId = null
         startButton.isEnabled = true
         stopButton.isEnabled = false
+        recordButton.text = "🎙 Ovoz yozishni boshlash"
+        recordButton.isEnabled = false
         status.text = message
     }
 
