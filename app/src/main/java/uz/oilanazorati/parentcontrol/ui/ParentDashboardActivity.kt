@@ -58,7 +58,7 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding = uz.oilanazorati.parentcontrol.databinding.ActivityParentDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
         if (!ensureAuth()) return
-        setupLists(); setupHeader(); setupBottomNav(); setupSectionButtons(); installAmbientAudioCard(); installSimInfoCard(); installRiskAlertsCard()
+        setupLists(); setupHeader(); setupBottomNav(); setupSectionButtons(); installSimInfoCard(); installOvozXavfRow()
         FirebaseRepo.checkIsPremium { isPremium ->
             isPremiumUser = isPremium
             contactSummaryAdapter.setPremium(isPremium)
@@ -110,17 +110,19 @@ class ParentDashboardActivity : AppCompatActivity() {
     }
 
 
-    private fun installRiskAlertsCard() {
+    /**
+     * "Ovoz" va "Xavfsizlik signallari" — bitta umumiy fon (karta) ichida yonma-yon,
+     * har biri alohida bosiladigan, ekranning yarmini egallaydigan ikkita bo'lak.
+     */
+    private fun installOvozXavfRow() {
         val scroll = binding.root.getChildAt(0) as? android.widget.ScrollView ?: return
         val content = scroll.getChildAt(0) as? LinearLayout ?: return
-        if (content.findViewWithTag<View>("risk_alerts_card") != null) return
+        if (content.findViewWithTag<View>("ovoz_xavf_row") != null) return
 
         val density = resources.displayMetrics.density
-        val card = LinearLayout(this).apply {
-            tag = "risk_alerts_card"
+        val row = LinearLayout(this).apply {
+            tag = "ovoz_xavf_row"
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(14))
             background = GradientDrawable().apply {
                 cornerRadius = dp(22).toFloat()
                 setColor(androidx.core.content.ContextCompat.getColor(
@@ -129,116 +131,108 @@ class ParentDashboardActivity : AppCompatActivity() {
                 ))
             }
             elevation = 3f
-            isClickable = true
-            isFocusable = true
-            setOnClickListener {
-                openIfChildSelected { RiskAlertsActivity::class.java }
-            }
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
                 topMargin = (4 * density).toInt()
                 bottomMargin = (12 * density).toInt()
             }
         }
 
-        val icon = iconTile(uz.oilanazorati.parentcontrol.R.drawable.ic_shield_alert, 0xFFF59E0B.toInt())
-        val texts = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
-        }
-        texts.addView(TextView(this).apply {
-            text = "Xavfsizlik signallari"
-            textSize = 16f
-            setTextColor(androidx.core.content.ContextCompat.getColor(
-                this@ParentDashboardActivity,
-                uz.oilanazorati.parentcontrol.R.color.color_text_primary
-            ))
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
-        })
-        texts.addView(TextView(this).apply {
-            text = "Muhim xavf signallari"
-            textSize = 12f
-            setPadding(0, 4, 0, 0)
-            setTextColor(androidx.core.content.ContextCompat.getColor(
-                this@ParentDashboardActivity,
-                uz.oilanazorati.parentcontrol.R.color.color_text_secondary
-            ))
-        })
-        val arrow = TextView(this).apply {
-            text = "›"
-            textSize = 28f
-            setTextColor(Color.parseColor("#4D6FD6"))
+        val ovozHalf = halfCell(
+            uz.oilanazorati.parentcontrol.R.drawable.ic_mic_wave,
+            androidx.core.content.ContextCompat.getColor(this, uz.oilanazorati.parentcontrol.R.color.color_primary),
+            "Ovoz", "Jonli eshitish"
+        ) {
+            FirebaseRepo.checkIsPremium { isPremium ->
+                if (!isPremium) {
+                    AlertDialog.Builder(this@ParentDashboardActivity)
+                        .setTitle("⭐ Premium kerak")
+                        .setMessage("Jonli ovoz eshitish faqat premium foydalanuvchilar uchun mavjud.")
+                        .setPositiveButton("Premiumni ochish") { _, _ -> startActivity(Intent(this@ParentDashboardActivity, PremiumActivity::class.java)) }
+                        .setNegativeButton("Bekor qilish", null)
+                        .show()
+                    return@checkIsPremium
+                }
+                openIfChildSelected { AmbientListenActivity::class.java }
+            }
         }
 
-        card.addView(icon)
-        card.addView(texts)
-        card.addView(arrow)
+        val divider = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(1), -1).apply {
+                topMargin = dp(16); bottomMargin = dp(16)
+            }
+            setBackgroundColor(androidx.core.content.ContextCompat.getColor(
+                this@ParentDashboardActivity,
+                uz.oilanazorati.parentcontrol.R.color.color_border
+            ))
+        }
+
+        val xavfHalf = halfCell(
+            uz.oilanazorati.parentcontrol.R.drawable.ic_shield_alert,
+            0xFFF59E0B.toInt(),
+            "Xavfsizlik", "Muhim signallar"
+        ) {
+            openIfChildSelected { RiskAlertsActivity::class.java }
+        }
+
+        row.addView(ovozHalf); row.addView(divider); row.addView(xavfHalf)
 
         val simCard = content.findViewWithTag<View>("sim_info_card")
         val idx = content.indexOfChild(simCard)
-        content.addView(card, if (idx >= 0) idx + 1 else content.childCount)
+        content.addView(row, if (idx >= 0) idx + 1 else content.childCount)
     }
 
-    private fun installAmbientAudioCard() {
-        val scroll = binding.root.getChildAt(0) as? android.widget.ScrollView ?: return
-        val content = scroll.getChildAt(0) as? LinearLayout ?: return
-        if (content.findViewWithTag<View>("ambient_audio_card") != null) return
-
-        val density = resources.displayMetrics.density
-        val card = LinearLayout(this).apply {
-            tag = "ambient_audio_card"
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(16), dp(14), dp(16), dp(14))
-            // Boshqa kartalar kabi mavzuga mos rang (kunduzgi: oq, tungi: to'q
-            // jigarrang) ishlatiladi — ilgari doim oq (Color.WHITE) bo'lgani
-            // uchun tungi mavzuda boshqa kartalardan ajralib, "yopishib"
-            // ko'rinardi.
-            background = GradientDrawable().apply {
-                cornerRadius = dp(22).toFloat()
-                setColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_surface))
-            }
-            elevation = 3f
+    /** Yonma-yon joylashadigan ikkita bo'lakdan biri: markazlashtirilgan ikonka, sarlavha va kichik izoh. */
+    private fun halfCell(iconRes: Int, tint: Int, title: String, subtitle: String, onClick: () -> Unit): LinearLayout {
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(16), dp(8), dp(16))
             isClickable = true
             isFocusable = true
-            setOnClickListener {
-                FirebaseRepo.checkIsPremium { isPremium ->
-                    if (!isPremium) {
-                        AlertDialog.Builder(this@ParentDashboardActivity)
-                            .setTitle("⭐ Premium kerak")
-                            .setMessage("Jonli ovoz eshitish faqat premium foydalanuvchilar uchun mavjud.")
-                            .setPositiveButton("Premiumni ochish") { _, _ -> startActivity(Intent(this@ParentDashboardActivity, PremiumActivity::class.java)) }
-                            .setNegativeButton("Bekor qilish", null)
-                            .show()
-                        return@checkIsPremium
-                    }
-                    openIfChildSelected { AmbientListenActivity::class.java }
+            layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+            setOnClickListener { onClick() }
+            setOnTouchListener { v, e ->
+                when (e.action) {
+                    android.view.MotionEvent.ACTION_DOWN -> v.alpha = 0.6f
+                    android.view.MotionEvent.ACTION_UP, android.view.MotionEvent.ACTION_CANCEL -> v.alpha = 1f
                 }
+                false
             }
-            // Pastdagi bo'lim bilan orasiga masofa — kartalar bir-biriga
-            // yopishib qolmasligi uchun.
-            layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
-                topMargin = (4 * density).toInt()
-                bottomMargin = (12 * density).toInt()
+            addView(iconTileCentered(iconRes, tint))
+            addView(TextView(this@ParentDashboardActivity).apply {
+                text = title
+                textSize = 14f
+                gravity = Gravity.CENTER
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_text_primary))
+                setPadding(0, dp(8), 0, 0)
+            })
+            addView(TextView(this@ParentDashboardActivity).apply {
+                text = subtitle
+                textSize = 11f
+                gravity = Gravity.CENTER
+                maxLines = 2
+                setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
+                setPadding(0, dp(2), 0, 0)
+            })
+        }
+    }
+
+    /** iconTile'ning markazlashtirilgan (chetga suriluvchi marginsiz) varianti — yonma-yon bo'laklar uchun. */
+    private fun iconTileCentered(iconRes: Int, tint: Int): View {
+        val tile = android.widget.FrameLayout(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(14).toFloat()
+                setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(tint, 40))
             }
         }
-        val icon = iconTile(uz.oilanazorati.parentcontrol.R.drawable.ic_mic_wave, androidx.core.content.ContextCompat.getColor(this, uz.oilanazorati.parentcontrol.R.color.color_primary))
-        val texts = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, -2, 1f) }
-        texts.addView(TextView(this).apply {
-            text = "Ovoz"
-            textSize = 16f
-            setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_text_primary))
-            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        tile.addView(android.widget.ImageView(this).apply {
+            setImageResource(iconRes)
+            setColorFilter(tint)
+            layoutParams = android.widget.FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER)
         })
-        texts.addView(TextView(this).apply {
-            text = "Jonli eshitish"
-            textSize = 12f
-            setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
-            setPadding(0, 4, 0, 0)
-        })
-        val arrow = TextView(this).apply { text = "›"; textSize = 28f; setTextColor(Color.parseColor("#4D6FD6")) }
-        card.addView(icon); card.addView(texts); card.addView(arrow)
-        val premiumIndex = content.indexOfChild(binding.premiumBannerHome)
-        content.addView(card, if (premiumIndex >= 0) premiumIndex + 1 else 1)
+        return tile
     }
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
@@ -298,9 +292,8 @@ class ParentDashboardActivity : AppCompatActivity() {
             addView(title)
         }
         card.addView(titleRow); card.addView(simCardText)
-        val ambientCard = content.findViewWithTag<View>("ambient_audio_card")
-        val idx = content.indexOfChild(ambientCard)
-        content.addView(card, if (idx >= 0) idx + 1 else content.childCount)
+        val premiumIndex = content.indexOfChild(binding.premiumBannerHome)
+        content.addView(card, if (premiumIndex >= 0) premiumIndex + 1 else 1)
     }
 
     private fun refreshSimInfo() {
