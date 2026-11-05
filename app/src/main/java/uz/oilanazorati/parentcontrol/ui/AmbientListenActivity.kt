@@ -200,10 +200,14 @@ class AmbientListenActivity : AppCompatActivity() {
             }
         }
         recordButton = Button(this).apply {
-            text = "🎙 Ovoz yozishni boshlash"
+            text = "Ovoz yozishni boshlash"
             isEnabled = false
             setTextColor(getColor(R.color.color_text_primary))
             setBackgroundResource(R.drawable.bg_card_theme)
+            val icon = ContextCompat.getDrawable(this@AmbientListenActivity, R.drawable.ic_record_dot)?.mutate()
+            icon?.setTint(android.graphics.Color.RED)
+            setCompoundDrawablesWithIntrinsicBounds(icon, null, null, null)
+            compoundDrawablePadding = 12
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = (10 * resources.displayMetrics.density).toInt() }
         }
         limitInfo = StatusTextView(this).apply {
@@ -460,13 +464,13 @@ class AmbientListenActivity : AppCompatActivity() {
             recordButton.text = "⏹ Yozishni to'xtatish"; status.text = "🔴 Jonli ovoz · 🎙 Yozilmoqda"
         } catch (t: Throwable) {
             crashlytics.recordException(t); isRecordingAudio = false; recordingTempFile = null
-            recordButton.text = "🎙 Ovoz yozishni boshlash"; status.text = "❌ Ovoz yozilmadi: ${t.message ?: "xato"}"
+            recordButton.text = "Ovoz yozishni boshlash"; status.text = "❌ Ovoz yozilmadi: ${t.message ?: "xato"}"
         }
     }
 
     private fun stopAudioRecordingAndSave() {
         if (!isRecordingAudio) return
-        isRecordingAudio = false; recordButton.text = "🎙 Ovoz yozishni boshlash"
+        isRecordingAudio = false; recordButton.text = "Ovoz yozishni boshlash"
         try {
             val result = engine?.stopAudioRecording() ?: Constants.ERR_FAILED
             val file = recordingTempFile; recordingTempFile = null
@@ -507,7 +511,7 @@ class AmbientListenActivity : AppCompatActivity() {
         currentRequestId = null
         startButton.isEnabled = true
         stopButton.isEnabled = false
-        recordButton.text = "🎙 Ovoz yozishni boshlash"
+        recordButton.text = "Ovoz yozishni boshlash"
         recordButton.isEnabled = false
         status.text = message
     }
