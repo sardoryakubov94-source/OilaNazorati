@@ -23,7 +23,6 @@ import io.agora.rtc2.Constants
 import io.agora.rtc2.IRtcEngineEventHandler
 import io.agora.rtc2.RtcEngine
 import io.agora.rtc2.RtcEngineConfig
-import io.agora.rtc2.audio.AudioRecordingConfiguration
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.service.AgoraConfig
@@ -452,8 +451,10 @@ class AmbientListenActivity : AppCompatActivity() {
             if (!dir.exists() && !dir.mkdirs()) throw IllegalStateException("Yozuv papkasi yaratilmadi")
             val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
             val file = File(dir, "OilaNazorati_$stamp.aac")
-            val cfg = AudioRecordingConfiguration(file.absolutePath, Constants.AUDIO_RECORDING_QUALITY_MEDIUM, Constants.AUDIO_RECORDING_POSITION_MIXED_PLAYBACK, 32000, 1)
-            val result = rtc.startAudioRecording(cfg)
+            // Agora Voice SDK 4.7.0 supports this recording overload.
+            // Local microphone capture is disabled for this listener, so the
+            // channel recording contains the subscribed remote voice only.
+            val result = rtc.startAudioRecording(file.absolutePath, Constants.AUDIO_RECORDING_QUALITY_MEDIUM)
             if (result != Constants.ERR_OK) throw IllegalStateException("Agora recording: $result")
             recordingTempFile = file; isRecordingAudio = true
             recordButton.text = "⏹ Yozishni to'xtatish"; status.text = "🔴 Jonli ovoz · 🎙 Yozilmoqda"
