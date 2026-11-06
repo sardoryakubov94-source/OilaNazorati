@@ -59,6 +59,7 @@ class ParentDashboardActivity : AppCompatActivity() {
         setContentView(binding.root)
         if (!ensureAuth()) return
         setupLists(); setupHeader(); setupBottomNav(); setupSectionButtons(); installSimInfoCard(); installOvozXavfRow()
+        binding.btnNotificationsHome.setOnClickListener { openIfChildSelected { NotificationHistoryActivity::class.java } }
         FirebaseRepo.checkIsPremium { isPremium ->
             isPremiumUser = isPremium
             contactSummaryAdapter.setPremium(isPremium)
@@ -100,7 +101,6 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding.btnSmsHistory.setOnClickListener { openIfChildSelected { SmsHistoryActivity::class.java } }
         binding.btnSavedContacts.setOnClickListener { startActivity(Intent(this, SavedContactsActivity::class.java)) }
         binding.btnTrends.setOnClickListener { startActivity(Intent(this, TrendsActivity::class.java)) }
-        binding.btnNotificationsHome.setOnClickListener { openIfChildSelected { NotificationHistoryActivity::class.java } }
         binding.cardStatCalls.setOnClickListener { openIfChildSelected { CallHistoryActivity::class.java } }
         binding.cardStatSms.setOnClickListener { openIfChildSelected { SmsHistoryActivity::class.java } }
         binding.cardStatContacts.setOnClickListener { startActivity(Intent(this, SavedContactsActivity::class.java)) }
@@ -186,7 +186,7 @@ class ParentDashboardActivity : AppCompatActivity() {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setPadding(dp(8), dp(16), dp(8), dp(16))
+            setPadding(dp(8), dp(10), dp(8), dp(10))
             isClickable = true
             isFocusable = true
             layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
@@ -201,15 +201,15 @@ class ParentDashboardActivity : AppCompatActivity() {
             addView(iconTileCentered(iconRes, tint))
             addView(TextView(this@ParentDashboardActivity).apply {
                 text = title
-                textSize = 14f
+                textSize = 13f
                 gravity = Gravity.CENTER
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
                 setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_text_primary))
-                setPadding(0, dp(8), 0, 0)
+                setPadding(0, dp(5), 0, 0)
             })
             addView(TextView(this@ParentDashboardActivity).apply {
                 text = subtitle
-                textSize = 11f
+                textSize = 10f
                 gravity = Gravity.CENTER
                 maxLines = 2
                 setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, uz.oilanazorati.parentcontrol.R.color.color_text_secondary))
@@ -221,16 +221,16 @@ class ParentDashboardActivity : AppCompatActivity() {
     /** iconTile'ning markazlashtirilgan (chetga suriluvchi marginsiz) varianti — yonma-yon bo'laklar uchun. */
     private fun iconTileCentered(iconRes: Int, tint: Int): View {
         val tile = android.widget.FrameLayout(this).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(44), dp(44))
+            layoutParams = LinearLayout.LayoutParams(dp(36), dp(36))
             background = GradientDrawable().apply {
-                cornerRadius = dp(14).toFloat()
+                cornerRadius = dp(12).toFloat()
                 setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(tint, 40))
             }
         }
         tile.addView(android.widget.ImageView(this).apply {
             setImageResource(iconRes)
             setColorFilter(tint)
-            layoutParams = android.widget.FrameLayout.LayoutParams(dp(22), dp(22), Gravity.CENTER)
+            layoutParams = android.widget.FrameLayout.LayoutParams(dp(18), dp(18), Gravity.CENTER)
         })
         return tile
     }

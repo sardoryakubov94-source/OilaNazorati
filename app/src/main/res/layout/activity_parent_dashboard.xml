@@ -318,8 +318,8 @@
             android:textSize="11sp"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:paddingTop="16dp"
-            android:paddingBottom="10dp"/>
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"/>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -781,23 +781,24 @@
 
         </LinearLayout>
 
-        <!-- ========== BILDIRISHNOMALAR KARTASI ========== -->
+
+        <!-- ========== PUSH BILDIRISHNOMALAR (Ilovalar tepasida) ========== -->
         <LinearLayout
             android:id="@+id/notificationsCardHome"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:background="@drawable/bg_card_theme"
-            android:padding="16dp"
-            android:layout_marginBottom="10dp"
+            android:padding="14dp"
+            android:layout_marginBottom="6dp"
             android:elevation="3dp">
 
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:layout_marginBottom="6dp">
+                android:layout_marginBottom="4dp">
                 <ImageView
                     android:layout_width="14dp"
                     android:layout_height="14dp"
@@ -806,12 +807,26 @@
                     android:tint="#3498DB"
                     android:contentDescription="Bildirishnomalar"/>
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_weight="1"
                     android:text="PUSH BILDIRISHNOMALAR"
                     android:textColor="#3498DB"
                     android:textStyle="bold"
                     android:textSize="11sp"/>
+                <TextView
+                    android:id="@+id/btnNotificationsHome"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Barchasini ko'rish →"
+                    android:textColor="#3498DB"
+                    android:textStyle="bold"
+                    android:textSize="12sp"
+                    android:background="@drawable/bg_pill_theme"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"/>
             </LinearLayout>
 
             <TextView
@@ -820,26 +835,11 @@
                 android:layout_height="wrap_content"
                 android:text="Telegram, WhatsApp, Instagram va boshqa ilovalardan kelgan xabarlarni bu yerdan kuzatishingiz mumkin."
                 android:textColor="@color/color_text_secondary"
-                android:textSize="12sp"
-                android:layout_marginBottom="10dp"/>
-
-            <TextView
-                android:id="@+id/btnNotificationsHome"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Barchasini ko'rish →"
-                android:textColor="#3498DB"
-                android:textStyle="bold"
-                android:textSize="13sp"
-                android:background="@drawable/bg_pill_theme"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="6dp"/>
+                android:textSize="11sp"/>
 
         </LinearLayout>
 
-        <!-- ========== ILOVALAR bo'limi ========== -->
+                <!-- ========== ILOVALAR bo'limi ========== -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
