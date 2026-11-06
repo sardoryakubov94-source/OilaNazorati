@@ -295,16 +295,16 @@
 
             </LinearLayout>
 
-            <!-- Mini joylashuv ko'rsatkichi — haqiqiy xarita o'rniga stilize
-                 qilingan "radar" grafikasi (statik, tez yuklanadi) -->
+            <!-- GIF animatsiyasi: radar to'lqinlari -->
             <ImageView
+                android:id="@+id/locationRadarGif"
                 android:layout_width="120dp"
                 android:layout_height="100dp"
                 android:layout_marginStart="12dp"
                 android:background="@drawable/bg_card_theme"
-                android:src="@drawable/ic_location_radar"
-                android:scaleType="centerInside"
-                android:contentDescription="Joylashuv"/>
+                android:scaleType="centerCrop"
+                android:clipToOutline="true"
+                android:contentDescription="Joylashuv animatsiyasi"/>
 
         </LinearLayout>
 

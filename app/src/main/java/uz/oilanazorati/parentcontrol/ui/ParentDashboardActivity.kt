@@ -14,6 +14,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
+import android.graphics.drawable.AnimatedImageDrawable
+import android.os.Build
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import java.text.SimpleDateFormat
@@ -59,6 +61,7 @@ class ParentDashboardActivity : AppCompatActivity() {
         setContentView(binding.root)
         if (!ensureAuth()) return
         setupLists(); setupHeader(); setupBottomNav(); setupSectionButtons(); installSimInfoCard(); installOvozXavfRow()
+        loadLocationRadarGif()
         binding.btnNotificationsHome.setOnClickListener { openIfChildSelected { NotificationHistoryActivity::class.java } }
         FirebaseRepo.checkIsPremium { isPremium ->
             isPremiumUser = isPremium
@@ -114,6 +117,25 @@ class ParentDashboardActivity : AppCompatActivity() {
      * "Ovoz" va "Xavfsizlik signallari" — bitta umumiy fon (karta) ichida yonma-yon,
      * har biri alohida bosiladigan, ekranning yarmini egallaydigan ikkita bo'lak.
      */
+
+    /** So'nggi joylashuv kartasidagi GIF animatsiyasini yuklaydi va ishga tushiradi. */
+    private fun loadLocationRadarGif() {
+        try {
+            val imageView = binding.locationRadarGif ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val source = android.graphics.ImageDecoder.createSource(resources, R.drawable.location_radar_anim)
+                val drawable = android.graphics.ImageDecoder.decodeDrawable(source) as? AnimatedImageDrawable
+                imageView.setImageDrawable(drawable)
+                drawable?.start()
+            } else {
+                // API 26-27 uchun: statik radar rasmini ko'rsatamiz (GIF animatsiyasi API 28+ da ishlaydi)
+                imageView.setImageResource(R.drawable.ic_location_radar)
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("Dashboard", "GIF yuklanmadi: ${e.message}")
+        }
+    }
+
     private fun installOvozXavfRow() {
         val scroll = binding.root.getChildAt(0) as? android.widget.ScrollView ?: return
         val content = scroll.getChildAt(0) as? LinearLayout ?: return
