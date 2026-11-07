@@ -295,13 +295,13 @@
 
             </LinearLayout>
 
-            <!-- GIF animatsiyasi: radar to'lqinlari -->
+            <!-- GIF animatsiyasi: radar to'lqinlari (kattaroq, kartaga mos) -->
             <ImageView
                 android:id="@+id/locationRadarGif"
-                android:layout_width="120dp"
-                android:layout_height="100dp"
-                android:layout_marginStart="12dp"
-                android:background="@drawable/bg_card_theme"
+                android:layout_width="160dp"
+                android:layout_height="160dp"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/bg_card_round"
                 android:scaleType="centerCrop"
                 android:clipToOutline="true"
                 android:contentDescription="Joylashuv animatsiyasi"/>
