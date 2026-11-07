@@ -58,7 +58,71 @@
         android:textSize="15sp"
         android:layout_marginBottom="10dp"/>
 
-    <!-- Bugungi statistika: barcha 4 karta aynan bir xil o'lchamda. -->
+    <!-- ========== PUSH BILDIRISHNOMALAR ========== -->
+    <LinearLayout
+        android:id="@+id/notificationsCardTrends"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card_theme"
+        android:padding="14dp"
+        android:layout_marginBottom="12dp"
+        android:elevation="3dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="6dp">
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:layout_marginEnd="6dp"
+                android:src="@drawable/ic_bell"
+                android:tint="#3498DB"
+                android:contentDescription="Bildirishnomalar"/>
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="PUSH BILDIRISHNOMALAR"
+                android:textColor="#3498DB"
+                android:textStyle="bold"
+                android:textSize="11sp"/>
+            <TextView
+                android:id="@+id/btnNotificationsTrends"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Barchasini ko'rish →"
+                android:textColor="#3498DB"
+                android:textStyle="bold"
+                android:textSize="12sp"
+                android:background="@drawable/bg_pill_theme"
+                android:paddingStart="10dp"
+                android:paddingEnd="10dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/notifPreviewList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+            <!-- So'nggi 3 ta push bildirishnoma Kotlin dan yuklanadi -->
+            <TextView
+                android:id="@+id/notifEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Telegram, WhatsApp, Instagram va boshqa ilovalardan kelgan xabarlar shu yerda ko'rinadi."
+                android:textColor="@color/color_text_secondary"
+                android:textSize="12sp"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+        <!-- Bugungi statistika: barcha 4 karta aynan bir xil o'lchamda. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="300dp"

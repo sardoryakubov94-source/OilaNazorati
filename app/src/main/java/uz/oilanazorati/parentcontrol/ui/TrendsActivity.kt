@@ -1,6 +1,10 @@
 package uz.oilanazorati.parentcontrol.ui
 
 import android.graphics.Color
+import android.view.LayoutInflater
+import android.widget.LinearLayout
+import android.widget.TextView
+import uz.oilanazorati.parentcontrol.model.NotificationEvent
 import android.content.Intent
 import android.os.Bundle
 import android.text.SpannableStringBuilder
@@ -63,6 +67,7 @@ class TrendsActivity : AppCompatActivity() {
     private var callsDonutListener: com.google.firebase.firestore.ListenerRegistration? = null
     private var smsDonutListener: com.google.firebase.firestore.ListenerRegistration? = null
     private var appUsageDonutListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var notifListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     // Donut bosilganda markazda ko'rsatiladigan matn (raqam/nomi) -> shu bo'lakning rangi.
     private val contactsSliceReveal = mutableMapOf<String, Int>() // label(ko'rinadigan, masalan "Kontakt 2") -> rang
@@ -121,6 +126,7 @@ class TrendsActivity : AppCompatActivity() {
         loadHourlySmsChart(weekRangeStart, rangeEnd)
         loadTopAppsChart(weekRangeStart, rangeEnd)
         loadDonutCharts()
+        setupPushCard()
 
         // Ismlarni oldindan yuklab olamiz — reytingda "raqamsiz, lekin
         // saqlangan bo'lsa ismi bilan" ko'rsatish uchun.
@@ -139,6 +145,70 @@ class TrendsActivity : AppCompatActivity() {
     }
 
     // ---------------- 0) Bugungi umumiy holat — donut diagrammalar ----------------
+
+
+    private fun setupPushCard() {
+        binding.btnNotificationsTrends.setOnClickListener {
+            startActivity(Intent(this, NotificationHistoryActivity::class.java))
+        }
+        // So'nggi 24 soatdagi eng yangi 5 ta push bildirishnomani ko'rsatamiz
+        val now = System.currentTimeMillis()
+        val since = now - 24 * 60 * 60 * 1000L
+        uz.oilanazorati.parentcontrol.repo.FirebaseRepo.fetchNotificationsInRange(since, now) { notifs ->
+            runOnUiThread { showNotifPreview(notifs.sortedByDescending { it.vaqtMs }.take(5)) }
+        }
+    }
+
+    private fun showNotifPreview(notifs: List<NotificationEvent>) {
+        val container = binding.notifPreviewList
+        val empty = binding.notifEmpty
+        container.removeAllViews()
+        if (notifs.isEmpty()) {
+            empty.visibility = android.view.View.VISIBLE
+            return
+        }
+        empty.visibility = android.view.View.GONE
+        val fmt = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+        for (n in notifs) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(0, 6, 0, 6)
+            }
+            val header = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
+            val appTv = TextView(this).apply {
+                text = if (n.ilovaNomi.isNotBlank()) n.ilovaNomi else n.ilovaPaket
+                textSize = 11f
+                setTextColor(0xFF3498DB.toInt())
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                layoutParams = LinearLayout.LayoutParams(0, -2, 1f)
+            }
+            val timeTv = TextView(this).apply {
+                text = fmt.format(java.util.Date(n.vaqtMs))
+                textSize = 10f
+                setTextColor(0xFF8899AA.toInt())
+            }
+            header.addView(appTv); header.addView(timeTv)
+            row.addView(header)
+            if (n.sarlavha.isNotBlank() || n.matn.isNotBlank()) {
+                val body = TextView(this).apply {
+                    text = listOf(n.sarlavha, n.matn).filter { it.isNotBlank() }.joinToString(": ")
+                    textSize = 12f
+                    maxLines = 2
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                }
+                row.addView(body)
+            }
+            val div = android.view.View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(-1, 1).apply { topMargin = 6 }
+                setBackgroundColor(0x22FFFFFF)
+            }
+            row.addView(div)
+            container.addView(row)
+        }
+    }
 
     private fun loadDonutCharts() {
         val cal = Calendar.getInstance()

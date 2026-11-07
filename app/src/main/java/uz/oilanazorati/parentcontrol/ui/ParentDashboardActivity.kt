@@ -62,7 +62,6 @@ class ParentDashboardActivity : AppCompatActivity() {
         if (!ensureAuth()) return
         setupLists(); setupHeader(); setupBottomNav(); setupSectionButtons(); installSimInfoCard(); installOvozXavfRow()
         loadLocationRadarGif()
-        binding.btnNotificationsHome.setOnClickListener { openIfChildSelected { NotificationHistoryActivity::class.java } }
         FirebaseRepo.checkIsPremium { isPremium ->
             isPremiumUser = isPremium
             contactSummaryAdapter.setPremium(isPremium)
