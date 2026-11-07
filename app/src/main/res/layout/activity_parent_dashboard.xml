@@ -193,36 +193,24 @@
         </LinearLayout>
 
         <!-- ========== JOYLASHUV KARTASI ========== -->
-        <!-- FrameLayout: GIF karta balandligini to'liq egallaydi, burchaklari mos -->
-        <FrameLayout
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
             android:background="@drawable/bg_card_theme"
+            android:padding="16dp"
             android:layout_marginTop="1dp"
+            android:layout_marginStart="0dp"
+            android:layout_marginEnd="0dp"
             android:layout_marginBottom="14dp"
-            android:elevation="1dp"
-            android:clipToOutline="true">
+            android:elevation="1dp">
 
-            <!-- GIF: o'ng tomonda, to'liq balandlik, burchaklar kartaga mos -->
-            <ImageView
-                android:id="@+id/locationRadarGif"
-                android:layout_width="140dp"
-                android:layout_height="match_parent"
-                android:layout_gravity="end"
-                android:scaleType="centerCrop"
-                android:clipToOutline="true"
-                android:contentDescription="Joylashuv animatsiyasi"/>
-
-            <!-- Chap: matn -->
             <LinearLayout
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:paddingStart="16dp"
-                android:paddingTop="14dp"
-                android:paddingBottom="14dp"
-                android:paddingEnd="156dp"
-                android:gravity="center_vertical">
+                android:layout_weight="1"
+                android:orientation="vertical">
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -307,7 +295,18 @@
 
             </LinearLayout>
 
-        </FrameLayout>
+            <!-- GIF animatsiyasi: radar to'lqinlari -->
+            <ImageView
+                android:id="@+id/locationRadarGif"
+                android:layout_width="120dp"
+                android:layout_height="100dp"
+                android:layout_marginStart="12dp"
+                android:background="@drawable/bg_card_theme"
+                android:scaleType="centerCrop"
+                android:clipToOutline="true"
+                android:contentDescription="Joylashuv animatsiyasi"/>
+
+        </LinearLayout>
 
         <!-- ========== BUGUNGI NAZORAT stats ========== -->
         <TextView
@@ -782,6 +781,63 @@
 
         </LinearLayout>
 
+
+        <!-- ========== PUSH BILDIRISHNOMALAR (Ilovalar tepasida) ========== -->
+        <LinearLayout
+            android:id="@+id/notificationsCardHome"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card_theme"
+            android:padding="14dp"
+            android:layout_marginBottom="6dp"
+            android:elevation="3dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="4dp">
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:layout_marginEnd="4dp"
+                    android:src="@drawable/ic_bell"
+                    android:tint="#3498DB"
+                    android:contentDescription="Bildirishnomalar"/>
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="PUSH BILDIRISHNOMALAR"
+                    android:textColor="#3498DB"
+                    android:textStyle="bold"
+                    android:textSize="11sp"/>
+                <TextView
+                    android:id="@+id/btnNotificationsHome"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Barchasini ko'rish →"
+                    android:textColor="#3498DB"
+                    android:textStyle="bold"
+                    android:textSize="12sp"
+                    android:background="@drawable/bg_pill_theme"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"/>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/notificationsSummary"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Telegram, WhatsApp, Instagram va boshqa ilovalardan kelgan xabarlarni bu yerdan kuzatishingiz mumkin."
+                android:textColor="@color/color_text_secondary"
+                android:textSize="11sp"/>
+
+        </LinearLayout>
 
                 <!-- ========== ILOVALAR bo'limi ========== -->
         <LinearLayout
