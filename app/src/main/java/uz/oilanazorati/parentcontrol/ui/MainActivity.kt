@@ -129,6 +129,9 @@ class MainActivity : AppCompatActivity() {
                 showGoogleLoginSection()
             }
         }
+        binding.btnSetupGuide.setOnClickListener {
+            startActivity(Intent(this, SetupGuideActivity::class.java))
+        }
         binding.btnSupport.setOnClickListener {
             if (FirebaseAuth.getInstance().currentUser?.isAnonymous == false) {
                 startActivity(Intent(this, SupportActivity::class.java))

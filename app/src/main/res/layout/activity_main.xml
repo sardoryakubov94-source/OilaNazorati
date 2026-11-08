@@ -170,6 +170,18 @@
             android:background="@drawable/bg_login_card"
             android:layout_marginBottom="14dp"/>
 
+        <TextView
+            android:id="@+id/btnSetupGuide"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="❓ Qanday ulanadi? (4 qadamli yo'riqnoma)"
+            android:textColor="@color/color_text_secondary"
+            android:textSize="13sp"
+            android:padding="12dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:layout_marginTop="6dp"/>
+
     </LinearLayout>
 
     <!-- ========== 3-BOSQICH: faqat Ota-ona paneli uchun Google ==========

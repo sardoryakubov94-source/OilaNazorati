@@ -184,7 +184,11 @@ class OnboardingActivity : AppCompatActivity() {
     private fun finishOnboarding() {
         getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
             .edit().putBoolean("onboarding_shown", true).apply()
-        startActivity(Intent(this, MainActivity::class.java))
+        // Feature-tur tugagach, "Qanday ulanadi?" 4 qadamli yo'riqnomasi
+        // ko'rsatiladi — u o'zi MainActivity'ga o'tkazadi.
+        startActivity(Intent(this, SetupGuideActivity::class.java).apply {
+            putExtra(SetupGuideActivity.EXTRA_FROM_ONBOARDING, true)
+        })
         finish()
     }
 
