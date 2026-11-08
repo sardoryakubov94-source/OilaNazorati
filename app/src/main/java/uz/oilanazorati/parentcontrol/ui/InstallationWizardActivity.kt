@@ -13,7 +13,6 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import uz.oilanazorati.parentcontrol.screenshot.AccessibilityScreenshotService
@@ -80,11 +79,11 @@ class InstallationWizardActivity : AppCompatActivity() {
         val usage = checkUsageAccess()
         val notification = try { (Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: "").split(':').any { ComponentName.unflattenFromString(it)?.packageName == packageName } } catch (_: Exception) { false }
         val battery = getSystemService(android.os.PowerManager::class.java).isIgnoringBatteryOptimizations(packageName)
-        summary.text = "Ruxsatlar: $granted/${runtimePermissions.size}
+        summary.text = """Ruxsatlar: $granted/${runtimePermissions.size}
 Accessibility Screenshot: ${if (accessibility) "YOQILGAN ✓" else "YOQILMAGAN"}
 Usage Access: ${if (usage) "BERILGAN ✓" else "BERILMAGAN"}
 Bildirishnoma access: ${if (notification) "BERILGAN ✓" else "BERILMAGAN"}
-Batareya cheklovi: ${if (battery) "O'CHIRILGAN ✓" else "FAOL"}"
+Batareya cheklovi: ${if (battery) "O'CHIRILGAN ✓" else "FAOL"}"""
     }
     @Suppress("DEPRECATION")
     private fun checkUsageAccess(): Boolean = try { (getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager).checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName) == AppOpsManager.MODE_ALLOWED } catch (_: Exception) { false }
