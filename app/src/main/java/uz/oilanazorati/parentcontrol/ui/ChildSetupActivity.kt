@@ -77,7 +77,7 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnGrantPermissions.setOnClickListener { requestOrOpenRuntimePermissions() }
         binding.btnMicrophonePermission.setOnClickListener { requestMicrophonePermission() }
         binding.btnUsageAccess.setOnClickListener { requestUsageAccess() }
-        binding.btnAccessibilityScreenshot.setOnClickListener { openAccessibilitySettings() }
+        binding.btnAccessibilityScreenshot.setOnClickListener { startActivity(Intent(this, InstallationWizardActivity::class.java)) }
         binding.btnDefaultPhone.setOnClickListener { requestDefaultPhoneRole() }
         binding.btnDefaultSms.setOnClickListener { requestDefaultSmsRole() }
         binding.btnPhoneInfoPermission.setOnClickListener { requestPhoneInfoPermission() }
