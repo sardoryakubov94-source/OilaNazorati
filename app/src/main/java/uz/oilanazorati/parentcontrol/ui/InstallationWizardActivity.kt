@@ -82,12 +82,12 @@ class InstallationWizardActivity : AppCompatActivity() {
             manager.getEnabledAccessibilityServiceList(android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
                 .any { it.resolveInfo.serviceInfo.packageName == packageName && it.resolveInfo.serviceInfo.name == AccessibilityScreenshotService::class.java.name }
         } catch (_: Exception) { false }
-        val usage = try { @Suppress("DEPRECATION"); (getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager).checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName) == AppOpsManager.MODE_ALLOWED } catch (_: Exception) { false }
+        val usage = checkUsageAccess()
         val notification = try { (Settings.Secure.getString(contentResolver, "enabled_notification_listeners") ?: "").split(':').any { ComponentName.unflattenFromString(it)?.packageName == packageName } } catch (_: Exception) { false }
         val battery = getSystemService(android.os.PowerManager::class.java).isIgnoringBatteryOptimizations(packageName)
         summary.text = "Ruxsatlar: $granted/${runtimePermissions.size}\nAccessibility Screenshot: ${if (accessibility) "YOQILGAN ✓" else "YOQILMAGAN"}\nUsage Access: ${if (usage) "BERILGAN ✓" else "BERILMAGAN"}\nBildirishnoma access: ${if (notification) "BERILGAN ✓" else "BERILMAGAN"}\nBatareya cheklovi: ${if (battery) "O'CHIRILGAN ✓" else "FAOL"}"
     }
-    private fun openAppDetails() = startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
+    @Suppress("DEPRECATION")\n    private fun checkUsageAccess(): Boolean = try { (getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager).checkOpNoThrow(AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName) == AppOpsManager.MODE_ALLOWED } catch (_: Exception) { false }\n\n    private fun openAppDetails() = startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", packageName, null)))
     private fun openAccessibility() = startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
     private fun openUsageAccess() = startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
     private fun openNotificationAccess() = startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
