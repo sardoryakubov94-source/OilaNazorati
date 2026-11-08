@@ -192,25 +192,35 @@ class InstallationWizardActivity : AppCompatActivity() {
                 else prefs.getInt("access_stage", 0)
             when (stage) {
                 0 -> AlertDialog.Builder(this)
-                    .setTitle("Accessibility — 1-qadam")
-                    .setMessage("Accessibility sozlamasi ochiladi. Ro'yxatdan OilaNazorati Screenshot xizmatini bosing. Agar Restricted setting ogohlantirishi chiqsa, OK ni bosing. Keyin shu yordamchiga qayting.")
+                    .setTitle("1-qadam / 3: xizmatni bosing")
+                    .setMessage("Ochiladigan ro'yxatdan \"Oila Nazorati — Accessibility Screenshot\" qatorini TOPIB, uning USTIGA bosing (tugmani emas, butun qatorni).\n\nShunda ekranga \"Qurilmangizni himoya qilish uchun bu sozlama hozircha mavjud emas\" (yoki shunga o'xshash) oynacha chiqadi. O'sha oynadagi OK tugmasini albatta bosing.\n\nOK bosilgandan keyingina keyingi qadam ishlaydi — shuning uchun avval shu qatorga bosishni unutmang.")
                     .setPositiveButton("Accessibility'ni ochish") { _, _ ->
                         prefs.edit().putInt("access_stage", 1).apply()
                         openSystem(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     }.setNegativeButton("Keyinroq", null).show()
                 1 -> AlertDialog.Builder(this)
-                    .setTitle("Accessibility — 2-qadam")
-                    .setMessage("Ilova ma'lumotlari sahifasida ⋮ menyuni bosing → Allow restricted settings / Cheklangan sozlamalarga ruxsat berish → Android tasdig'ini bering. So'ng yordamchiga qayting.")
+                    .setTitle("2-qadam / 3: barcha ruxsatni yoqish")
+                    .setMessage("Ochilgan \"Ilova ma'lumotlari\" sahifasida yuqori o'ng burchakdagi uch nuqta (⋮) ni bosing.\n\n• Agar menyu ochilsa: \"Allow restricted settings\" / \"Cheklangan sozlamalarga ruxsat berish\" ni tanlang, so'ng barmoq izi yoki PIN bilan tasdiqlang.\n• Agar uch nuqta hali ham hech narsa qilmasa — demak 1-qadam oxirigacha bajarilmagan. Pastdagi \"Orqaga: 1-qadam\" tugmasini bosib, Accessibility'dagi xizmat qatoriga qayta bosing va OK'ni tasdiqlang.")
                     .setPositiveButton("Ilova ma'lumotlarini ochish") { _, _ ->
                         prefs.edit().putInt("access_stage", 2).apply()
                         openSystem(appDetailsIntent())
-                    }.setNegativeButton("Keyinroq", null).show()
+                    }
+                    .setNeutralButton("Orqaga: 1-qadam") { _, _ ->
+                        prefs.edit().putInt("access_stage", 0).apply()
+                        openNextStep()
+                    }
+                    .setNegativeButton("Keyinroq", null).show()
                 else -> AlertDialog.Builder(this)
-                    .setTitle("Accessibility — 3-qadam")
-                    .setMessage("Accessibility sahifasida OilaNazorati Screenshot xizmatini ON qiling va Android tasdig'ini bering. Qaytganingizda ilova o'zi tekshiradi.")
+                    .setTitle("3-qadam / 3: xizmatni yoqish")
+                    .setMessage("Endi Accessibility sahifasida \"Oila Nazorati — Accessibility Screenshot\" qatoriga qayta bosing. Endi tugma xira emas — uni ON holatiga torting va Android tasdig'ini bering.\n\nQaytganingizda bu yordamchi holatni o'zi tekshiradi.")
                     .setPositiveButton("Accessibility'ni ochish") { _, _ ->
                         openSystem(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                    }.setNegativeButton("Keyinroq", null).show()
+                    }
+                    .setNeutralButton("Hali ham xira / ishlamayapti") { _, _ ->
+                        prefs.edit().putInt("access_stage", 0).apply()
+                        openNextStep()
+                    }
+                    .setNegativeButton("Keyinroq", null).show()
             }
             return
         }
