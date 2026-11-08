@@ -29,23 +29,35 @@ class InstallationWizardActivity : AppCompatActivity() {
     private val prefs by lazy { getSharedPreferences("installation_wizard", Context.MODE_PRIVATE) }
 
     // Same runtime permissions as the existing child setup screen.
-    private val permissions = arrayOf(
-        android.Manifest.permission.READ_PHONE_STATE,
-        android.Manifest.permission.READ_PHONE_NUMBERS,
-        android.Manifest.permission.READ_CALL_LOG,
-        android.Manifest.permission.RECEIVE_SMS,
-        android.Manifest.permission.READ_SMS,
-        android.Manifest.permission.SEND_SMS,
-        android.Manifest.permission.READ_CONTACTS,
-        android.Manifest.permission.ACCESS_FINE_LOCATION,
-        android.Manifest.permission.ACCESS_COARSE_LOCATION,
-        android.Manifest.permission.RECORD_AUDIO,
-        android.Manifest.permission.POST_NOTIFICATIONS,
-        android.Manifest.permission.CALL_PHONE
-    )
+    // POST_NOTIFICATIONS exists only on Android 13+; do not block older devices on it.
+    private val permissions: Array<String>
+        get() = arrayOf(
+            android.Manifest.permission.READ_PHONE_STATE,
+            android.Manifest.permission.READ_PHONE_NUMBERS,
+            android.Manifest.permission.READ_CALL_LOG,
+            android.Manifest.permission.RECEIVE_SMS,
+            android.Manifest.permission.READ_SMS,
+            android.Manifest.permission.SEND_SMS,
+            android.Manifest.permission.READ_CONTACTS,
+            android.Manifest.permission.ACCESS_FINE_LOCATION,
+            android.Manifest.permission.ACCESS_COARSE_LOCATION,
+            android.Manifest.permission.RECORD_AUDIO,
+            android.Manifest.permission.POST_NOTIFICATIONS,
+            android.Manifest.permission.CALL_PHONE
+        ).filter {
+            it != android.Manifest.permission.POST_NOTIFICATIONS ||
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        }.toTypedArray()
+
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) { refresh() }
+    ) { result ->
+        result.filterValues { !it }.keys.forEach { permission ->
+            val key = "permission_request_count_$permission"
+            prefs.edit().putInt(key, prefs.getInt(key, 0) + 1).apply()
+        }
+        refresh()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -128,8 +140,12 @@ class InstallationWizardActivity : AppCompatActivity() {
             ContextCompat.checkSelfPermission(this, it) != android.content.pm.PackageManager.PERMISSION_GRANTED
         }
         if (missing.isNotEmpty()) {
-            val askedBefore = prefs.getBoolean("runtime_permissions_asked", false)
-            val permanentlyDenied = askedBefore && missing.any { !shouldShowRequestPermissionRationale(it) }
+            // A first denial can also return false here. Only route to App Info
+            // after the permission has actually been requested repeatedly.
+            val permanentlyDenied = missing.any {
+                prefs.getInt("permission_request_count_$it", 0) >= 2 &&
+                    !shouldShowRequestPermissionRationale(it)
+            }
             if (permanentlyDenied) {
                 AlertDialog.Builder(this)
                     .setTitle("Ruxsatni sozlamadan yoqing")
@@ -137,7 +153,6 @@ class InstallationWizardActivity : AppCompatActivity() {
                     .setPositiveButton("Ilova sozlamalarini ochish") { _, _ -> openSystem(appDetailsIntent()) }
                     .setNegativeButton("Keyinroq", null).show()
             } else {
-                prefs.edit().putBoolean("runtime_permissions_asked", true).apply()
                 permissionLauncher.launch(missing.toTypedArray())
             }
             return
