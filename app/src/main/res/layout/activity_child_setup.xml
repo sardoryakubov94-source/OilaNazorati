@@ -9,6 +9,7 @@
     android:orientation="vertical"
     android:padding="20dp">
 
+    <Button android:id="@+id/btnInstallationWizard" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="OilaNazorati o‘rnatish yordamchisi" android:layout_marginBottom="16dp"/>
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1) Ota-ona kodini kiriting" android:textStyle="bold" android:layout_marginBottom="8dp"/>
     <EditText android:id="@+id/inputChildName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Farzand ismi (masalan: Anvar) — ixtiyoriy" android:layout_marginBottom="8dp"/>
     <EditText android:id="@+id/inputFamilyCode" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Masalan: 4F9K21" android:maxLength="6" android:inputType="textCapCharacters"/>
