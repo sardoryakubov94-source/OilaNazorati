@@ -1,0 +1,49 @@
+name: Validate Installation Wizard (debug APK)
+
+on:
+  push:
+    branches: [ feature/installation-wizard ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Set up Gradle 8.5
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.5'
+      - name: Restore Firebase configuration
+        env:
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          test -n "$GOOGLE_SERVICES_JSON_B64" || { echo "GOOGLE_SERVICES_JSON_B64 secret is missing"; exit 1; }
+          echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > app/google-services.json
+      - name: Generate Google Web OAuth resource
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path('app/google-services.json').read_text())
+          client_id = next((oauth['client_id'] for client in data.get('client', []) for oauth in client.get('oauth_client', []) if oauth.get('client_type') == 3 and oauth.get('client_id')), '')
+          escaped = client_id.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;').replace("'", '&apos;')
+          Path('app/src/main/res/values/google_auth.xml').write_text('<?xml version="1.0" encoding="utf-8"?>\\n<resources>\\n<string name="default_web_client_id" translatable="false">' + escaped + '</string>\\n</resources>\\n')
+          PY
+      - name: Build debug APK
+        run: gradle --no-daemon clean assembleDebug
+      - name: Upload test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: OilaNazorati-installation-wizard-debug
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14
