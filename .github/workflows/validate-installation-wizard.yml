@@ -3,6 +3,8 @@ name: Validate Installation Wizard (debug APK)
 on:
   push:
     branches: [ feature/installation-wizard ]
+  pull_request:
+    branches: [ main ]
 
 permissions:
   contents: read
