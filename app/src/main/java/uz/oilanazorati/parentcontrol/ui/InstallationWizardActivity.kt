@@ -26,6 +26,15 @@ class InstallationWizardActivity : AppCompatActivity() {
     private lateinit var root: LinearLayout
     private lateinit var status: TextView
     private lateinit var next: Button
+    private companion object {
+        const val BG = 0xFF0B1220.toInt()
+        const val CARD = 0xFF16223A.toInt()
+        const val TEXT = 0xFFFFFFFF.toInt()
+        const val MUTED = 0xFFC9D4E5.toInt()
+        const val OK = 0xFF4ADE80.toInt()
+        const val BAD = 0xFFFF6B6B.toInt()
+        const val BTN = 0xFF2F6BFF.toInt()
+    }
     private val prefs by lazy { getSharedPreferences("installation_wizard", Context.MODE_PRIVATE) }
 
     // Same runtime permissions as the existing child setup screen.
@@ -67,6 +76,8 @@ class InstallationWizardActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(18), dp(18), dp(28))
         }
+        scroll.setBackgroundColor(BG)
+        root.setBackgroundColor(BG)
         scroll.addView(root)
         setContentView(scroll)
         buildUi()
@@ -81,17 +92,21 @@ class InstallationWizardActivity : AppCompatActivity() {
         root.addView(TextView(this).apply {
             text = "Bolalar telefonini sozlash"
             textSize = 24f
+            setTextColor(TEXT)
             setTypeface(typeface, android.graphics.Typeface.BOLD)
         })
         root.addView(TextView(this).apply {
             text = "Bitta tugma bilan keyingi kerakli sozlamaga o'ting. Android sahifasidan qaytsangiz, ruxsatlar avtomatik tekshiriladi."
             textSize = 15f
+            setTextColor(MUTED)
             setPadding(0, dp(8), 0, dp(14))
         })
         status = TextView(this).apply {
-            textSize = 14f
+            textSize = 15f
+            setTextColor(TEXT)
+            setLineSpacing(dp(4).toFloat(), 1f)
             setPadding(dp(14), dp(12), dp(14), dp(12))
-            setBackgroundColor(0xFFEAF4FF.toInt())
+            setBackgroundColor(CARD)
         }
         root.addView(status)
         next = Button(this).apply {
@@ -99,15 +114,21 @@ class InstallationWizardActivity : AppCompatActivity() {
             setOnClickListener { openNextStep() }
             layoutParams = LinearLayout.LayoutParams(-1, dp(54)).apply { topMargin = dp(12) }
         }
+        styleButton(next)
         root.addView(next)
-        addNote("Muhim: Accessibility Screenshot",
-            "Android 13+ da avval xizmatni bosib ogohlantirishdagi OK ni tasdiqlang. Keyin ilova ma'lumotlari sahifasidagi ⋮ → Allow restricted settings ni tanlang. So'ng Accessibility'ga qaytib xizmatni yoqing.")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            addNote("Muhim: Accessibility Screenshot",
+                "Avval xizmatni bosib ogohlantirishdagi OK ni tasdiqlang. Keyin ilova ma'lumotlari sahifasidagi ⋮ → Allow restricted settings ni tanlang. So'ng Accessibility'ga qaytib xizmatni yoqing.")
+        }
+        manufacturerNote()?.let { addNote("Telefoningiz uchun qo'shimcha", it) }
         root.addView(Button(this).apply {
+            styleButton(this)
             text = "Holatni qayta tekshirish"
             setOnClickListener { refresh() }
             layoutParams = LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(10) }
         })
         root.addView(Button(this).apply {
+            styleButton(this)
             text = "Oila kodi bilan ulanish / monitoring"
             setOnClickListener { startActivity(Intent(this@InstallationWizardActivity, ChildSetupActivity::class.java)) }
             layoutParams = LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(8) }
@@ -115,21 +136,28 @@ class InstallationWizardActivity : AppCompatActivity() {
         refresh()
     }
 
+    private fun styleButton(b: Button) {
+        b.setTextColor(TEXT)
+        b.setBackgroundColor(BTN)
+    }
+
     private fun addNote(heading: String, body: String) {
         val box = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(14), dp(12), dp(14), dp(12))
-            setBackgroundColor(0xFFF4F6F8.toInt())
+            setBackgroundColor(CARD)
             layoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(12) }
         }
         box.addView(TextView(this).apply {
             text = heading
             textSize = 16f
+            setTextColor(0xFFFFD166.toInt())
             setTypeface(typeface, android.graphics.Typeface.BOLD)
         })
         box.addView(TextView(this).apply {
             text = body
             textSize = 14f
+            setTextColor(MUTED)
             setPadding(0, dp(6), 0, 0)
         })
         root.addView(box)
@@ -159,7 +187,10 @@ class InstallationWizardActivity : AppCompatActivity() {
         }
 
         if (!accessibilityEnabled()) {
-            when (prefs.getInt("access_stage", 0)) {
+            // "Allow restricted settings" exists only on Android 13+ (sideloaded apps).
+            val stage = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) 3
+                else prefs.getInt("access_stage", 0)
+            when (stage) {
                 0 -> AlertDialog.Builder(this)
                     .setTitle("Accessibility — 1-qadam")
                     .setMessage("Accessibility sozlamasi ochiladi. Ro'yxatdan OilaNazorati Screenshot xizmatini bosing. Agar Restricted setting ogohlantirishi chiqsa, OK ni bosing. Keyin shu yordamchiga qayting.")
@@ -196,9 +227,16 @@ class InstallationWizardActivity : AppCompatActivity() {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
             ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-            explain("Fon joylashuvi",
-                "Ilova ma'lumotlari → Ruxsatlar → Joylashuv bo'limida, agar mavjud bo'lsa, 'Har doim ruxsat berish'ni tanlang.",
-                appDetailsIntent()); return
+            if (Build.VERSION.SDK_INT == Build.VERSION_CODES.Q) {
+                // Android 10: can be requested directly.
+                permissionLauncher.launch(arrayOf(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION))
+            } else {
+                // Android 11+: only grantable from the system settings page.
+                explain("Fon joylashuvi",
+                    "Ochiladigan sahifada Ruxsatlar → Joylashuv ni tanlang va 'Har doim ruxsat berish' (Allow all the time) ni yoqing. Aniq joylashuv (Precise) ham yoniq tursin.",
+                    appDetailsIntent())
+            }
+            return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !batteryExempt()) {
             val batteryIntent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
@@ -239,15 +277,24 @@ class InstallationWizardActivity : AppCompatActivity() {
         val background = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q ||
             ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_BACKGROUND_LOCATION) == android.content.pm.PackageManager.PERMISSION_GRANTED
         val battery = Build.VERSION.SDK_INT < Build.VERSION_CODES.M || batteryExempt()
-        status.text = listOf(
-            "Oddiy ruxsatlar: " + granted + "/" + permissions.size,
-            "Accessibility Screenshot: " + if (access) "YOQILGAN ✓" else "YOQILMAGAN",
-            "Usage Access: " + if (usageEnabled()) "BERILGAN ✓" else "BERILMAGAN",
-            "Bildirishnoma access: " + if (notificationsEnabled()) "BERILGAN ✓" else "BERILMAGAN",
-            "Fon joylashuvi: " + if (background) "BERILGAN ✓" else "BERILMAGAN",
-            "Batareya: " + if (battery) "CHEKLOVSIZ ✓" else "CHEKLANGAN",
-            "Device Admin: " + if (deviceAdminEnabled()) "FAOL ✓" else "FAOL EMAS"
-        ).joinToString("\n")
+        val rows = listOf(
+            "Oddiy ruxsatlar: $granted/${permissions.size}" to (granted == permissions.size),
+            "Accessibility Screenshot: " + (if (access) "YOQILGAN ✓" else "YOQILMAGAN") to access,
+            "Usage Access: " + (if (usageEnabled()) "BERILGAN ✓" else "BERILMAGAN") to usageEnabled(),
+            "Bildirishnoma access: " + (if (notificationsEnabled()) "BERILGAN ✓" else "BERILMAGAN") to notificationsEnabled(),
+            "Fon joylashuvi: " + (if (background) "BERILGAN ✓" else "BERILMAGAN") to background,
+            "Batareya: " + (if (battery) "CHEKLOVSIZ ✓" else "CHEKLANGAN") to battery,
+            "Device Admin: " + (if (deviceAdminEnabled()) "FAOL ✓" else "FAOL EMAS") to deviceAdminEnabled()
+        )
+        val sb = android.text.SpannableStringBuilder()
+        rows.forEachIndexed { i, (line, ok) ->
+            val start = sb.length
+            sb.append(line)
+            sb.setSpan(android.text.style.ForegroundColorSpan(if (ok) OK else BAD),
+                start, sb.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            if (i < rows.lastIndex) sb.append("\n")
+        }
+        status.text = sb
         next.text = if (granted == permissions.size && access && usageEnabled() &&
             notificationsEnabled() && background && battery && deviceAdminEnabled())
             "Ruxsatlar tayyor ✓" else "Keyingi kerakli qadam"
@@ -288,6 +335,14 @@ class InstallationWizardActivity : AppCompatActivity() {
     private fun openSystem(intent: Intent) {
         try { startActivity(intent) }
         catch (_: Exception) { startActivity(appDetailsIntent()) }
+    }
+
+    private fun manufacturerNote(): String? = when (Build.MANUFACTURER.lowercase()) {
+        "samsung" -> "Samsung: Sozlamalar → Batareya → Fon rejimidagi cheklovlar → 'Hech qachon uxlamaydigan ilovalar' ga OilaNazorati'ni qo'shing va 'Uxlayotgan ilovalar'dan olib tashlang."
+        "xiaomi", "redmi", "poco" -> "Xiaomi: Ilova ma'lumotlari → Avtoishga tushirish (Autostart) ni yoqing va Batareya tejash → 'Cheklovsiz' ni tanlang."
+        "huawei", "honor" -> "Huawei/Honor: Ilova ishga tushirish → OilaNazorati uchun 'Qo'lda boshqarish' va uchala ruxsatni yoqing."
+        "oppo", "realme", "oneplus", "vivo" -> "Ilova ma'lumotlari → Batareya → 'Fonda ishlashga ruxsat' va Avtoishga tushirishni yoqing."
+        else -> null
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
