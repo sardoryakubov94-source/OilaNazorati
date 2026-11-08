@@ -128,7 +128,18 @@ class InstallationWizardActivity : AppCompatActivity() {
             ContextCompat.checkSelfPermission(this, it) != android.content.pm.PackageManager.PERMISSION_GRANTED
         }
         if (missing.isNotEmpty()) {
-            permissionLauncher.launch(missing.toTypedArray())
+            val askedBefore = prefs.getBoolean("runtime_permissions_asked", false)
+            val permanentlyDenied = askedBefore && missing.any { !shouldShowRequestPermissionRationale(it) }
+            if (permanentlyDenied) {
+                AlertDialog.Builder(this)
+                    .setTitle("Ruxsatni sozlamadan yoqing")
+                    .setMessage("Ayrim ruxsatlar avval rad etilgan. Ilova ma'lumotlari → Ruxsatlar bo'limiga kirib, OilaNazorati uchun kerakli ruxsatlarni yoqing.")
+                    .setPositiveButton("Ilova sozlamalarini ochish") { _, _ -> openSystem(appDetailsIntent()) }
+                    .setNegativeButton("Keyinroq", null).show()
+            } else {
+                prefs.edit().putBoolean("runtime_permissions_asked", true).apply()
+                permissionLauncher.launch(missing.toTypedArray())
+            }
             return
         }
 
