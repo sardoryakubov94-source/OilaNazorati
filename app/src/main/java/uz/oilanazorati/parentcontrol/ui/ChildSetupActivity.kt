@@ -72,6 +72,7 @@ class ChildSetupActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityChildSetupBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.btnInstallationWizard.setOnClickListener { startActivity(Intent(this, InstallationWizardActivity::class.java)) }
         binding.btnPair.setOnClickListener { pairWithFamilyCode() }
         binding.btnGrantPermissions.setOnClickListener { requestOrOpenRuntimePermissions() }
         binding.btnMicrophonePermission.setOnClickListener { requestMicrophonePermission() }
