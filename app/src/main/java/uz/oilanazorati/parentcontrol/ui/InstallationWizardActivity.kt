@@ -49,19 +49,14 @@ class InstallationWizardActivity : AppCompatActivity() {
             val missing = runtimePermissions.filter { ContextCompat.checkSelfPermission(this, it) != android.content.pm.PackageManager.PERMISSION_GRANTED }
             if (missing.isEmpty()) openAppDetails() else requestPermissions(missing.toTypedArray(), 101)
         }
-        addStep("2", "Accessibility cheklovini ochish", "Xizmat xira bo'lsa: Ilova ma'lumotlari → ⋮ → “Cheklangan sozlamalarga ruxsat berish”.") {
-            AlertDialog.Builder(this).setTitle("Accessibility cheklovi")
-                .setMessage("Android bu ruxsatni foydalanuvchi tasdig'isiz ochmaydi. OilaNazorati ilova ma'lumotlariga kiring, ⋮ menyuni oching va “Cheklangan sozlamalarga ruxsat berish”ni tanlang. Keyin Accessibility xizmatini yoqing.")
-                .setPositiveButton("Ilova ma'lumotlariga o'tish") { _, _ -> openAppDetails() }
-                .setNeutralButton("Accessibility'ga o'tish") { _, _ -> openAccessibility() }
-                .setNegativeButton("Bekor", null).show()
-        }
-        addStep("3", "Screenshot Accessibility", "Oila Nazorati — Accessibility Screenshot xizmatini ON qiling.") { openAccessibility() }
-        addStep("4", "Ilova ishlatilishi (Usage Access)", "Ilovalar statistikasi va screenshot kuzatuvi uchun kerak.") { openUsageAccess() }
-        addStep("5", "Bildirishnomalarga ruxsat", "Telegram/WhatsApp va boshqa ilovalardan bildirishnomalarni ko'rish uchun.") { openNotificationAccess() }
-        addStep("6", "Joylashuv va fon ishlashi", "Joylashuv ruxsatlarini tekshiring; Android sozlamasida fon joylashuviga ruxsat bering (agar so'ralsa).") { openAppDetails() }
-        addStep("7", "Batareya cheklovini olib tashlash", "Monitoring fonda uzilmasdan ishlashi uchun.") { requestBatteryExemption() }
-        addStep("8", "Ilovani o'chirishdan himoya", "Device Admin ruxsatini sozlash uchun eski sozlash sahifasidan foydalaning.") { startActivity(Intent(this, ChildSetupActivity::class.java)) }
+        addStep("2", "1-qadam: Accessibility cheklovini chaqirish", "Accessibility sahifasida OilaNazorati xizmatini bosing. Android Restricted setting ogohlantirishini ko'rsatadi. Undagi OK tugmasini bosing, so'ng shu yordamchiga qayting.") { openAccessibility() }
+        addStep("3", "2-qadam: Ilova uchun cheklangan sozlamalarga ruxsat", "Qaytgach, bu tugmani bosing. App Info sahifasida uch nuqta → Allow restricted settings ni tanlang va Android tasdig'ini bering.") { openAppDetails() }
+        addStep("4", "3-qadam: Screenshot Accessibility'ni yoqish", "Endi Accessibility sahifasiga qayting, OilaNazorati Screenshot xizmatini ON qiling va tizim tasdig'ini bering.") { openAccessibility() }
+        addStep("5", "Ilova ishlatilishi (Usage Access)", "Ilovalar statistikasi va screenshot kuzatuvi uchun kerak.") { openUsageAccess() }
+        addStep("6", "Bildirishnomalarga ruxsat", "Telegram/WhatsApp va boshqa ilovalardan bildirishnomalarni ko'rish uchun.") { openNotificationAccess() }
+        addStep("7", "Joylashuv va fon ishlashi", "Joylashuv ruxsatlarini tekshiring; Android sozlamasida fon joylashuviga ruxsat bering (agar so'ralsa).") { openAppDetails() }
+        addStep("8", "Batareya cheklovini olib tashlash", "Monitoring fonda uzilmasdan ishlashi uchun.") { requestBatteryExemption() }
+        addStep("9", "Ilovani o'chirishdan himoya", "Device Admin ruxsatini sozlash uchun eski sozlash sahifasidan foydalaning.") { startActivity(Intent(this, ChildSetupActivity::class.java)) }
         root.addView(Button(this).apply { text = "Holatni qayta tekshirish"; setOnClickListener { refreshStatus() }; layoutParams = LinearLayout.LayoutParams(-1, dp(52)).apply { topMargin = dp(12) } })
         root.addView(Button(this).apply { text = "Sozlash sahifasiga qaytish"; setOnClickListener { finish() }; layoutParams = LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(8) } })
         refreshStatus()
