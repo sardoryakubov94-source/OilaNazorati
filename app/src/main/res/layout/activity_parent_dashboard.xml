@@ -317,11 +317,15 @@
 
             </LinearLayout>
 
-            <!-- GIF animatsiyasi: radar to'lqinlari -->
+            <!-- GIF animatsiyasi: radar to'lqinlari. Balandligi match_parent — chapdagi
+                 matn ustuni qancha joy egallasa (karta o'lchami shuning o'zi bilan
+                 belgilanadi), animatsiya ham aynan shu balandlikni to'liq egallaydi,
+                 yuqori/pastida bo'sh joy qolmaydi. Kartaning o'zi kattalashmaydi —
+                 faqat ichidagi bo'sh joy endi animatsiya bilan to'ladi. -->
             <ImageView
                 android:id="@+id/locationRadarGif"
                 android:layout_width="120dp"
-                android:layout_height="100dp"
+                android:layout_height="match_parent"
                 android:layout_marginStart="12dp"
                 android:background="@drawable/bg_card_theme"
                 android:scaleType="centerCrop"
