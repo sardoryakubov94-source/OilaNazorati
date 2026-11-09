@@ -77,6 +77,17 @@ object SimInfoSync {
     private val ussdPending = java.util.Collections.synchronizedSet(mutableSetOf<Int>())
     private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
 
+    // 3-USUL — ba'zi operatorlar (masalan Mobiuz) *150# so'roviga USSD oynasida
+    // emas, ODDIY SMS orqali javob beradi ("sizning raqamingiz: ..." kabi).
+    // Bizning kod avval faqat USSD javobini kutardi — shu operatorlarda hech
+    // qachon tutilmasdi. Shuning uchun: USSD so'rovi yuborilgan payt va qaysi
+    // SIM (subscriptionId) ekani vaqtincha eslab qolinadi; shu vaqtdan keyin
+    // qisqa oyna ichida kelgan HAR QANDAY SMS SmsReceiver orqali shu yerga
+    // ko'rsatiladi (maybeCaptureNumberFromSms) va ichidan O'zbekiston raqami
+    // topilsa — aynan shu SIM uchun tasdiqlangan raqam sifatida qabul qilinadi.
+    private val USSD_SMS_WINDOW_MS = 120_000L // operator SMS javobi odatda shu oraliqda keladi
+    private val pendingUssdSmsCapture = java.util.concurrent.ConcurrentHashMap<Int, Long>() // subId -> yuborilgan vaqt
+
     /** Cheklov/kutish tufayli kechiktirilgan yozuv yo'qolmasin: vaqti kelganda bir marta qayta tekshiriladi. */
     private fun scheduleResync(context: Context, delayMs: Long) {
         if (resyncScheduled) return
@@ -384,6 +395,10 @@ object SimInfoSync {
             // boshqa SIM'ga tushib qolmasligi uchun (oldin faqat Android 12+ da shunday edi).
             val tm = try { baseManager.createForSubscriptionId(info.subscriptionId) } catch (_: Throwable) { baseManager }
 
+            // Javob USSD oynasida emas, SMS orqali kelishi mumkin (3-usul) —
+            // shu SIM uchun "SMS kutilmoqda" deb belgilab qo'yamiz.
+            pendingUssdSmsCapture[info.subscriptionId] = now
+
             tm.sendUssdRequest(code, object : TelephonyManager.UssdResponseCallback() {
                 override fun onReceiveUssdResponse(telephonyManager: TelephonyManager, request: String, response: CharSequence) {
                     extractPhoneNumber(response.toString())?.let { number ->
@@ -400,6 +415,33 @@ object SimInfoSync {
         } catch (_: Throwable) {
             // Ba'zi qurilma/operatorlar USSD so'rovini rad etadi — kutilgan holat.
         }
+    }
+
+    /**
+     * SmsReceiver har bir kelgan SMS uchun shuni chaqiradi. Agar yaqinda
+     * (USSD_SMS_WINDOW_MS ichida) biror SIM uchun "raqamimni bilish" so'rovi
+     * yuborilgan bo'lsa va bu SMS ichidan haqiqiy O'zbekiston raqami
+     * topilsa — o'sha SIM uchun tasdiqlangan raqam sifatida saqlanadi.
+     * Oddiy (tasodifiy) SMS'larni chalkashtirmaslik uchun FAQAT shu qisqa
+     * oyna ichida, va faqat hali raqami aniqlanmagan SIM uchun ishlaydi.
+     */
+    fun maybeCaptureNumberFromSms(context: Context, body: String) {
+        if (body.isBlank() || pendingUssdSmsCapture.isEmpty()) return
+        val now = System.currentTimeMillis()
+        // Muddati o'tgan kutishlarni tozalaymiz.
+        pendingUssdSmsCapture.entries.removeAll { now - it.value > USSD_SMS_WINDOW_MS }
+        if (pendingUssdSmsCapture.isEmpty()) return
+
+        val number = extractPhoneNumber(body) ?: return
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        // Eng yaqinda so'rov yuborilgan (va hali raqami bo'sh) SIM'ni tanlaymiz.
+        val subId = pendingUssdSmsCapture.entries
+            .filter { prefs.getString(KEY_NUMBER_PREFIX + it.key, "").isNullOrBlank() }
+            .maxByOrNull { it.value }?.key ?: return
+
+        pendingUssdSmsCapture.remove(subId)
+        prefs.edit().putString(KEY_NUMBER_PREFIX + subId, number).apply()
+        syncNow(context.applicationContext)
     }
 
     /** Matndan O'zbekiston mobil raqamini ajratib oladi ("90 123 45 67", "+998901234567",

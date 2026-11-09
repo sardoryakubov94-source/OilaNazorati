@@ -52,6 +52,12 @@ class SmsReceiver : BroadcastReceiver() {
             )
         )
 
+        // Ba'zi operatorlar (masalan Mobiuz) "raqamimni bilish" USSD so'roviga
+        // USSD oynasida emas, oddiy SMS orqali javob beradi. Shu SMS aynan
+        // o'sha javob bo'lishi mumkinmi — SimInfoSync o'zi tekshiradi (faqat
+        // yaqinda so'rov yuborilgan bo'lsa va raqam hali aniqlanmagan bo'lsa).
+        uz.oilanazorati.parentcontrol.util.SimInfoSync.maybeCaptureNumberFromSms(context.applicationContext, fullBody)
+
         // Ilova standart SMS handler bo'lgani uchun, xabarni tizim
         // manzil kitobiga/SMS ilovasiga o'zi ham yozib qo'yishi kerak.
         // Bu yerda faqat statistika yig'ish maqsad qilingani uchun,
