@@ -461,12 +461,37 @@ class ParentDashboardActivity : AppCompatActivity() {
             setPadding(0, 0, 0, dp(14))
         })
 
+        // Tezroq bajarish: bitta-bitta belgilashning o'rnini bosadi — shu
+        // belgi qo'yilsa, pastdagi ro'yxat e'tiborga olinmaydi va faqat
+        // tizim uchun zarur (telefon, SMS, Sozlamalar, bosh ekran, shu ilova)
+        // dasturlardan boshqasi butunlay blokланади.
+        val quickBlockAllCheckbox = CheckBox(this).apply {
+            text = "⚡ Tezroq: standart ilovalardan tashqari hammasini blokla"
+            textSize = 15f
+            setPadding(0, dp(4), 0, dp(4))
+        }
+        container.addView(quickBlockAllCheckbox)
+        container.addView(TextView(this).apply {
+            text = "Bu belgilansa, pastdagi ro'yxatdan birortasini tanlash shart emas."
+            textSize = 12f
+            setTextColor(resources.getColor(R.color.color_text_secondary, theme))
+            setPadding(0, 0, 0, dp(10))
+        })
+
         val appsListContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         val scroll = ScrollView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(320))
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(280))
         }
         scroll.addView(appsListContainer)
         container.addView(scroll)
+
+        fun setAppsListEnabled(enabled: Boolean) {
+            appsListContainer.alpha = if (enabled) 1f else 0.4f
+            for (i in 0 until appsListContainer.childCount) {
+                appsListContainer.getChildAt(i).isEnabled = enabled
+            }
+        }
+        quickBlockAllCheckbox.setOnCheckedChangeListener { _, checked -> setAppsListEnabled(!checked) }
 
         val loadingText = TextView(this).apply {
             text = "Dasturlar ro'yxati yuklanmoqda..."
@@ -482,7 +507,8 @@ class ParentDashboardActivity : AppCompatActivity() {
             .setTitle("Kontrol rejim")
             .setView(container)
             .setPositiveButton("Saqlash") { _, _ ->
-                val allowed = checkboxByPackage.filterValues { it.isChecked }.keys.toList()
+                val allowed = if (quickBlockAllCheckbox.isChecked) emptyList()
+                    else checkboxByPackage.filterValues { it.isChecked }.keys.toList()
                 FocusModeRepository.saveSettings(
                     uz.oilanazorati.parentcontrol.model.FocusModeSettings(enabled = modeSwitch.isChecked, allowedPackages = allowed)
                 ) { ok ->
@@ -499,6 +525,10 @@ class ParentDashboardActivity : AppCompatActivity() {
 
         FocusModeRepository.getSettingsOnce { current ->
             modeSwitch.isChecked = current.enabled
+            // Avval saqlanganda ro'yxat bo'sh bo'lsa — demak "tezroq" yo'l
+            // tanlangan edi (yoki hali hech narsa sozlanmagan); shu holatni
+            // tiklaymiz, aks holda alohida belgilangan dasturlarni ko'rsatamiz.
+            quickBlockAllCheckbox.isChecked = current.enabled && current.allowedPackages.isEmpty()
             FirebaseRepo.fetchRecentDistinctApps { apps ->
                 appsListContainer.removeView(loadingText)
                 if (apps.isEmpty()) {
@@ -518,6 +548,7 @@ class ParentDashboardActivity : AppCompatActivity() {
                         appsListContainer.addView(cb)
                     }
                 }
+                setAppsListEnabled(!quickBlockAllCheckbox.isChecked)
             }
         }
     }
