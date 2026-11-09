@@ -79,14 +79,16 @@ class SetupGuideActivity : AppCompatActivity() {
         fromOnboarding = intent.getBooleanExtra(EXTRA_FROM_ONBOARDING, false)
 
         val bg = Color.parseColor("#0B1220")
-        val root = FrameLayout(this).apply { setBackgroundColor(bg) }
+        val root = FrameLayout(this).apply {
+            background = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(Color.parseColor("#0B1220"), Color.parseColor("#111D30"), Color.parseColor("#0B1422")))
+        }
         val density = resources.displayMetrics.density
         fun dp(v: Int) = (v * density).toInt()
 
         val scroll = ScrollView(this).apply { isFillViewport = true }
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(28), dp(24), dp(28), dp(28))
+            setPadding(dp(22), dp(20), dp(22), dp(24))
         }
 
         val topRow = LinearLayout(this).apply {
@@ -94,17 +96,18 @@ class SetupGuideActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
         }
         val headerTitle = TextView(this).apply {
-            text = "Qanday ulanadi?"
+            text = "Qanday o'rnatiladi?"
             setTextColor(Color.WHITE)
             textSize = 18f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         val close = TextView(this).apply {
-            text = "Yopish ✕"
+            text = "Yopish  ✕"
             setTextColor(Color.parseColor("#8993A2"))
-            textSize = 14f
-            setPadding(dp(8), dp(8), dp(8), dp(8))
+            textSize = 12f
+            setPadding(dp(12), dp(9), dp(12), dp(9))
+            background = rounded(Color.parseColor("#1C293B"), dp(12).toFloat(), Color.parseColor("#34445A"))
             setOnClickListener { finishGuide() }
         }
         topRow.addView(headerTitle)
@@ -112,16 +115,17 @@ class SetupGuideActivity : AppCompatActivity() {
         content.addView(topRow)
 
         val spacerTop = View(this)
-        content.addView(spacerTop, LinearLayout.LayoutParams(0, dp(36)))
+        content.addView(spacerTop, LinearLayout.LayoutParams(0, dp(20)))
 
         val iconWrap = FrameLayout(this).apply {
-            layoutParams = LinearLayout.LayoutParams(dp(96), dp(96)).apply { gravity = Gravity.CENTER_HORIZONTAL }
+            layoutParams = LinearLayout.LayoutParams(dp(112), dp(112)).apply { gravity = Gravity.CENTER_HORIZONTAL }
         }
         iconBox = FrameLayout(this).apply {
-            layoutParams = FrameLayout.LayoutParams(dp(96), dp(96))
+            layoutParams = FrameLayout.LayoutParams(dp(112), dp(112))
+            elevation = dp(8).toFloat()
         }
         iconText = TextView(this).apply {
-            textSize = 38f
+            textSize = 44f
             gravity = Gravity.CENTER
             layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
         }
@@ -132,7 +136,7 @@ class SetupGuideActivity : AppCompatActivity() {
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             setTextColor(Color.WHITE)
             gravity = Gravity.CENTER
-            layoutParams = FrameLayout.LayoutParams(dp(28), dp(28)).apply {
+            layoutParams = FrameLayout.LayoutParams(dp(32), dp(32)).apply {
                 gravity = Gravity.TOP or Gravity.END
             }
         }
@@ -140,46 +144,64 @@ class SetupGuideActivity : AppCompatActivity() {
         content.addView(iconWrap)
 
         val spacerMid = View(this)
-        content.addView(spacerMid, LinearLayout.LayoutParams(0, dp(24)))
+        content.addView(spacerMid, LinearLayout.LayoutParams(0, dp(20)))
 
         titleText = TextView(this).apply {
             setTextColor(Color.WHITE)
-            textSize = 22f
+            textSize = 21f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
+            setPadding(dp(4), 0, dp(4), 0)
         }
         content.addView(titleText)
 
         val spacerSmall = View(this)
         content.addView(spacerSmall, LinearLayout.LayoutParams(0, dp(16)))
 
+        val instructionCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(Color.parseColor("#18263A"), dp(20).toFloat(), Color.parseColor("#2C405A"))
+            setPadding(dp(18), dp(18), dp(18), dp(18))
+            elevation = dp(2).toFloat()
+        }
+        val instructionLabel = TextView(this).apply {
+            text = "BAJARISH TARTIBI"
+            setTextColor(Color.parseColor("#8FA7C5"))
+            textSize = 10f
+            letterSpacing = 0.12f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+        }
+        instructionCard.addView(instructionLabel)
+        instructionCard.addView(View(this), LinearLayout.LayoutParams(1, dp(10)))
         bodyText = TextView(this).apply {
-            setTextColor(Color.parseColor("#C9D4E5"))
-            textSize = 16f
-            gravity = Gravity.CENTER
+            setTextColor(Color.parseColor("#D9E4F2"))
+            textSize = 15f
+            gravity = Gravity.START
             setLineSpacing(dp(5).toFloat(), 1f)
         }
-        content.addView(bodyText)
+        instructionCard.addView(bodyText)
+        content.addView(instructionCard)
 
         val spacerBottom = View(this)
-        content.addView(spacerBottom, LinearLayout.LayoutParams(0, dp(32)))
+        content.addView(spacerBottom, LinearLayout.LayoutParams(0, dp(24)))
 
         dotsRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
         }
-        content.addView(dotsRow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(24)))
+        content.addView(dotsRow, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(28)))
 
         val spacerBtn = View(this)
         content.addView(spacerBtn, LinearLayout.LayoutParams(0, dp(20)))
 
         val btnRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         backBtn = TextView(this).apply {
-            text = "← Orqaga"
-            textSize = 15f
-            setTextColor(Color.parseColor("#AEB8C7"))
+            text = "←  Orqaga"
+            textSize = 14f
+            setTextColor(Color.parseColor("#C4D0DF"))
             gravity = Gravity.CENTER
-            setPadding(0, dp(16), 0, dp(16))
+            background = rounded(Color.parseColor("#1B293B"), dp(15).toFloat(), Color.parseColor("#35465D"))
+            setPadding(0, dp(15), 0, dp(15))
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
                 marginEnd = dp(10)
             }
@@ -192,7 +214,7 @@ class SetupGuideActivity : AppCompatActivity() {
             textSize = 16f
             setTypeface(typeface, android.graphics.Typeface.BOLD)
             gravity = Gravity.CENTER
-            setPadding(0, dp(16), 0, dp(16))
+            setPadding(0, dp(15), 0, dp(15))
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f)
             setOnClickListener {
                 if (index < steps.size - 1) { index++; render() } else finishGuide()
@@ -213,9 +235,11 @@ class SetupGuideActivity : AppCompatActivity() {
         val s = steps[index]
         val accent = Color.parseColor(s.accent)
 
-        val boxBg = GradientDrawable().apply {
-            cornerRadius = 24f * resources.displayMetrics.density
-            setColor(Color.argb(38, Color.red(accent), Color.green(accent), Color.blue(accent)))
+        val boxBg = GradientDrawable(GradientDrawable.Orientation.TL_BR, intArrayOf(
+            Color.argb(90, Color.red(accent), Color.green(accent), Color.blue(accent)),
+            Color.argb(28, Color.red(accent), Color.green(accent), Color.blue(accent))
+        )).apply {
+            cornerRadius = 30f * resources.displayMetrics.density
             setStroke((1.5f * resources.displayMetrics.density).toInt(), accent)
         }
         iconBox.background = boxBg
@@ -234,12 +258,11 @@ class SetupGuideActivity : AppCompatActivity() {
 
         backBtn.visibility = if (index == 0) View.INVISIBLE else View.VISIBLE
 
-        val nextBg = GradientDrawable().apply {
+        val nextBg = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(accent, lighten(accent))).apply {
             cornerRadius = 16f * resources.displayMetrics.density
-            setColor(accent)
         }
         nextBtn.background = nextBg
-        nextBtn.text = if (index == steps.size - 1) "Tushunarli, boshlayman ✓" else "Keyingi qadam →"
+        nextBtn.text = if (index == steps.size - 1) "Tushunarli, boshlayman  ✓" else "Keyingi qadam  →"
 
         dotsRow.removeAllViews()
         val density = resources.displayMetrics.density
@@ -257,6 +280,17 @@ class SetupGuideActivity : AppCompatActivity() {
             dot.background = drawable
             dotsRow.addView(dot, params)
         }
+    }
+
+    private fun rounded(color: Int, radius: Float, stroke: Int): GradientDrawable =
+        GradientDrawable().apply {
+            cornerRadius = radius
+            setColor(color)
+            setStroke((resources.displayMetrics.density).toInt().coerceAtLeast(1), stroke)
+        }
+
+    private fun lighten(color: Int): Int {
+        return Color.rgb((Color.red(color) + 22).coerceAtMost(255), (Color.green(color) + 22).coerceAtMost(255), (Color.blue(color) + 22).coerceAtMost(255))
     }
 
     private fun finishGuide() {
