@@ -138,36 +138,46 @@
             android:textColor="@color/color_text_primary"
             android:layout_marginBottom="36dp"/>
 
-        <Button app:backgroundTint="@color/selector_button_dim" app:strokeColor="@color/color_border" app:strokeWidth="1dp"
+        <Button
             android:id="@+id/btnChildDevice"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:text="Bu farzandimning telefoni"
             android:textAllCaps="false"
             android:textStyle="bold"
-            android:textColor="@color/selector_button_dim_text"
-            android:background="@drawable/bg_button_gold"
+            android:textSize="14sp"
+            android:textColor="#EAF3FF"
+            android:background="@drawable/bg_setup_guide_button"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
             android:layout_marginBottom="14dp"/>
 
-        <Button app:backgroundTint="@color/selector_button_dim" app:strokeColor="@color/color_border" app:strokeWidth="1dp"
+        <Button
             android:id="@+id/btnOpenParentDashboard"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:text="Ota-ona panelini ochish"
             android:textAllCaps="false"
             android:textStyle="bold"
-            android:textColor="@color/selector_button_dim_text"
-            android:background="@drawable/bg_login_card"
+            android:textSize="14sp"
+            android:textColor="#EAF3FF"
+            android:background="@drawable/bg_setup_guide_button"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
             android:layout_marginBottom="14dp"/>
 
-        <Button app:backgroundTint="@color/selector_button_dim" app:strokeColor="@color/color_border" app:strokeWidth="1dp"
+        <Button
             android:id="@+id/btnSupport"
             android:layout_width="match_parent"
             android:layout_height="56dp"
             android:text="✍️ Yordam (Bizga yozing)"
             android:textAllCaps="false"
-            android:textColor="@color/selector_button_dim_text"
-            android:background="@drawable/bg_login_card"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:textColor="#EAF3FF"
+            android:background="@drawable/bg_setup_guide_button"
+            android:elevation="0dp"
+            android:stateListAnimator="@null"
             android:layout_marginBottom="14dp"/>
 
         <TextView
