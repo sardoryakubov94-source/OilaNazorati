@@ -14,7 +14,10 @@ import java.util.*
 class ScreenshotSettingsActivity : AppCompatActivity() {
     private val checks = LinkedHashMap<String, CheckBox>()
     private var current = ScreenshotSettings()
-    private lateinit var enabled: Switch
+    // "Screenshot olish" asosiy kluchatiri ATAYLAB olib tashlandi: ko'p
+    // foydalanuvchi uni yoqishni unutib, "Screenshot bo'limi ishlamayapti"
+    // deb shikoyat qilgan. Endi bu funksiya har doim YOQIQ hisoblanadi —
+    // pastdagi listenSettings'da eski "o'chiq" holat ham avtomatik tuzatiladi.
     private lateinit var autoTop3: Switch
     private lateinit var frequency: Spinner
     private lateinit var appsBox: LinearLayout
@@ -94,7 +97,6 @@ class ScreenshotSettingsActivity : AppCompatActivity() {
             })
             addView(TextView(this@ScreenshotSettingsActivity).apply { text = "Screenshot nazorati"; textSize = 24f })
         })
-        enabled = Switch(this).apply { text = "Screenshot olish" }; root.addView(enabled)
         autoTop3 = Switch(this).apply { text = "Avtomatik TOP 3 ilova" }; root.addView(autoTop3)
         root.addView(TextView(this).apply { text = "Chastota"; textSize = 16f })
         frequency = Spinner(this); frequency.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, listOf("15 daqiqa", "30 daqiqa", "60 daqiqa")); root.addView(frequency)
@@ -116,7 +118,14 @@ class ScreenshotSettingsActivity : AppCompatActivity() {
             compoundDrawablePadding = 16
             setOnClickListener { startActivity(android.content.Intent(this@ScreenshotSettingsActivity, ScreenshotHistoryActivity::class.java)) }
         })
-        ScreenshotRepository.listenSettings { s -> current = s; enabled.isChecked = s.enabled; autoTop3.isChecked = s.autoTop3Enabled; frequency.setSelection(listOf(15,30,60).indexOf(s.frequencyMinutes.coerceIn(15,60).toInt()).coerceAtLeast(0)); checks.values.forEach { it.isChecked = s.manualPackageNames.contains(it.tag as String) } }
+        ScreenshotRepository.listenSettings { s ->
+            current = s; autoTop3.isChecked = s.autoTop3Enabled
+            frequency.setSelection(listOf(15,30,60).indexOf(s.frequencyMinutes.coerceIn(15,60).toInt()).coerceAtLeast(0))
+            checks.values.forEach { it.isChecked = s.manualPackageNames.contains(it.tag as String) }
+            // Eski/avvalgi "o'chiq" holatni jim ravishda tuzatamiz — ota-onadan
+            // hech qanday qo'shimcha harakat talab qilinmaydi.
+            if (!s.enabled) ScreenshotRepository.saveSettings(s.copy(enabled = true)) {}
+        }
         loadTodayApps()
     }
     private fun loadTodayApps() {
@@ -135,6 +144,6 @@ class ScreenshotSettingsActivity : AppCompatActivity() {
     private fun save() {
         val selected = checks.filterValues { it.isChecked }.keys.toList()
         val mins = listOf(15,30,60)[frequency.selectedItemPosition.coerceIn(0,2)]
-        ScreenshotRepository.saveSettings(ScreenshotSettings(enabled.isChecked, autoTop3.isChecked, mins, selected)) { ok -> Toast.makeText(this, if (ok) "Screenshot sozlamalari saqlandi" else "Saqlashda xato", Toast.LENGTH_SHORT).show() }
+        ScreenshotRepository.saveSettings(ScreenshotSettings(true, autoTop3.isChecked, mins, selected)) { ok -> Toast.makeText(this, if (ok) "Screenshot sozlamalari saqlandi" else "Saqlashda xato", Toast.LENGTH_SHORT).show() }
     }
 }
