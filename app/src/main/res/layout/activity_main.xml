@@ -172,15 +172,21 @@
 
         <TextView
             android:id="@+id/btnSetupGuide"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="❓ Qanday ulanadi? (4 qadamli yo'riqnoma)"
-            android:textColor="@color/color_text_secondary"
-            android:textSize="13sp"
-            android:padding="12dp"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_setup_guide_button"
+            android:gravity="center"
+            android:drawablePadding="10dp"
+            android:text="❔  Qanday o'rnatiladi?"
+            android:textColor="#EAF3FF"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.01"
             android:clickable="true"
             android:focusable="true"
-            android:layout_marginTop="6dp"/>
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"/>
 
     </LinearLayout>
 
