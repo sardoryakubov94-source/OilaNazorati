@@ -94,6 +94,23 @@
                 android:orientation="horizontal">
 
                 <FrameLayout
+                    android:id="@+id/btnFocusMode"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_card_clickable_theme"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:layout_marginEnd="8dp">
+                    <ImageView
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_gravity="center"
+                        android:src="@drawable/ic_shield"
+                        android:tint="@color/color_text_primary"
+                        android:contentDescription="Kontrol rejim"/>
+                </FrameLayout>
+
+                <FrameLayout
                     android:id="@+id/btnChooseChild"
                     android:layout_width="36dp"
                     android:layout_height="36dp"

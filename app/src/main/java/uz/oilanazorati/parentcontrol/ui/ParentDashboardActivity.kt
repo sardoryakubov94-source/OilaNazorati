@@ -7,7 +7,10 @@ import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import android.widget.CheckBox
 import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -18,6 +21,7 @@ import android.graphics.drawable.AnimatedImageDrawable
 import android.os.Build
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
+import uz.oilanazorati.parentcontrol.screenshot.FocusModeRepository
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -93,6 +97,11 @@ class ParentDashboardActivity : AppCompatActivity() {
             showChildPickerDialog(code)
         }
         binding.btnSettings.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
+        binding.btnFocusMode.setOnClickListener {
+            if (FirebaseRepo.familyCode.isNullOrBlank() || FirebaseRepo.childId.isNullOrBlank()) {
+                Toast.makeText(this, "Avval oila kodini yuklab, farzandni tanlang", Toast.LENGTH_SHORT).show()
+            } else showFocusModeDialog()
+        }
     }
 
     private fun setupBottomNav() { bindBottomNav(NavTab.HOME) }
@@ -414,6 +423,103 @@ class ParentDashboardActivity : AppCompatActivity() {
         renderRows(children)
         dialog = AlertDialog.Builder(this).setTitle("Qaysi farzand?").setView(container).setNegativeButton("Yopish", null).create()
         dialog.show()
+    }
+
+    /**
+     * "Kontrol rejim" — dars yoki e'tibor kerak bo'lgan vaqtda ota-ona
+     * yoqadi: shu vaqtda farzand telefonida faqat belgilangan (yoki
+     * telefon/SMS/Sozlamalar kabi tizim uchun zarur) dasturlar ochiq
+     * turadi, qolganlari ochilgan zahoti yopiladi. Yechish ham shu oynadan.
+     */
+    private fun showFocusModeDialog() {
+        val density = resources.displayMetrics.density
+        fun dp(v: Int) = (v * density).toInt()
+
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), dp(8))
+        }
+        val switchRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 0, 0, dp(10))
+        }
+        val switchLabel = TextView(this).apply {
+            text = "Kontrol rejimini yoqish"
+            textSize = 16f
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val modeSwitch = Switch(this)
+        switchRow.addView(switchLabel)
+        switchRow.addView(modeSwitch)
+        container.addView(switchRow)
+
+        container.addView(TextView(this).apply {
+            text = "Yoqilsa, farzand telefonida faqat pastda belgilangan dasturlar ochiq turadi. Qolganlari ochilgan zahoti yopiladi. Telefon, SMS, Sozlamalar va shu ilova har doim ochiq qoladi."
+            textSize = 13f
+            setTextColor(resources.getColor(R.color.color_text_secondary, theme))
+            setPadding(0, 0, 0, dp(14))
+        })
+
+        val appsListContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        val scroll = ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(320))
+        }
+        scroll.addView(appsListContainer)
+        container.addView(scroll)
+
+        val loadingText = TextView(this).apply {
+            text = "Dasturlar ro'yxati yuklanmoqda..."
+            textSize = 13f
+            setPadding(0, dp(12), 0, dp(12))
+        }
+        appsListContainer.addView(loadingText)
+
+        val checkboxByPackage = HashMap<String, CheckBox>()
+
+        var dialog: AlertDialog? = null
+        dialog = AlertDialog.Builder(this)
+            .setTitle("Kontrol rejim")
+            .setView(container)
+            .setPositiveButton("Saqlash") { _, _ ->
+                val allowed = checkboxByPackage.filterValues { it.isChecked }.keys.toList()
+                FocusModeRepository.saveSettings(
+                    uz.oilanazorati.parentcontrol.model.FocusModeSettings(enabled = modeSwitch.isChecked, allowedPackages = allowed)
+                ) { ok ->
+                    Toast.makeText(
+                        this,
+                        if (ok) (if (modeSwitch.isChecked) "Kontrol rejim yoqildi" else "Kontrol rejim o'chirildi") else "Saqlab bo'lmadi — internetni tekshiring",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            .setNegativeButton("Bekor qilish", null)
+            .create()
+        dialog.show()
+
+        FocusModeRepository.getSettingsOnce { current ->
+            modeSwitch.isChecked = current.enabled
+            FirebaseRepo.fetchRecentDistinctApps { apps ->
+                appsListContainer.removeView(loadingText)
+                if (apps.isEmpty()) {
+                    appsListContainer.addView(TextView(this).apply {
+                        text = "Hali dastur tarixi yo'q. Farzand telefonida birror ilova ishlatilgandan so'ng, u shu yerda ko'rinadi."
+                        textSize = 13f
+                        setPadding(0, dp(12), 0, dp(12))
+                    })
+                } else {
+                    apps.forEach { (pkg, name) ->
+                        val cb = CheckBox(this).apply {
+                            text = name
+                            isChecked = current.allowedPackages.contains(pkg)
+                            textSize = 15f
+                        }
+                        checkboxByPackage[pkg] = cb
+                        appsListContainer.addView(cb)
+                    }
+                }
+            }
+        }
     }
 
     private fun loadTodayStats() {

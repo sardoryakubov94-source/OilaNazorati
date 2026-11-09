@@ -43,6 +43,20 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private val bgExecutor = Executors.newSingleThreadExecutor()
     private var settings: ScreenshotSettings = ScreenshotSettings()
     private var settingsListener: ListenerRegistration? = null
+
+    // ===== Kontrol rejim ("Focus mode") =====
+    // Ota-ona dars/e'tibor vaqtida yoqadi: shu vaqtda faqat ruxsat etilgan
+    // (yoki tizim uchun zarur) dasturlar ochiq turadi, qolganlari ochilgan
+    // zahoti yopilib, bosh ekranga qaytariladi. Tekshiruv bitta HashSet
+    // qidiruvi — mavjud, allaqachon ishlab turgan Accessibility hodisa
+    // oqimidan foydalanadi, shuning uchun qo'shimcha polling/wakelock yo'q
+    // va batareyaga deyarli ta'sir qilmaydi.
+    private var focusModeSettings: uz.oilanazorati.parentcontrol.model.FocusModeSettings =
+        uz.oilanazorati.parentcontrol.model.FocusModeSettings()
+    private var focusModeListener: ListenerRegistration? = null
+    private var lastFocusBlockedPackage: String? = null
+    private var lastFocusBlockedAtUptime: Long = 0L
+    private val essentialPackages: Set<String> by lazy { buildEssentialPackages() }
     private var requestListener: ListenerRegistration? = null
     private var captureRunning: Boolean = false
     private var autoWatchScheduled: Boolean = false
@@ -82,6 +96,11 @@ class AccessibilityScreenshotService : AccessibilityService() {
             settings = newSettings
             if (!settings.enabled || !autoCaptureActive) clearBurst()
             if (settings.enabled && autoCaptureActive) scheduleAutoWatch()
+        }
+        // Push-based snapshot listener — ota-ona panelida o'zgartirilgan zahoti
+        // keladi, polling yo'q.
+        focusModeListener = uz.oilanazorati.parentcontrol.screenshot.FocusModeRepository.listenSettings { newSettings ->
+            focusModeSettings = newSettings
         }
         requestListener = ScreenshotRepository.listenScreenshotRequests { requestId: String ->
             if (settings.enabled) queueRemoteCapture(requestId)
@@ -542,8 +561,57 @@ class AccessibilityScreenshotService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
+        // Kontrol rejim tekshiruvi — eng birinchi, eng tez bajariladigan qism.
+        // Faqat oyna/ekran almashganda (TYPE_WINDOW_STATE_CHANGED) ishlaydi,
+        // chunki aynan shu hodisa "yangi dastur oldinga chiqdi" degani.
+        // Risk-skanerlash uchun ishlatiladigan throttling (minGap) bu yerga
+        // tegmaydi — bloklash kechikmasligi kerak.
+        if (focusModeSettings.enabled && event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val pkg = event.packageName?.toString()
+            if (!pkg.isNullOrBlank() && !isFocusModeAllowed(pkg)) {
+                val uptime = android.os.SystemClock.uptimeMillis()
+                // Bitta paket uchun ketma-ket hodisalarda performGlobalAction'ni
+                // qayta-qayta chaqirmaslik uchun qisqa debounce (CPU/batareya tejash).
+                if (pkg != lastFocusBlockedPackage || uptime - lastFocusBlockedAtUptime > 600L) {
+                    lastFocusBlockedPackage = pkg
+                    lastFocusBlockedAtUptime = uptime
+                    performGlobalAction(GLOBAL_ACTION_HOME)
+                }
+                return // bloklangan dastur uchun screenshot/risk-tahlil kerak emas
+            }
+        }
         if (settings.enabled && autoCaptureActive) scheduleAutoWatch()
         analyzeAccessibilityEvent(event)
+    }
+
+    /** Kontrol rejimda shu dastur ochiq turishi mumkinmi. */
+    private fun isFocusModeAllowed(packageName: String): Boolean =
+        packageName in essentialPackages || packageName in focusModeSettings.allowedPackages
+
+    /**
+     * Tizim ishlashi uchun har doim kerak bo'ladigan paketlar — kontrol
+     * rejimda ham bloklanmaydi: bosh ekran (launcher), telefon/qo'ng'iroq,
+     * standart SMS, Sozlamalar, tizim UI (bildirishnomalar paneli, Recents)
+     * va ilovaning o'zi. Bir marta hisoblanadi (lazy) — har hodisada qayta
+     * so'ralmaydi.
+     */
+    private fun buildEssentialPackages(): Set<String> {
+        val set = HashSet<String>()
+        set.add(applicationContext.packageName)
+        set.add("com.android.systemui")
+        runCatching {
+            val launcherIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+            packageManager.resolveActivity(launcherIntent, 0)?.activityInfo?.packageName?.let { set.add(it) }
+        }
+        runCatching {
+            (getSystemService(Context.TELECOM_SERVICE) as? android.telecom.TelecomManager)
+                ?.defaultDialerPackage?.let { set.add(it) }
+        }
+        runCatching {
+            android.provider.Telephony.Sms.getDefaultSmsPackage(this)?.let { set.add(it) }
+        }
+        runCatching { set.add("com.android.settings") }
+        return set
     }
 
     private fun analyzeAccessibilityEvent(event: AccessibilityEvent?) {
@@ -683,7 +751,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
     override fun onInterrupt(): Unit = Unit
     override fun onDestroy() {
         mainHandler.removeCallbacksAndMessages(null)
-        settingsListener?.remove(); requestListener?.remove()
+        settingsListener?.remove(); requestListener?.remove(); focusModeListener?.remove()
         clearBurst()
         stopVideoWatch()
         bgExecutor.shutdownNow()

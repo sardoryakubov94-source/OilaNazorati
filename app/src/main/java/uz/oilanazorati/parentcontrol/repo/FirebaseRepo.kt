@@ -411,6 +411,26 @@ object FirebaseRepo {
             }
     }
 
+    /**
+     * Kontrol rejim uchun "ruxsat berish" ro'yxatini to'ldirishda ko'rsatiladigan
+     * dasturlar ro'yxati — oxirgi foydalanish tarixidan paket nomi bo'yicha
+     * takrorlanmas ro'yxat (bir martalik o'qish, listener emas).
+     */
+    fun fetchRecentDistinctApps(onResult: (List<Pair<String, String>>) -> Unit) {
+        val col = childCollection("app_usage") ?: run { onResult(emptyList()); return }
+        col.orderBy("boshlanishMs", Query.Direction.DESCENDING).limit(400).get()
+            .addOnSuccessListener { snap ->
+                val seen = LinkedHashMap<String, String>() // paketNomi -> ilovaNomi
+                snap.documents.mapNotNull { it.toObject(AppUsageEvent::class.java) }.forEach { e ->
+                    if (e.paketNomi.isNotBlank() && !seen.containsKey(e.paketNomi)) {
+                        seen[e.paketNomi] = e.ilovaNomi.ifBlank { e.paketNomi }
+                    }
+                }
+                onResult(seen.map { it.key to it.value }.sortedBy { it.second.lowercase() })
+            }
+            .addOnFailureListener { onResult(emptyList()) }
+    }
+
     fun requestLiveTracking(durationMinutes: Int = 5) {
         val code = familyCode ?: return
         val cid = childId ?: return

@@ -122,6 +122,15 @@ service cloud.firestore {
             if isRealOwner();
         }
 
+        match /focus_mode_settings/{docId} {
+          allow read:
+            if isRealOwner() || isThisChildsOwnSession();
+          allow create, update:
+            if isRealOwner() && docId == 'current';
+          allow delete:
+            if isRealOwner();
+        }
+
         match /screenshot_trigger_state/{docId} {
           allow read:
             if isRealOwner() || isThisChildsOwnSession();
@@ -218,6 +227,7 @@ service cloud.firestore {
           allow read, write:
             if (isRealOwner() || isThisChildsOwnSession())
               && subcollection != 'screenshot_settings'
+              && subcollection != 'focus_mode_settings'
               && subcollection != 'screenshot_trigger_state'
               && subcollection != 'screenshot_requests'
               && subcollection != 'screenshots'
