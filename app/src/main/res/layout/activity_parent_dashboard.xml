@@ -57,9 +57,18 @@
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:gravity="start"
                     android:layout_marginTop="4dp">
+
+                    <TextView
+                        android:id="@+id/headerStatus"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="● FAOL"
+                        android:textColor="@color/color_success_text"
+                        android:textSize="11sp"
+                        android:textStyle="bold"/>
 
                     <TextView
                         android:id="@+id/headerFamilyCode"
@@ -73,16 +82,7 @@
                         android:paddingEnd="8dp"
                         android:paddingTop="2dp"
                         android:paddingBottom="2dp"
-                        android:layout_marginEnd="8dp"/>
-
-                    <TextView
-                        android:id="@+id/headerStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="● FAOL"
-                        android:textColor="@color/color_success_text"
-                        android:textSize="11sp"
-                        android:textStyle="bold"/>
+                        android:layout_marginTop="3dp"/>
 
                 </LinearLayout>
             </LinearLayout>
