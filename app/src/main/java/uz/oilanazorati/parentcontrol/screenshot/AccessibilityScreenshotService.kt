@@ -457,6 +457,13 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private var videoWatchCount: Int = 0
     private var videoWatchRunnable: Runnable? = null
 
+    // ===== Statik surat/stiker uchun bir martalik tahlil =====
+    // Video kabi davriy emas — bitta tasvir o'zgarmaydi, shuning uchun bir marta
+    // tekshirilib, keyin shu ilova uchun qisqa muddat (debounce) kutiladi.
+    private val IMAGE_CHECK_COOLDOWN_MS = 6_000L
+    private val lastImageCheckAt = HashMap<String, Long>()
+    private var imageCheckRunning = false
+
     private fun ensureVideoWatch(packageName: String) {
         if (videoWatchPackage == packageName) return // allaqachon shu ilova uchun ishlab turibdi
         stopVideoWatch()
@@ -513,6 +520,76 @@ class AccessibilityScreenshotService : AccessibilityService() {
 
     private fun rescheduleIfStillWatching(target: String) {
         mainHandler.post { if (videoWatchPackage == target) scheduleVideoSample() }
+    }
+
+    /**
+     * Ekranda katta surat/stiker aniqlanganda bir martalik ekran suratini
+     * oladi va MediaRiskAnalyzer bilan tekshiradi. Video kuzatuvi band bo'lsa
+     * (captureRunning) yoki ekran o'chiq bo'lsa — o'tkazib yuboriladi.
+     */
+    private fun runImageFrameCheck(packageName: String) {
+        if (imageCheckRunning || captureRunning || !isScreenInteractive()) return
+        imageCheckRunning = true
+        takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
+            override fun onSuccess(screenshot: ScreenshotResult) {
+                try {
+                    val hardware = Bitmap.wrapHardwareBuffer(screenshot.hardwareBuffer, screenshot.colorSpace)
+                    screenshot.hardwareBuffer.close()
+                    val bitmap = hardware?.copy(Bitmap.Config.ARGB_8888, false)
+                    hardware?.recycle()
+                    if (bitmap == null) { imageCheckRunning = false; return }
+                    bgExecutor.execute {
+                        processImageFrame(bitmap, packageName)
+                        imageCheckRunning = false
+                    }
+                } catch (t: Throwable) {
+                    imageCheckRunning = false
+                }
+            }
+            override fun onFailure(errorCode: Int) {
+                imageCheckRunning = false
+            }
+        })
+    }
+
+    /**
+     * Statik surat/stiker kadrini tekshiradi. Xavf topilmasa bitmap darhol
+     * tashlanadi — hech narsa yozilmaydi/yuklanmaydi (video kadr tahlili
+     * bilan bir xil qoida).
+     */
+    private fun processImageFrame(bitmap: Bitmap, packageName: String) {
+        val verdict = runCatching { MediaRiskAnalyzer.analyze(applicationContext, bitmap) }.getOrNull()
+        if (verdict == null) { runCatching { bitmap.recycle() }; return }
+        try {
+            val now = System.currentTimeMillis()
+            val appName = runCatching {
+                packageManager.getApplicationLabel(packageManager.getApplicationInfo(packageName, 0)).toString()
+            }.getOrDefault(packageName)
+            FirebaseRepo.logRiskEvent(
+                RiskEvent(
+                    id = "risk_image_${now}_${packageName.hashCode()}", category = verdict.category,
+                    severity = verdict.severity, confidence = verdict.confidence,
+                    packageName = packageName, appName = appName, source = "image_view_classifier",
+                    summary = verdict.summary, contextText = "", mediaType = "IMAGE",
+                    mediaState = if (verdict.sensitive) "HIDDEN_SENSITIVE" else "VISIBLE",
+                    capturedAt = now, evidenceAvailable = true, sensitive = verdict.sensitive
+                )
+            )
+            val file = File(cacheDir, "image_frame_${now}.jpg")
+            val outputBitmap = if (verdict.sensitive) MediaRiskAnalyzer.blurForEvidence(bitmap) else bitmap
+            FileOutputStream(file).use { outputBitmap.compress(Bitmap.CompressFormat.JPEG, 82, it) }
+            if (outputBitmap !== bitmap) outputBitmap.recycle()
+            bitmap.recycle()
+            val meta = ScreenshotMetadata(
+                id = "${now}_image_${packageName.hashCode()}", childId = FirebaseRepo.childId.orEmpty(),
+                familyId = FirebaseRepo.familyCode.orEmpty(), packageName = packageName, appLabel = label(packageName),
+                capturedAt = now, date = todayKey(), dailyUsageSeconds = 0L, thresholdMinute = 0,
+                riskCategory = verdict.category, sensitiveEvidence = verdict.sensitive, kind = "risk"
+            )
+            ScreenshotRepository.upload(file, meta) { file.delete() }
+        } catch (t: Throwable) {
+            runCatching { bitmap.recycle() }
+        }
     }
 
     /**
@@ -634,12 +711,13 @@ class AccessibilityScreenshotService : AccessibilityService() {
         event.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
         event.className?.toString()?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
         val videoFlag = booleanArrayOf(false)
+        val imageFlag = booleanArrayOf(false)
         // Faqat hodisa egasi bo'lgan ilovaning oynasi o'qiladi (klaviatura/tizim hodisasi
         // orqali boshqa ilova matni shu paket nomi bilan yozilib ketmasligi uchun).
         runCatching {
             rootInActiveWindow?.let { root ->
                 val rootPackage = root.packageName?.toString()
-                if (rootPackage == null || rootPackage == packageName) collectVisibleText(root, parts, 0, videoFlag)
+                if (rootPackage == null || rootPackage == packageName) collectVisibleText(root, parts, 0, videoFlag, imageFlag = imageFlag)
             }
         }
 
@@ -649,6 +727,18 @@ class AccessibilityScreenshotService : AccessibilityService() {
         // eski kuzatuvni to'xtatamiz (batareya/kvota tejash uchun muhim).
         if (videoFlag[0]) ensureVideoWatch(packageName)
         else if (videoWatchPackage != null && videoWatchPackage != packageName) stopVideoWatch()
+
+        // Ekranning sezilarli qismini egallagan surat/stiker (masalan, Telegram/WhatsApp
+        // orqali yuborilgan rasm) aniqlansa — DARHOL, bir martalik tasvir tahlili
+        // ishga tushiriladi (video kabi davriy emas, chunki statik tasvir o'zgarmaydi).
+        // Qisqa debounce — bir xil ekran uchun qayta-qayta so'rov yubormaslik uchun.
+        if (imageFlag[0]) {
+            val lastAt = lastImageCheckAt[packageName] ?: 0L
+            if (uptime - lastAt >= IMAGE_CHECK_COOLDOWN_MS) {
+                lastImageCheckAt[packageName] = uptime
+                runImageFrameCheck(packageName)
+            }
+        }
 
         if (parts.isEmpty()) return
         // Mazmun oldingi o'qishdagi bilan bir xil bo'lsa — qayta tahlil qilishning ma'nosi yo'q.
@@ -721,6 +811,19 @@ class AccessibilityScreenshotService : AccessibilityService() {
         "VideoView", "PlayerView", "ExoPlayerView", "StyledPlayerView", "TextureView"
     )
 
+    // Rasm/stiker ko'rinishlarining odatiy klass nomlari (Telegram, WhatsApp,
+    // Instagram va h.k.da ishlatiladigan umumiy variantlar). Faqat shu
+    // klasslardan biri BO'LISHI YETARLI EMAS — kichik ikonka/avatar ham
+    // shu klasslardan bo'ladi, shuning uchun pastda o'lcham (bounds) bo'yicha
+    // ham filtrlanadi: faqat ekranning sezilarli qismini egallagan tasvir
+    // (chatdagi surat/stiker, to'liq ekranli ko'ruv) hisobga olinadi.
+    private val IMAGE_VIEW_HINTS = listOf(
+        "ImageView", "PhotoView", "StickerView", "BackupImageView",
+        "SimpleDraweeView", "RLottieImageView", "GifImageView"
+    )
+    private val MIN_IMAGE_WIDTH_RATIO = 0.30f
+    private val MIN_IMAGE_HEIGHT_RATIO = 0.10f
+
     // Har bir getChild() — boshqa ilova jarayoniga alohida so'rov (IPC). Murakkab ekranlarda
     // (brauzer, Telegram, WebView) daraxt minglab tugundan iborat bo'lishi mumkin — bu ham
     // bizning, ham ochiq turgan ilovaning batareyasini ko'p yeydi. Shuning uchun: ko'rinmaydigan
@@ -730,18 +833,33 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private fun collectVisibleText(
         node: android.view.accessibility.AccessibilityNodeInfo,
         out: MutableList<String>, depth: Int, videoFlag: BooleanArray,
-        budget: IntArray = intArrayOf(MAX_SCAN_NODES)
+        budget: IntArray = intArrayOf(MAX_SCAN_NODES),
+        imageFlag: BooleanArray? = null
     ) {
         if (depth > 8 || budget[0] <= 0 || !node.isVisibleToUser) return
         budget[0]--
         node.text?.toString()?.takeIf { it.isNotBlank() }?.let { out.add(it) }
         node.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { out.add(it) }
-        node.className?.toString()?.let { cls -> if (VIDEO_VIEW_HINTS.any { cls.contains(it) }) videoFlag[0] = true }
+        node.className?.toString()?.let { cls ->
+            if (VIDEO_VIEW_HINTS.any { cls.contains(it) }) videoFlag[0] = true
+            // Kichik ikonka/avatarlarni chiqarib tashlash uchun — faqat ekranning
+            // sezilarli qismini egallagan tasvir hisobga olinadi (pastga qarang).
+            if (imageFlag != null && !imageFlag[0] && IMAGE_VIEW_HINTS.any { cls.contains(it) }) {
+                runCatching {
+                    val rect = android.graphics.Rect()
+                    node.getBoundsInScreen(rect)
+                    val dm = resources.displayMetrics
+                    if (rect.width() >= dm.widthPixels * MIN_IMAGE_WIDTH_RATIO &&
+                        rect.height() >= dm.heightPixels * MIN_IMAGE_HEIGHT_RATIO
+                    ) imageFlag[0] = true
+                }
+            }
+        }
         for (i in 0 until node.childCount) {
             if (budget[0] <= 0) break
             runCatching {
                 node.getChild(i)?.let { child ->
-                    collectVisibleText(child, out, depth + 1, videoFlag, budget)
+                    collectVisibleText(child, out, depth + 1, videoFlag, budget, imageFlag)
                     child.recycle()
                 }
             }
