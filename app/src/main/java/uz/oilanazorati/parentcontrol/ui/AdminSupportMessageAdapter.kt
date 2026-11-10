@@ -10,10 +10,18 @@ import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.model.SupportMessage
 
 class AdminSupportMessageAdapter(
-    private val onReplyClick: (docId: String, msg: SupportMessage) -> Unit
+    private val onReplyClick: (docId: String, msg: SupportMessage) -> Unit,
+    // Faqat egasi (asosiy admin) chaqirganda ishlatiladi — shu foydalanuvchining
+    // (fromUid) butun yozishmasini boshqa adminlardan yashiradi/qayta ko'rsatadi.
+    private val onToggleHideSender: (fromUid: String, currentlyHidden: Boolean) -> Unit = { _, _ -> }
 ) : RecyclerView.Adapter<AdminSupportMessageAdapter.VH>() {
 
     private var items: List<Pair<String, SupportMessage>> = emptyList()
+    // Faqat egasi ko'radi — shuning uchun bu tugma ham faqat egasiga ko'rinadi.
+    var isOwner: Boolean = false
+    // Egasi uchun: hozircha yashirilgan foydalanuvchilarning uid to'plami
+    // (shu tab doirasida tugma matnini to'g'ri ko'rsatish uchun).
+    var hiddenUids: Set<String> = emptySet()
 
     fun setData(newItems: List<Pair<String, SupportMessage>>) {
         items = newItems
@@ -26,6 +34,7 @@ class AdminSupportMessageAdapter(
         val contactNumber: TextView = view.findViewById(R.id.msgContactNumber)
         val status: TextView = view.findViewById(R.id.msgStatus)
         val replyBtn: Button = view.findViewById(R.id.btnReply)
+        val hideBtn: Button = view.findViewById(R.id.btnToggleHideSender)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
@@ -51,6 +60,15 @@ class AdminSupportMessageAdapter(
         }
 
         holder.replyBtn.setOnClickListener { onReplyClick(docId, msg) }
+
+        if (isOwner && msg.fromUid.isNotBlank()) {
+            val hidden = msg.fromUid in hiddenUids
+            holder.hideBtn.visibility = View.VISIBLE
+            holder.hideBtn.text = if (hidden) "Qayta ko'rsatish (boshqa adminlarga)" else "Boshqa adminlardan yashirish"
+            holder.hideBtn.setOnClickListener { onToggleHideSender(msg.fromUid, hidden) }
+        } else {
+            holder.hideBtn.visibility = View.GONE
+        }
     }
 
     override fun getItemCount() = items.size

@@ -46,8 +46,14 @@ class AdminPanelActivity : AppCompatActivity() {
     private var isOwner = false
     private var rawUsers: List<PremiumParent> = emptyList()
     private var rawRequests: List<Pair<String, PremiumRequest>> = emptyList()
+    private var rawMessages: List<Pair<String, uz.oilanazorati.parentcontrol.model.SupportMessage>> = emptyList()
+    // Premium bo'lsin-bo'lmasin BARCHA yashirilgan foydalanuvchilar (Xabarlar bo'limi uchun).
+    private var hiddenUidsGlobal: Set<String> = emptySet()
 
-    private val messagesAdapter = AdminSupportMessageAdapter { docId, msg -> showReplyDialog(docId, msg.adminJavobi) }
+    private val messagesAdapter = AdminSupportMessageAdapter(
+        onReplyClick = { docId, msg -> showReplyDialog(docId, msg.adminJavobi) },
+        onToggleHideSender = { fromUid, currentlyHidden -> toggleMessageSenderHidden(fromUid, currentlyHidden) }
+    )
     private val premiumAdapter = AdminPremiumRequestAdapter(
         onApprove = { docId, req ->
             FirebaseRepo.approvePremiumRequest(docId, req.fromUid) { success ->
@@ -126,13 +132,48 @@ class AdminPanelActivity : AppCompatActivity() {
 
         findViewById<View>(R.id.btnAddCard).setOnClickListener { showAddCardDialog() }
 
-        FirebaseRepo.listenAllSupportMessages { list -> messagesAdapter.setData(list) }
         isOwner = AdminConfig.isOwner()
+        FirebaseRepo.listenAllSupportMessages { list -> rawMessages = list; refreshMessages() }
+        FirebaseRepo.listenHiddenParentUids { uids -> hiddenUidsGlobal = uids; refreshMessages() }
         FirebaseRepo.listenAllPremiumRequests { list -> rawRequests = list; refreshPremiumLists() }
         FirebaseRepo.listenPremiumParents { list -> rawUsers = list; refreshPremiumLists() }
         FirebaseRepo.listenAdminCards { list -> cardsAdapter.setData(list) }
 
         showTab(0)
+    }
+
+    /**
+     * Egasi (asosiy admin) hamma xabarni ko'radi (yashirilganlari ham,
+     * belgilangan holda). Boshqa adminlar — yashirilgan foydalanuvchining
+     * YOZGANI HAM, UNGA BERILGAN JAVOB HAM — hech narsasini ko'rmaydi,
+     * chunki butun yozishma (hujjat) shu fromUid bo'yicha filtrlanadi.
+     */
+    private fun refreshMessages() {
+        messagesAdapter.isOwner = isOwner
+        messagesAdapter.hiddenUids = hiddenUidsGlobal
+        messagesAdapter.setData(
+            if (isOwner) rawMessages
+            else rawMessages.filterNot { it.second.fromUid.isNotBlank() && it.second.fromUid in hiddenUidsGlobal }
+        )
+    }
+
+    /** Faqat egasi chaqira oladi: shu foydalanuvchining butun yozishmasini boshqa adminlardan yashiradi/qaytaradi. */
+    private fun toggleMessageSenderHidden(fromUid: String, currentlyHidden: Boolean) {
+        if (!isOwner || fromUid.isBlank()) return
+        val hide = !currentlyHidden
+        AlertDialog.Builder(this)
+            .setTitle(if (hide) "Yozishmani boshqa adminlardan yashirish" else "Qayta ko'rsatish")
+            .setMessage(
+                if (hide) "Bu foydalanuvchining support'ga yozgan xabarlari VA siz bergan javoblar boshqa adminlarga butunlay ko'rinmay qoladi. Faqat siz ko'rasiz. Hech narsa o'chirilmaydi."
+                else "Bu foydalanuvchining yozishmasi boshqa adminlarga yana ko'rinadi."
+            )
+            .setPositiveButton("Ha") { _, _ ->
+                FirebaseRepo.setPremiumUserHidden(fromUid, hide) { ok ->
+                    Toast.makeText(this, if (ok) (if (hide) "Boshqa adminlardan yashirildi" else "Qayta ko'rsatildi") else "Xato yuz berdi", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Yo'q", null)
+            .show()
     }
 
     /** Egasi hammasini (yashirilganlari belgilangan holda) ko'radi; boshqa adminlar — yashirilmaganlarni. */

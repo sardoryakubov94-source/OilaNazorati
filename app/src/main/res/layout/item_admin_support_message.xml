@@ -47,4 +47,17 @@
         android:textSize="12sp"
         android:layout_marginTop="8dp"/>
 
+    <!-- Faqat EGASI (asosiy admin) uchun ko'rinadi — shu foydalanuvchining
+         yozishmasini (yuborgani ham, javobi ham) boshqa adminlardan
+         yashiradi/qayta ko'rsatadi. -->
+    <Button
+        android:id="@+id/btnToggleHideSender"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Boshqa adminlardan yashirish"
+        android:textSize="12sp"
+        android:background="@drawable/bg_card_clickable"
+        android:layout_marginTop="6dp"
+        android:visibility="gone"/>
+
 </LinearLayout>

@@ -677,6 +677,18 @@ object FirebaseRepo {
      * ro'yxatda ko'rinadi, chunki tekshiruv faqat parents/{uid}.premium
      * maydoniga qaraydi.
      */
+    /**
+     * Barcha "boshqa adminlardan yashirilgan" foydalanuvchilarning uid
+     * to'plami — premium bo'lsin-bo'lmasin FARQI YO'Q (listenPremiumParents
+     * faqat premium'ga ega bo'lganlarni qaytaradi, shuning uchun bu alohida,
+     * kengroq so'rov: "Xabarlar" bo'limida premium bo'lmagan foydalanuvchi
+     * ham yashirilgan bo'lishi mumkin).
+     */
+    fun listenHiddenParentUids(onChange: (Set<String>) -> Unit): com.google.firebase.firestore.ListenerRegistration =
+        db.collection("parents").whereEqualTo("adminHidden", true).addSnapshotListener { snap, _ ->
+            onChange(snap?.documents?.map { it.id }?.toSet() ?: emptySet())
+        }
+
     fun listenPremiumParents(onChange: (List<PremiumParent>) -> Unit) {
         db.collection("parents").whereEqualTo("premium", true).addSnapshotListener { snap, _ ->
             onChange(snap?.documents?.map { doc ->
