@@ -200,10 +200,10 @@ class InstallationWizardActivity : AppCompatActivity() {
                     }.setNegativeButton("Keyinroq", null).show()
                 1 -> AlertDialog.Builder(this)
                     .setTitle("2-qadam / 3: barcha ruxsatni yoqish")
-                    .setMessage("Ochilgan \"Ilova ma'lumotlari\" sahifasida yuqori o'ng burchakdagi uch nuqta (⋮) ni bosing.\n\n• Agar menyu ochilsa: \"Allow restricted settings\" / \"Cheklangan sozlamalarga ruxsat berish\" ni tanlang, so'ng barmoq izi yoki PIN bilan tasdiqlang.\n• Agar uch nuqta hali ham hech narsa qilmasa — demak 1-qadam oxirigacha bajarilmagan. Pastdagi \"Orqaga: 1-qadam\" tugmasini bosib, Accessibility'dagi xizmat qatoriga qayta bosing va OK'ni tasdiqlang.")
-                    .setPositiveButton("Ilova ma'lumotlarini ochish") { _, _ ->
+                    .setMessage("MUHIM: bu safar ilova o'zi \"Ilova ma'lumotlari\" sahifasini TO'G'RIDAN-TO'G'RI OCHMAYDI — buning o'rniga butun ilovalar RO'YXATI ochiladi. Shu ro'yxatdan QO'LDA \\\"Bulut servis\\\" degan qatorni toping va unga bosing.\n\n(To'g'ridan-to'g'ri ochilsa, Android uch nuqta menyusini ataylab ishlamaydigan qilib qo'yadi — shuning uchun ro'yxatdan qo'lda kirish shart.)\n\nOchilgan sahifada yuqori o'ng burchakdagi uch nuqta (⋮) ni bosing: \"Allow restricted settings\" / \"Cheklangan sozlamalarga ruxsat berish\" ni tanlang, so'ng barmoq izi yoki PIN bilan tasdiqlang.\n\nUch nuqta hali ham hech narsa qilmasa — \"Orqaga: 1-qadam\"ni bosib, Accessibility'dagi xizmat qatoriga qayta bosing va OK'ni tasdiqlang.")
+                    .setPositiveButton("Ilovalar ro'yxatini ochish") { _, _ ->
                         prefs.edit().putInt("access_stage", 2).apply()
-                        openSystem(appDetailsIntent())
+                        openSystem(appsListIntent())
                     }
                     .setNeutralButton("Orqaga: 1-qadam") { _, _ ->
                         prefs.edit().putInt("access_stage", 0).apply()
@@ -340,6 +340,22 @@ class InstallationWizardActivity : AppCompatActivity() {
     } catch (_: Exception) { false }
 
     private fun appDetailsIntent() = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+
+    /**
+     * Android 13+'da "Allow restricted settings" menyusi (⋮ ichida) FAQAT
+     * foydalanuvchi Sozlamalar ichida O'ZI qo'lda qadam bosib kirganda
+     * ishlaydi — boshqa ilovadan to'g'ridan-to'g'ri (deep-link) ochilgan
+     * "Ilova ma'lumotlari" sahifasida bu menyu band/ko'rinmas bo'lib qoladi
+     * (bu — Android'ning ataylab qo'yilgan xavfsizlik cheklovi, soxta
+     * ilovalar foydalanuvchini aldab shu menyuni bosdirib yubormasligi
+     * uchun). Shuning uchun to'g'ridan-to'g'ri ochish o'rniga, butun
+     * ilovalar RO'YXATI ochiladi — foydalanuvchi o'zi qo'lda bosib kiradi.
+     */
+    private fun appsListIntent(): Intent {
+        val intent = Intent(Settings.ACTION_APPLICATION_SETTINGS)
+        return if (intent.resolveActivity(packageManager) != null) intent
+        else Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS)
+    }
         .setData(Uri.fromParts("package", packageName, null))
 
     private fun openSystem(intent: Intent) {
