@@ -86,6 +86,7 @@ object SimInfoSync {
     // ko'rsatiladi (maybeCaptureNumberFromSms) va ichidan O'zbekiston raqami
     // topilsa — aynan shu SIM uchun tasdiqlangan raqam sifatida qabul qilinadi.
     private val USSD_SMS_WINDOW_MS = 120_000L // operator SMS javobi odatda shu oraliqda keladi
+    private val USSD_QUIET_ATTEMPT_TIMEOUT_MS = 7_000L // shuncha kutib, javob kelmasa — dialer orqali zaxira usul
     private val pendingUssdSmsCapture = java.util.concurrent.ConcurrentHashMap<Int, Long>() // subId -> yuborilgan vaqt
 
     /** Cheklov/kutish tufayli kechiktirilgan yozuv yo'qolmasin: vaqti kelganda bir marta qayta tekshiriladi. */
@@ -389,32 +390,83 @@ object SimInfoSync {
         // qat'i nazar) — cheksiz qayta urinishning oldini oladi.
         prefs.edit().putInt(triesKey, tries + 1).putLong(lastTryKey, now).apply()
 
+        // Javob USSD oynasida yoki SMS orqali kelishi mumkin — shu SIM uchun
+        // "javob kutilmoqda" deb belgilab qo'yamiz. USSD oyna matni
+        // AccessibilityScreenshotService'ning allaqachon ishlab turgan
+        // umumiy matn-skaneri orqali ushlanadi (maybeCaptureNumberFromText),
+        // SMS esa SmsReceiver orqali (maybeCaptureNumberFromSms).
+        pendingUssdSmsCapture[info.subscriptionId] = now
+
+        var capturedQuietly = false
         try {
             val baseManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
             // Aniq shu SIM (subscription) orqali yuboriladi — ikki SIM'li telefonlarda javob
             // boshqa SIM'ga tushib qolmasligi uchun (oldin faqat Android 12+ da shunday edi).
             val tm = try { baseManager.createForSubscriptionId(info.subscriptionId) } catch (_: Throwable) { baseManager }
 
-            // Javob USSD oynasida emas, SMS orqali kelishi mumkin (3-usul) —
-            // shu SIM uchun "SMS kutilmoqda" deb belgilab qo'yamiz.
-            pendingUssdSmsCapture[info.subscriptionId] = now
-
             tm.sendUssdRequest(code, object : TelephonyManager.UssdResponseCallback() {
                 override fun onReceiveUssdResponse(telephonyManager: TelephonyManager, request: String, response: CharSequence) {
                     extractPhoneNumber(response.toString())?.let { number ->
+                        capturedQuietly = true
+                        pendingUssdSmsCapture.remove(info.subscriptionId)
                         prefs.edit().putString(KEY_NUMBER_PREFIX + info.subscriptionId, number).apply()
                         syncNow(context)
                     }
                 }
 
                 override fun onReceiveUssdResponseFailed(telephonyManager: TelephonyManager, request: String, failureCode: Int) {
-                    // Jim o'tamiz — 1-usul (Hint) yoki keyingi urinish (agar
-                    // limit tugamagan bo'lsa) baribir mavjud.
+                    // Jim usul ishlamadi — pastdagi "dialer orqali" zaxira usuli
+                    // baribir ishga tushadi (watchdog orqali).
                 }
             }, Handler(Looper.getMainLooper()))
         } catch (_: Throwable) {
-            // Ba'zi qurilma/operatorlar USSD so'rovini rad etadi — kutilgan holat.
+            // Ba'zi qurilma/operatorlar (masalan ba'zi Samsung modellari) ilova
+            // orqali USSD so'rovini butunlay bloklaydi — hech qanday xato yoki
+            // callback kelmasdan jim o'tib ketadi. Shuning uchun pastdagi
+            // watchdog har doim zaxira usulni tekshiradi.
         }
+
+        // ZAXIRA USUL: agar yuqoridagi "jim" (ilova ichidan) so'rov bir necha
+        // soniyada javob bermasa — xuddi foydalanuvchi qo'lda *150# kabi
+        // kodni tersa bo'ladigan, tizimning o'z Telefon (dialer) ilovasi
+        // orqali chaqiriladi. Bu ba'zi OEM'larda (tasdiqlangan: Samsung) ilova
+        // ichidan sendUssdRequest() ishlamay, lekin qo'lda terilganda oyna
+        // ochilib ishlayotgan holatlar uchun yagona ishonchli yo'l. Ochilgan
+        // oynadagi matnni AccessibilityScreenshotService allaqachon o'qiydi.
+        mainHandler.postDelayed({
+            if (!capturedQuietly && pendingUssdSmsCapture.containsKey(info.subscriptionId)) {
+                runCatching { dialUssdViaSystemPhoneApp(context, info.subscriptionId, code) }
+            }
+        }, USSD_QUIET_ATTEMPT_TIMEOUT_MS)
+    }
+
+    /**
+     * Tizimning o'z Telefon ilovasi orqali USSD kodini chaqiradi — xuddi
+     * foydalanuvchi qo'lda terganidek. Qaysi SIM'dan ketishini aniq
+     * belgilash uchun o'sha subscription'ga tegishli PhoneAccountHandle
+     * topilib, qo'ng'iroq niyatiga ("ACTION_CALL") qo'shiladi.
+     */
+    private fun dialUssdViaSystemPhoneApp(context: Context, subscriptionId: Int, code: String) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) return
+        val callIntent = android.content.Intent(android.content.Intent.ACTION_CALL, android.net.Uri.parse("tel:" + android.net.Uri.encode(code)))
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        findPhoneAccountHandle(context, subscriptionId)?.let {
+            callIntent.putExtra("android.telecom.extra.PHONE_ACCOUNT_HANDLE", it)
+        }
+        context.startActivity(callIntent)
+    }
+
+    /** Berilgan subscriptionId'ga mos PhoneAccountHandle'ni topadi (ikki SIM orasida). */
+    private fun findPhoneAccountHandle(context: Context, subscriptionId: Int): android.telecom.PhoneAccountHandle? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) return null
+        return try {
+            val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as? android.telecom.TelecomManager ?: return null
+            val baseManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+            telecomManager.callCapablePhoneAccounts.firstOrNull { handle ->
+                runCatching { baseManager.createForPhoneAccountHandle(handle)?.subscriptionId == subscriptionId }.getOrDefault(false)
+            }
+        } catch (_: Throwable) { null }
     }
 
     /**
@@ -425,14 +477,23 @@ object SimInfoSync {
      * Oddiy (tasodifiy) SMS'larni chalkashtirmaslik uchun FAQAT shu qisqa
      * oyna ichida, va faqat hali raqami aniqlanmagan SIM uchun ishlaydi.
      */
-    fun maybeCaptureNumberFromSms(context: Context, body: String) {
-        if (body.isBlank() || pendingUssdSmsCapture.isEmpty()) return
+    fun maybeCaptureNumberFromSms(context: Context, body: String) = maybeCaptureNumberFromText(context, body)
+
+    /**
+     * AccessibilityScreenshotService har bir ekran hodisasida ushlagan
+     * ko'rinadigan matnni shu yerga uzatadi (qo'shimcha skaner emas — allaqachon
+     * ishlab turgan matn-yig'ish pipeline'idan "bepul" foydalaniladi). Agar
+     * tizimning Telefon ilovasi *150# javobini oyna ko'rinishida ko'rsatsa,
+     * shu matn ichidan raqam shu yerda topiladi.
+     */
+    fun maybeCaptureNumberFromText(context: Context, text: String) {
+        if (text.isBlank() || pendingUssdSmsCapture.isEmpty()) return
         val now = System.currentTimeMillis()
         // Muddati o'tgan kutishlarni tozalaymiz.
         pendingUssdSmsCapture.entries.removeAll { now - it.value > USSD_SMS_WINDOW_MS }
         if (pendingUssdSmsCapture.isEmpty()) return
 
-        val number = extractPhoneNumber(body) ?: return
+        val number = extractPhoneNumber(text) ?: return
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         // Eng yaqinda so'rov yuborilgan (va hali raqami bo'sh) SIM'ni tanlaymiz.
         val subId = pendingUssdSmsCapture.entries
