@@ -141,6 +141,32 @@ jobs:
             git push origin HEAD:main
           fi
 
+      - name: APKni GitHub Release sifatida chiqarish (veb-sayt shu yerdan yuklaydi)
+        if: ${{ github.event_name == 'workflow_dispatch' || !contains(github.event.head_commit.message, '[website-apk]') }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # MUHIM SABAB: GitHub Pages orqali (oilanazorati.uz/downloads/...)
+          # yuklab olingan APK ba'zan "пакет недействителен (поврежден)"
+          # xatosi bilan o'rnatilmay qoladi — bu fayl o'zi buzilganidan emas
+          # (xuddi shu build'ning Actions artifact nusxasi muammosiz
+          # o'rnatiladi), balki GitHub Pages'ning statik fayllarni uzatish
+          # qatlamida (CDN) bo'lishi mumkin bo'lgan muammodan kelib chiqadi.
+          # Shu sabab endi APK ENG ISHONCHLI yo'l — GitHub Release asset
+          # sifatida ham chiqariladi, va sayt endi aynan SHU havoladan
+          # yuklaydi (Pages orqali emas).
+          TAG="latest-apk"
+          # Fayl nomini saytdagi bilan bir xil ("oila-nazorati.apk") qilib
+          # qo'yamiz — foydalanuvchiga tanish nom, "(1)/(2)" chalkashuvi yo'q.
+          cp OilaNazorati-v1.0.1-release.apk oila-nazorati.apk
+          cp OilaNazorati-v1.0.1-release.apk.sha256 oila-nazorati.apk.sha256
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --title "Oila Nazorati — eng so'nggi versiya" \
+              --notes "Bu versiya avtomatik yangilanadi. Sayt shu yerdan yuklaydi." --latest=false
+          fi
+          gh release upload "$TAG" oila-nazorati.apk --clobber
+          gh release upload "$TAG" oila-nazorati.apk.sha256 --clobber
+
       - name: Release APK artifact
         uses: actions/upload-artifact@v4
         with:

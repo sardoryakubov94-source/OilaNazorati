@@ -195,6 +195,12 @@ class MainActivity : AppCompatActivity() {
     // ---------------- 2-bosqich: rol tanlash ----------------
 
     private fun showRoleSection() {
+        // Parol to'g'ri kiritilib, ichkariga o'tilgach, klaviatura ekranda
+        // osilib qolmasligi uchun avtomatik yashiriladi.
+        currentFocus?.let { focused ->
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? android.view.inputmethod.InputMethodManager
+            imm?.hideSoftInputFromWindow(focused.windowToken, 0)
+        }
         binding.passwordSection.visibility = View.GONE
         binding.roleSection.visibility = View.VISIBLE
         binding.loginSection.visibility = View.GONE
