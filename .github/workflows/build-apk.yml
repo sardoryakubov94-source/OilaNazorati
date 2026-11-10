@@ -10,7 +10,15 @@ on:
 
 concurrency:
   group: build-release-apk-${{ github.ref }}
-  cancel-in-progress: true
+  # MUHIM: avval "true" edi — ketma-ket bir necha push qilinganda, oldingi
+  # ishlab turgan build "APKni saytga joylash" bosqichining O'RTASIDA
+  # to'xtatilib qolishi mumkin edi. Bu esa downloads/oila-nazorati.apk
+  # faylini yarim yozilgan/buzilgan holatda qoldirib ketishi mumkin edi —
+  # android "пакет недействителен (поврежден)" xatosi aynan shundan kelib
+  # chiqqan bo'lishi katta ehtimol. Endi yangi push kelsa, eski build
+  # BEKOR QILINMAYDI — navbatda kutib, oxirigacha (saytga joylashgacha)
+  # tugaydi, keyin navbatdagi boshlanadi.
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -116,7 +124,12 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           mkdir -p downloads
-          cp OilaNazorati-v1.0.1-release.apk downloads/oila-nazorati.apk
+          # Avval boshqa nom bilan nusxalab, keyin ATOMIK ravishda (mv) asl
+          # nomga ko'chiramiz — shu bilan hech qachon yarim yozilgan fayl
+          # "oila-nazorati.apk" nomi ostida ko'rinmaydi (foydalanuvchi aynan
+          # shu paytda saytdan yuklab olsa ham).
+          cp OilaNazorati-v1.0.1-release.apk downloads/oila-nazorati.apk.tmp
+          mv downloads/oila-nazorati.apk.tmp downloads/oila-nazorati.apk
           cp OilaNazorati-v1.0.1-release.apk.sha256 downloads/oila-nazorati.apk.sha256
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
