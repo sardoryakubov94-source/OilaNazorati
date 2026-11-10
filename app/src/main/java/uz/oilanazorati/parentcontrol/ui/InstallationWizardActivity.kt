@@ -200,10 +200,10 @@ class InstallationWizardActivity : AppCompatActivity() {
                     }.setNegativeButton("Keyinroq", null).show()
                 1 -> AlertDialog.Builder(this)
                     .setTitle("2-qadam / 3: barcha ruxsatni yoqish")
-                    .setMessage("MUHIM: bu safar ilova o'zi \"Ilova ma'lumotlari\" sahifasini TO'G'RIDAN-TO'G'RI OCHMAYDI — buning o'rniga butun ilovalar RO'YXATI ochiladi. Shu ro'yxatdan QO'LDA \\\"Bulut servis\\\" degan qatorni toping va unga bosing.\n\n(To'g'ridan-to'g'ri ochilsa, Android uch nuqta menyusini ataylab ishlamaydigan qilib qo'yadi — shuning uchun ro'yxatdan qo'lda kirish shart.)\n\nOchilgan sahifada yuqori o'ng burchakdagi uch nuqta (⋮) ni bosing: \"Allow restricted settings\" / \"Cheklangan sozlamalarga ruxsat berish\" ni tanlang, so'ng barmoq izi yoki PIN bilan tasdiqlang.\n\nUch nuqta hali ham hech narsa qilmasa — \"Orqaga: 1-qadam\"ni bosib, Accessibility'dagi xizmat qatoriga qayta bosing va OK'ni tasdiqlang.")
-                    .setPositiveButton("Ilovalar ro'yxatini ochish") { _, _ ->
+                    .setMessage("Ochilgan \"Ilova ma'lumotlari\" sahifasida yuqori o'ng burchakdagi uch nuqta (⋮) ni bosing.\n\n• Agar menyu ochilsa: \"Allow restricted settings\" / \"Cheklangan sozlamalarga ruxsat berish\" ni tanlang, so'ng barmoq izi yoki PIN bilan tasdiqlang.\n• Agar uch nuqta hali ham hech narsa qilmasa — demak 1-qadam oxirigacha bajarilmagan. Pastdagi \"Orqaga: 1-qadam\" tugmasini bosib, Accessibility'dagi xizmat qatoriga qayta bosing va OK'ni tasdiqlang.")
+                    .setPositiveButton("Ilova ma'lumotlarini ochish") { _, _ ->
                         prefs.edit().putInt("access_stage", 2).apply()
-                        openSystem(appsListIntent())
+                        openSystem(appDetailsIntent())
                     }
                     .setNeutralButton("Orqaga: 1-qadam") { _, _ ->
                         prefs.edit().putInt("access_stage", 0).apply()
@@ -217,8 +217,7 @@ class InstallationWizardActivity : AppCompatActivity() {
                         openSystem(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                     }
                     .setNeutralButton("Hali ham xira / ishlamayapti") { _, _ ->
-                        prefs.edit().putInt("access_stage", 0).apply()
-                        openNextStep()
+                        showAccessibilityStillGreyedOutHelp()
                     }
                     .setNegativeButton("Keyinroq", null).show()
             }
@@ -339,7 +338,31 @@ class InstallationWizardActivity : AppCompatActivity() {
         manager.isAdminActive(ComponentName(this, AppDeviceAdminReceiver::class.java))
     } catch (_: Exception) { false }
 
+    /**
+     * "Hali ham xira / ishlamayapti" bosilganda chiqadigan yordam oynasi.
+     * Sabab: Android 13+'da "Allow restricted settings" menyusi, agar
+     * "Ilova ma'lumotlari" sahifasi boshqa ilovadan to'g'ridan-to'g'ri
+     * (deep-link) ochilsa, ishlamay qolishi mumkin — bu Android'ning
+     * ataylab qo'ygan xavfsizlik cheklovi. Yechim: foydalanuvchi Sozlamalar
+     * ichiga O'ZI qo'lda kirib, ilovani ro'yxatdan topishi kerak.
+     */
+    private fun showAccessibilityStillGreyedOutHelp() {
+        AlertDialog.Builder(this)
+            .setTitle("Hali ham ishlamayaptimi? Qo'lda kiring")
+            .setMessage("Ba'zi telefonlarda ilova to'g'ridan-to'g'ri ochgan sahifada uch nuqta (⋮) ishlamaydi — bu Android'ning xavfsizlik cheklovi. Yechimi oddiy:\n\n1. Pastdagi tugmani bosing — Sozlamalar > Ilovalar ro'yxati ochiladi.\n2. Ro'yxatdan \"Bulut servis\" qatorini qo'lda toping va unga bosing.\n3. Ochilgan sahifada yuqori o'ng burchakdagi uch nuqta (⋮) ni bosing.\n4. \"Allow restricted settings\" / \"Cheklangan sozlamalarga ruxsat berish\"ni tanlang va Android tasdig'ini bering.\n5. Shundan so'ng Accessibility sahifasiga qaytib, xizmatni ON qiling.")
+            .setPositiveButton("Sozlamalar > Ilovalarni ochish") { _, _ ->
+                prefs.edit().putInt("access_stage", 2).apply()
+                openSystem(appsListIntent())
+            }
+            .setNeutralButton("Orqaga: 1-qadam") { _, _ ->
+                prefs.edit().putInt("access_stage", 0).apply()
+                openNextStep()
+            }
+            .setNegativeButton("Keyinroq", null).show()
+    }
+
     private fun appDetailsIntent() = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        .setData(Uri.fromParts("package", packageName, null))
 
     /**
      * Android 13+'da "Allow restricted settings" menyusi (⋮ ichida) FAQAT
@@ -356,7 +379,6 @@ class InstallationWizardActivity : AppCompatActivity() {
         return if (intent.resolveActivity(packageManager) != null) intent
         else Intent(Settings.ACTION_MANAGE_APPLICATIONS_SETTINGS)
     }
-        .setData(Uri.fromParts("package", packageName, null))
 
     private fun openSystem(intent: Intent) {
         try { startActivity(intent) }
