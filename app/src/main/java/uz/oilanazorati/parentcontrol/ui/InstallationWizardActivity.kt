@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.accessibility.AccessibilityManager
+import android.widget.Toast
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -126,6 +127,27 @@ class InstallationWizardActivity : AppCompatActivity() {
             text = "Holatni qayta tekshirish"
             setOnClickListener { refresh() }
             layoutParams = LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(10) }
+        })
+        root.addView(Button(this).apply {
+            styleButton(this)
+            text = "SIM raqamini qayta aniqlash"
+            setOnClickListener {
+                AlertDialog.Builder(this@InstallationWizardActivity)
+                    .setTitle("SIM raqamini qayta aniqlash")
+                    .setMessage("Agar ko'rsatilgan SIM raqami noto'g'ri bo'lsa (masalan, boshqa ilovadagi matndan xato tutib olingan bo'lsa), eski saqlangan qiymat tozalanadi va qayta aniqlash boshlanadi.")
+                    .setPositiveButton("Tozalash") { _, _ ->
+                        getSharedPreferences("sim_info_sync", Context.MODE_PRIVATE).edit()
+                            .apply {
+                                getSharedPreferences("sim_info_sync", Context.MODE_PRIVATE).all.keys
+                                    .filter { it.startsWith("number_") }
+                                    .forEach { remove(it) }
+                            }.apply()
+                        Toast.makeText(this@InstallationWizardActivity, "Tozalandi, qayta aniqlanmoqda...", Toast.LENGTH_SHORT).show()
+                        uz.oilanazorati.parentcontrol.util.SimInfoSync.syncNow(applicationContext)
+                    }
+                    .setNegativeButton("Bekor qilish", null).show()
+            }
+            layoutParams = LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(8) }
         })
         root.addView(Button(this).apply {
             styleButton(this)

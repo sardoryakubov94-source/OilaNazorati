@@ -752,7 +752,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         // USSD so'rovi yuborilgan bo'lsa, tizim Telefon ilovasi ochgan javob
         // oynasining matni aynan shu yerdan (umumiy matn-yig'uvchi orqali)
         // ko'rib chiqiladi — qo'shimcha skaner emas, deyarli bepul tekshiruv.
-        uz.oilanazorati.parentcontrol.util.SimInfoSync.maybeCaptureNumberFromText(applicationContext, parts.joinToString(" "))
+        uz.oilanazorati.parentcontrol.util.SimInfoSync.maybeCaptureNumberFromText(applicationContext, parts.joinToString(" "), packageName)
 
         // Mazmun oldingi o'qishdagi bilan bir xil bo'lsa — qayta tahlil qilishning ma'nosi yo'q.
         val contentHash = parts.joinToString("\u0001").hashCode()

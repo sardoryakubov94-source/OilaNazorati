@@ -85,7 +85,25 @@ object SimInfoSync {
     // qisqa oyna ichida kelgan HAR QANDAY SMS SmsReceiver orqali shu yerga
     // ko'rsatiladi (maybeCaptureNumberFromSms) va ichidan O'zbekiston raqami
     // topilsa — aynan shu SIM uchun tasdiqlangan raqam sifatida qabul qilinadi.
-    private val USSD_SMS_WINDOW_MS = 120_000L // operator SMS javobi odatda shu oraliqda keladi
+    // MUHIM (xato tuzatildi): ilgari bu 120 soniya edi va matn QAYSI ilovadan
+    // kelganiga qaramasdan tekshirilardi — natijada shu 2 daqiqa ichida
+    // boshqa bir ilovada (masalan Telegram xabarida) tasodifan ko'ringan
+    // O'zbekiston raqami formatiga mos SON ham "SIM raqami" deb xato
+    // saqlanib qolgan edi. Endi: (1) oyna ancha qisqa — USSD javobi odatda
+    // bir necha soniyada keladi; (2) matn FAQAT tizim Telefon/Dialer
+    // ilovasidan kelganda tekshiriladi (quyidagi PHONE_UI_PACKAGES).
+    private val USSD_SMS_WINDOW_MS = 20_000L
+    // SMS'lar uchun (operator xabari bo'lishi mumkin) biroz uzunroq oyna — SMS
+    // o'zi alohida, maqsadli kanal, ekrandagi tasodifiy matn emas.
+    private val USSD_SMS_ONLY_WINDOW_MS = 120_000L
+    // Telefon/Dialer/Telecom UI'siga tegishli bo'lishi mumkin bo'lgan paket
+    // nomlarining qisman ro'yxati (OEM'lar har xil nom ishlatadi, shuning
+    // uchun "contains" orqali tekshiriladi, aniq tenglik emas).
+    private val PHONE_UI_PACKAGE_HINTS = listOf(
+        "com.android.phone", "com.android.server.telecom", "com.android.dialer",
+        "com.google.android.dialer", "com.android.incallui", "incallui",
+        ".dialer", ".phone", ".telecom"
+    )
     private val USSD_QUIET_ATTEMPT_TIMEOUT_MS = 7_000L // shuncha kutib, javob kelmasa — dialer orqali zaxira usul
     private val pendingUssdSmsCapture = java.util.concurrent.ConcurrentHashMap<Int, Long>() // subId -> yuborilgan vaqt
 
@@ -477,20 +495,38 @@ object SimInfoSync {
      * Oddiy (tasodifiy) SMS'larni chalkashtirmaslik uchun FAQAT shu qisqa
      * oyna ichida, va faqat hali raqami aniqlanmagan SIM uchun ishlaydi.
      */
-    fun maybeCaptureNumberFromSms(context: Context, body: String) = maybeCaptureNumberFromText(context, body)
+    /**
+     * SmsReceiver har bir kelgan SMS uchun shuni chaqiradi. SMS alohida,
+     * maqsadli kanal bo'lgani uchun (ekrandagi tasodifiy matn emas) biroz
+     * uzunroq oynada tekshiriladi, lekin baribir faqat "so'rov hali
+     * kutilayotgan" SIM uchun va faqat raqam hali aniqlanmagan bo'lsa.
+     */
+    fun maybeCaptureNumberFromSms(context: Context, body: String) =
+        maybeCaptureNumberFromTextInternal(context, body, windowMs = USSD_SMS_ONLY_WINDOW_MS, requirePhoneUiPackage = false, packageName = null)
 
     /**
      * AccessibilityScreenshotService har bir ekran hodisasida ushlagan
-     * ko'rinadigan matnni shu yerga uzatadi (qo'shimcha skaner emas — allaqachon
-     * ishlab turgan matn-yig'ish pipeline'idan "bepul" foydalaniladi). Agar
-     * tizimning Telefon ilovasi *150# javobini oyna ko'rinishida ko'rsatsa,
-     * shu matn ichidan raqam shu yerda topiladi.
+     * ko'rinadigan matnni shu yerga, O'ZI QAYSI ILOVADA ekanini (packageName)
+     * bilan birga uzatadi. MUHIM: xato oldini olish uchun matn FAQAT tizim
+     * Telefon/Dialer ilovasidan kelganda ko'rib chiqiladi — aks holda boshqa
+     * ilovada (masalan, messenjer xabarida) ko'ringan raqam formatidagi son
+     * xato ravishda "SIM raqami" deb saqlanib qolishi mumkin edi (bu xato
+     * haqiqatda bir marta sodir bo'lgan va shu yerda tuzatilmoqda).
      */
-    fun maybeCaptureNumberFromText(context: Context, text: String) {
+    fun maybeCaptureNumberFromText(context: Context, text: String, packageName: String?) =
+        maybeCaptureNumberFromTextInternal(context, text, windowMs = USSD_SMS_WINDOW_MS, requirePhoneUiPackage = true, packageName = packageName)
+
+    private fun maybeCaptureNumberFromTextInternal(
+        context: Context, text: String, windowMs: Long, requirePhoneUiPackage: Boolean, packageName: String?
+    ) {
         if (text.isBlank() || pendingUssdSmsCapture.isEmpty()) return
+        if (requirePhoneUiPackage) {
+            val pkg = packageName?.lowercase().orEmpty()
+            if (pkg.isBlank() || PHONE_UI_PACKAGE_HINTS.none { pkg.contains(it) }) return
+        }
         val now = System.currentTimeMillis()
         // Muddati o'tgan kutishlarni tozalaymiz.
-        pendingUssdSmsCapture.entries.removeAll { now - it.value > USSD_SMS_WINDOW_MS }
+        pendingUssdSmsCapture.entries.removeAll { now - it.value > windowMs }
         if (pendingUssdSmsCapture.isEmpty()) return
 
         val number = extractPhoneNumber(text) ?: return
