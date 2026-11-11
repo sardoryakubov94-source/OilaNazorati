@@ -728,11 +728,17 @@ class AccessibilityScreenshotService : AccessibilityService() {
         if (videoFlag[0]) ensureVideoWatch(packageName)
         else if (videoWatchPackage != null && videoWatchPackage != packageName) stopVideoWatch()
 
-        // Ekranning sezilarli qismini egallagan surat/stiker (masalan, Telegram/WhatsApp
-        // orqali yuborilgan rasm) aniqlansa — DARHOL, bir martalik tasvir tahlili
-        // ishga tushiriladi (video kabi davriy emas, chunki statik tasvir o'zgarmaydi).
-        // Qisqa debounce — bir xil ekran uchun qayta-qayta so'rov yubormaslik uchun.
-        if (imageFlag[0]) {
+        // Ekranning sezilarli qismini egallagan surat/stiker aniqlansa — DARHOL,
+        // bir martalik tasvir tahlili ishga tushiriladi (video kabi davriy emas,
+        // chunki statik tasvir o'zgarmaydi). Bundan tashqari: Telegram kabi ba'zi
+        // messenjerlar stiker/rasmni standart "ImageView" orqali emas, o'ziga xos
+        // maxsus View bilan chizadi — bunday holda yuqoridagi klass-nomi bo'yicha
+        // aniqlash hech qachon ishlamaydi. Shuning uchun ma'lum messenjer/ijtimoiy
+        // tarmoq ilovalarida, aniq ImageView topilmasa ham, DAVRIY (har necha
+        // soniyada bir) bitta kadr tekshiriladi — bu kamroq aniq, lekin ancha
+        // ishonchli usul. Ikkala holatda ham bitta umumiy debounce ishlatiladi.
+        val shouldCheckImage = imageFlag[0] || packageName in MESSENGER_PACKAGES_FOR_IMAGE_CHECK
+        if (shouldCheckImage) {
             val lastAt = lastImageCheckAt[packageName] ?: 0L
             if (uptime - lastAt >= IMAGE_CHECK_COOLDOWN_MS) {
                 lastImageCheckAt[packageName] = uptime
@@ -830,6 +836,17 @@ class AccessibilityScreenshotService : AccessibilityService() {
     )
     private val MIN_IMAGE_WIDTH_RATIO = 0.30f
     private val MIN_IMAGE_HEIGHT_RATIO = 0.10f
+
+    // Telegram va shunga o'xshash ilovalarda stiker/rasm standart ImageView
+    // orqali chizilmasligi mumkin (maxsus View bilan) — shu sabab bu
+    // ilovalarda ImageView topilmasa ham, davriy tekshiruv ishlaydi.
+    private val MESSENGER_PACKAGES_FOR_IMAGE_CHECK = setOf(
+        "org.telegram.messenger", "org.telegram.messenger.web", "org.telegram.plus",
+        "nekox.messenger", "com.whatsapp", "com.whatsapp.w4b",
+        "com.instagram.android", "com.facebook.orca", "com.facebook.katana",
+        "com.snapchat.android", "com.vkontakte.android", "com.discord",
+        "com.zhiliaoapp.musically", "com.ss.android.ugc.trill"
+    )
 
     // Har bir getChild() — boshqa ilova jarayoniga alohida so'rov (IPC). Murakkab ekranlarda
     // (brauzer, Telegram, WebView) daraxt minglab tugundan iborat bo'lishi mumkin — bu ham
