@@ -119,7 +119,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnPasswordSubmit.setOnClickListener { onPasswordSubmit() }
         binding.btnChildDevice.setOnClickListener {
-            startActivity(Intent(this, ChildSetupActivity::class.java))
+            startActivity(Intent(this, FamilyCodeEntryActivity::class.java))
         }
         binding.btnOpenParentDashboard.setOnClickListener {
             if (FirebaseAuth.getInstance().currentUser?.isAnonymous == false) {
