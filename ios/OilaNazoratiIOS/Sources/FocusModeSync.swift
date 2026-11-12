@@ -24,23 +24,7 @@ final class FocusModeSync {
     private let store = ManagedSettingsStore()
     private var listener: ListenerRegistration?
 
-    /// Ilova birinchi marta ishga tushganda, oila kodiga bog'langandan keyin
-    /// bir marta chaqiriladi. Foydalanuvchidan (yoki ota-onadan, shu
-    /// qurilmada) Screen Time ruxsatini so'raydi — bu SO'ROVNI faqat
-    /// qurilmaning o'zida, bir marta berish mumkin, masofadan emas.
-    func requestAuthorizationIfNeeded() {
-        Task {
-            do {
-                try await AuthorizationCenter.shared.requestAuthorization(for: .child)
-            } catch {
-                // Ruxsat berilmasa, bloklash funksiyasi shunchaki ishlamaydi —
-                // joylashuv kuzatuvi bunga bog'liq emas, u baribir ishlayveradi.
-            }
-        }
-    }
-
     func start(familyCode: String, childUid: String) {
-        requestAuthorizationIfNeeded()
         let doc = Firestore.firestore()
             .collection("families").document(familyCode)
             .collection("children").document(childUid)
