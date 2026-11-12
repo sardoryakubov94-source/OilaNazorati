@@ -508,12 +508,26 @@ class ParentDashboardActivity : AppCompatActivity() {
             .collection("children").document(childId)
             .collection("screen_time_settings").document("current")
 
+        val childReference = reference.parent.parent
         val content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(8), dp(20), dp(8))
         }
         val scroll = ScrollView(this).apply {
             addView(content)
+        }
+        val authorizationLabel = TextView(this).apply {
+            text = "Apple Screen Time ruxsati: tekshirilmoqda…"
+            textSize = 12f
+            setTextColor(resources.getColor(R.color.color_text_secondary, theme))
+            setPadding(0, dp(4), 0, dp(8))
+        }
+        content.addView(authorizationLabel)
+        val eventsLabel = TextView(this).apply {
+            text = "Limit hodisalari: yuklanmoqda…"
+            textSize = 12f
+            setTextColor(resources.getColor(R.color.color_text_secondary, theme))
+            setPadding(0, dp(8), 0, dp(8))
         }
         fun addHint(value: String) {
             content.addView(TextView(this).apply {
@@ -554,6 +568,34 @@ class ParentDashboardActivity : AppCompatActivity() {
         val websiteBlocking = CheckBox(this).apply { text = "Tanlangan saytlarni cheklash" }
         content.addView(websiteBlocking)
         addHint("Muhim: qaysi ilova, toifa va saytlar nazorat qilinishi bolaning iPhone qurilmasida Apple Family Controls ruxsati bilan tanlanadi. Bu oynada faqat vaqt siyosati yuboriladi.")
+        content.addView(eventsLabel)
+
+        childReference?.get()?.addOnSuccessListener { childSnapshot ->
+            val status = childSnapshot.getString("screenTimeAuthorizationStatus") ?: "notDetermined"
+            val label = when (status) {
+                "approved" -> "Apple Screen Time ruxsati: berilgan"
+                "denied" -> "Apple Screen Time ruxsati: rad etilgan"
+                "notDetermined" -> "Apple Screen Time ruxsati: hali so'ralmagan"
+                else -> "Apple Screen Time ruxsati: noma'lum"
+            }
+            authorizationLabel.text = label
+        }
+        childReference?.collection("screen_time_reports")
+            ?.orderBy("timestampMs", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            ?.limit(5)?.get()
+            ?.addOnSuccessListener { snapshot ->
+                if (snapshot.isEmpty) {
+                    eventsLabel.text = "Limit hodisalari: hozircha yo'q"
+                } else {
+                    eventsLabel.text = snapshot.documents.joinToString("\\n", prefix = "So'nggi limit hodisalari:\\n") { doc ->
+                        val millis = doc.getLong("timestampMs") ?: 0L
+                        val time = java.text.SimpleDateFormat("dd.MM HH:mm", Locale.getDefault()).format(Date(millis))
+                        "• $time"
+                    }
+                }
+            }?.addOnFailureListener {
+                eventsLabel.text = "Limit hodisalari hozircha olinmadi"
+            }
 
         val dialog = AlertDialog.Builder(this)
             .setTitle("iPhone — Ekran vaqti")
