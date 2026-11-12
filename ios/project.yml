@@ -97,16 +97,6 @@ targets:
         CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Extensions/DeviceActivityReport.entitlements
         SKIP_INSTALL: YES
 
-schemes:
-  OilaNazoratiIOS:
-    build:
-      targets:
-        OilaNazoratiIOS: all
-        OilaNazoratiActivityMonitor: all
-        OilaNazoratiActivityReport: all
-    run:
-      config: Debug
-
   OilaNazoratiScreenBroadcast:
     type: app-extension
     platform: iOS
@@ -130,3 +120,15 @@ schemes:
         INFOPLIST_FILE: OilaNazoratiIOS/Extensions/ScreenBroadcast-Info.plist
         CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Extensions/ScreenBroadcast.entitlements
         SKIP_INSTALL: YES
+
+schemes:
+  OilaNazoratiIOS:
+    build:
+      targets:
+        OilaNazoratiIOS: all
+        OilaNazoratiActivityMonitor: all
+        OilaNazoratiActivityReport: all
+        OilaNazoratiScreenBroadcast: all
+    run:
+      config: Debug
+
