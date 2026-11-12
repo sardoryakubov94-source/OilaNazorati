@@ -51,8 +51,6 @@ struct IOSParentDashboardView: View {
     @State private var location: IOSChildLocation?
     @State private var metrics: [IOSMetric] = []
     @State private var focusEnabled = false
-    @State private var screenshotRequestStatus = "Hali so'rov yuborilmagan"
-    @State private var latestAndroidScreenshot: UIImage?
     @State private var loading = false
     @State private var signingIn = false
     @State private var errorMessage: String?
@@ -61,8 +59,6 @@ struct IOSParentDashboardView: View {
     @State private var childrenListener: ListenerRegistration?
     @State private var locationListener: ListenerRegistration?
     @State private var focusListener: ListenerRegistration?
-    @State private var screenshotListener: ListenerRegistration?
-    @State private var latestScreenshotListener: ListenerRegistration?
     @State private var boundChildID: String?
     @State private var boundChildPlatform: DevicePlatform?
     @State private var boundCapabilities: Set<MonitoringCapability>?
@@ -356,29 +352,6 @@ struct IOSParentDashboardView: View {
                     .font(.caption).foregroundStyle(ParentPalette.muted)
             }
 
-            if child.capabilities.contains(.screenshots) {
-                Button {
-                    requestAndroidScreenshot(child)
-                } label: {
-                    Label("Ekran rasmini so'rash", systemImage: "camera.viewfinder")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity).padding(.vertical, 11)
-                        .background(ParentPalette.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(ParentPalette.accent)
-                Text(screenshotRequestStatus)
-                    .font(.caption).foregroundStyle(ParentPalette.muted)
-                if let latestAndroidScreenshot {
-                    Image(uiImage: latestAndroidScreenshot)
-                        .resizable()
-                        .scaledToFit()
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .accessibilityLabel("Android bolaning so'nggi screenshot rasmi")
-                }
-                Text("Screenshot olish uchun bolaning Android qurilmasida Accessibility va screenshot ruxsatlari hamda screenshot moduli yoqilgan bo'lishi kerak.")
-                    .font(.caption2).foregroundStyle(ParentPalette.muted)
-            }
         }
         .padding(16)
         .background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 18))
@@ -638,9 +611,11 @@ struct IOSParentDashboardView: View {
                         // Child iOS versiyasi ota-ona iPhone versiyasidan mustaqil.
                         // Eski iOS bola ilovasi capability yubormasa, faqat xavfsiz
                         // joylashuv imkoniyatini ko'rsatamiz; Screen Time'ni taxmin qilmaymiz.
-                        let capabilities = declared ?? (platform == .ios
-                            ? Set<MonitoringCapability>([.location])
-                            : DeviceCapabilityMatrix.capabilities(for: platform))
+                        let capabilities = CrossPlatformConfiguration.resolve(
+                            parentPlatform: .ios,
+                            childPlatform: platform,
+                            declaredCapabilities: declared
+                        ).capabilities
                         return IOSChildDevice(
                             id: doc.documentID,
                             name: (data["nomi"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "Farzand",
@@ -690,12 +665,8 @@ struct IOSParentDashboardView: View {
         boundFamilyCode = familyCode
         locationListener?.remove()
         focusListener?.remove()
-        screenshotListener?.remove()
-        latestScreenshotListener?.remove()
         location = nil
         metrics = []
-        latestAndroidScreenshot = nil
-        screenshotRequestStatus = "Hali so'rov yuborilmagan"
         guard let code = familyCode else { return }
         let childRef = Firestore.firestore().collection("families").document(code)
             .collection("children").document(child.id)
@@ -722,70 +693,28 @@ struct IOSParentDashboardView: View {
         }
         if child.platform == .android {
             loadAndroidMetrics(childRef)
-            if child.capabilities.contains(.screenshots) {
-                screenshotListener = childRef.collection("screenshot_requests").document("current")
-                    .addSnapshotListener { snapshot, error in
-                        guard error == nil, let data = snapshot?.data() else { return }
-                        let status = data["status"] as? String ?? ""
-                        let message = data["message"] as? String ?? ""
-                        DispatchQueue.main.async {
-                            switch status {
-                            case "requested": screenshotRequestStatus = "Screenshot so'rovi yuborildi — kutilmoqda"
-                            case "processing": screenshotRequestStatus = "Screenshot olinmoqda…"
-                            case "completed": screenshotRequestStatus = "Screenshot tayyor"
-                            case "failed": screenshotRequestStatus = message.isEmpty ? "Screenshot olinmadi" : "Xato: " + message
-                            default: screenshotRequestStatus = "Hali so'rov yuborilmagan"
-                            }
-                        }
-                    }
-                latestScreenshotListener = childRef.collection("screenshots")
-                    .order(by: "capturedAt", descending: true).limit(to: 1)
-                    .addSnapshotListener { snapshot, _ in
-                        guard let document = snapshot?.documents.first else {
-                            DispatchQueue.main.async { latestAndroidScreenshot = nil }
-                            return
-                        }
-                        childRef.collection("screenshot_data").document(document.documentID).getDocument { dataSnapshot, _ in
-                            guard let blob = dataSnapshot?.data()?["image"] as? Blob else { return }
-                            let image = UIImage(data: blob.data)
-                            DispatchQueue.main.async {
-                                guard selectedChildID == child.id else { return }
-                                latestAndroidScreenshot = image
-                            }
-                        }
-                    }
-            }
         }
     }
 
     private func loadAndroidMetrics(_ childRef: DocumentReference) {
         let startOfDay = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970 * 1000
-        let collections: [(String, String, String, Color, String?)] = [
-            ("calls", "Qo‘ng‘iroqlar", "phone.arrow.up.right", ParentPalette.accent, "boshlanishMs"),
-            ("sms", "SMS", "message", ParentPalette.teal, "vaqtMs"),
-            ("app_usage", "Ilova faolligi", "app.badge", ParentPalette.orange, "boshlanishMs"),
-            ("contacts", "Kontaktlar", "person.2", ParentPalette.accent, nil),
-            ("notifications", "Bildirishnomalar", "bell", ParentPalette.orange, "vaqtMs"),
-            ("risk_events", "Xavf signallari", "exclamationmark.shield", ParentPalette.red, "capturedAt")
-        ]
-        for (collection, title, symbol, tint, dateField) in collections {
-            let reference = childRef.collection(collection)
-            let request: Query
-            if let dateField {
-                request = reference.whereField(dateField, isGreaterThanOrEqualTo: startOfDay)
-            } else {
-                request = reference
-            }
-            request.getDocuments { snapshot, _ in
+        childRef.collection("app_usage")
+            .whereField("boshlanishMs", isGreaterThanOrEqualTo: startOfDay)
+            .getDocuments { snapshot, _ in
                 let count = snapshot?.documents.count ?? 0
                 DispatchQueue.main.async {
                     guard selectedChildID == childRef.documentID else { return }
-                    metrics.removeAll { $0.id == collection }
-                    metrics.append(IOSMetric(id: collection, title: title, value: count, symbol: symbol, tint: tint))
-                    metrics.sort { $0.id < $1.id }
+                    metrics = [
+                        IOSMetric(
+                            id: "app_usage",
+                            title: "Ilova faolligi",
+                            value: count,
+                            symbol: "app.badge",
+                            tint: ParentPalette.orange
+                        )
+                    ]
                 }
             }
-        }
     }
 
     private func locationPermissionLabel(_ child: IOSChildDevice) -> String {
@@ -797,36 +726,6 @@ struct IOSParentDashboardView: View {
         case "restricted": return "Cheklangan"
         case "notDetermined": return "So'ralmagan"
         default: return "Noma'lum"
-        }
-    }
-
-    private func requestAndroidScreenshot(_ child: IOSChildDevice) {
-        guard child.platform == .android, child.capabilities.contains(.screenshots),
-              let code = familyCode, let uid = Auth.auth().currentUser?.uid else {
-            errorMessage = "Screenshot so'rovi uchun Android bola va ota-ona hisobi kerak."
-            return
-        }
-        let requestId = UUID().uuidString
-        let now = Int64(Date().timeIntervalSince1970 * 1000)
-        let reference = Firestore.firestore().collection("families").document(code)
-            .collection("children").document(child.id)
-            .collection("screenshot_requests").document("current")
-        screenshotRequestStatus = "So'rov yuborilmoqda…"
-        reference.setData([
-            "requestId": requestId,
-            "status": "requested",
-            "requestedByUid": uid,
-            "createdAt": now,
-            "updatedAt": now,
-            "message": ""
-        ]) { error in
-            DispatchQueue.main.async {
-                if let error {
-                    screenshotRequestStatus = "So'rov yuborilmadi: " + error.localizedDescription
-                } else {
-                    screenshotRequestStatus = "Screenshot so'rovi yuborildi — kutilmoqda"
-                }
-            }
         }
     }
 
@@ -865,8 +764,6 @@ struct IOSParentDashboardView: View {
         childrenListener?.remove()
         locationListener?.remove()
         focusListener?.remove()
-        screenshotListener?.remove()
-        latestScreenshotListener?.remove()
         boundChildID = nil
         boundChildPlatform = nil
         boundCapabilities = nil
@@ -882,8 +779,6 @@ struct IOSParentDashboardView: View {
         selectedChildID = nil
         location = nil
         metrics = []
-        latestAndroidScreenshot = nil
-        screenshotRequestStatus = "Hali so'rov yuborilmagan"
         errorMessage = nil
     }
 }
