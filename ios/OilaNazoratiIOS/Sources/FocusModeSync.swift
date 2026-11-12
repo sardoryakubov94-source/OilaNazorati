@@ -53,6 +53,7 @@ final class FocusModeSync {
     }
 
     private func apply(enabled: Bool) {
+        guard AuthorizationCenter.shared.authorizationStatus == .approved else { return }
         if enabled {
             // Deyarli barcha ilova toifalarini bloklaydi. Telefon, SMS va
             // Sozlamalar kabi tizim ilovalarini Apple o'zi himoyalagan —
