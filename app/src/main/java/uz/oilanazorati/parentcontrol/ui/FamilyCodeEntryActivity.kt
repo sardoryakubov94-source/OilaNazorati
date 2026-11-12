@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
 import uz.oilanazorati.parentcontrol.databinding.ActivityFamilyCodeEntryBinding
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
+import uz.oilanazorati.parentcontrol.util.SimInfoSync
 
 /**
  * Bola qurilmasini oilaga ulash uchun mustaqil, to'liq ekranli sahifa.
@@ -62,6 +63,7 @@ class FamilyCodeEntryActivity : AppCompatActivity() {
         } else {
             auth.signInAnonymously()
                 .addOnSuccessListener { result ->
+                    if (requestAnswered) return@addOnSuccessListener
                     val uid = result.user?.uid
                     if (uid.isNullOrBlank()) {
                         handler.removeCallbacks(timeout)
@@ -80,6 +82,7 @@ class FamilyCodeEntryActivity : AppCompatActivity() {
     }
 
     private fun submitPairing(code: String, childName: String, uid: String, timeout: Runnable) {
+        if (requestAnswered) return
         FirebaseRepo.joinFamily(code, childName) { ok, error ->
             if (requestAnswered) return@joinFamily
             requestAnswered = true
@@ -95,6 +98,7 @@ class FamilyCodeEntryActivity : AppCompatActivity() {
                 .putString("child_name", childName)
                 .putString("child_platform", "android")
                 .apply()
+            SimInfoSync.syncNow(this)
 
             binding.pairStatusText.text = "✅ Oila bilan bog'landi. Keyingi sozlash bosqichiga o'tilmoqda..."
             binding.btnPair.text = "Ulandi"
