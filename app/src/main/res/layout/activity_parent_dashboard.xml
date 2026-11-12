@@ -107,6 +107,7 @@
                     android:focusable="true"
                     android:layout_marginEnd="8dp">
                     <ImageView
+                        android:id="@+id/btnFocusModeIcon"
                         android:layout_width="18dp"
                         android:layout_height="18dp"
                         android:layout_gravity="center"
