@@ -21,6 +21,7 @@ private struct IOSChildDevice: Identifiable, Hashable {
     let name: String
     let platform: DevicePlatform
     let capabilities: Set<MonitoringCapability>
+    let screenTimeAuthorizationStatus: String
 
     var isIOS: Bool { platform == .ios }
     var platformTitle: String { platform == .ios ? "iPhone / iPad" : platform == .android ? "Android" : "Aniqlanmagan" }
@@ -349,6 +350,15 @@ struct IOSParentDashboardView: View {
                 IOSScreenTimeParentControlsView(familyCode: familyCode, childUid: child.id)
             }
 
+            HStack {
+                Label("Apple Screen Time ruxsati", systemImage: child.screenTimeAuthorizationStatus == "approved" ? "checkmark.shield.fill" : "lock.shield")
+                    .font(.subheadline)
+                Spacer()
+                Text(child.screenTimeAuthorizationStatus == "approved" ? "Berilgan" : child.screenTimeAuthorizationStatus == "denied" ? "Rad etilgan" : "Kutilmoqda")
+                    .font(.caption).foregroundStyle(child.screenTimeAuthorizationStatus == "approved" ? ParentPalette.teal : ParentPalette.orange)
+            }
+            .padding(12).background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 14))
+
             VStack(alignment: .leading, spacing: 9) {
                 capabilityRow("Rozilik asosida joylashuv", available: child.capabilities.contains(.location))
                 capabilityRow("Ilova va toifa statistikasi", available: child.capabilities.contains(.appUsage))
@@ -550,7 +560,8 @@ struct IOSParentDashboardView: View {
                             id: doc.documentID,
                             name: (data["nomi"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "Farzand",
                             platform: platform,
-                            capabilities: capabilities
+                            capabilities: capabilities,
+                            screenTimeAuthorizationStatus: data["screenTimeAuthorizationStatus"] as? String ?? "notDetermined"
                         )
                     }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
                     children = loaded
