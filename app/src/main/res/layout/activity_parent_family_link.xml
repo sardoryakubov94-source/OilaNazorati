@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/color_bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="OilaNazorati"
+            android:textAlignment="center"
+            android:textColor="@color/color_text_primary"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="10dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Oilaviy nazoratni boshlash"
+            android:textAlignment="center"
+            android:textColor="@color/color_text_primary"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Quyidagi oila kodini farzandingiz telefonidagi OilaNazorati ilovasiga kiriting."
+            android:textAlignment="center"
+            android:textColor="@color/color_text_secondary"
+            android:textSize="14sp"
+            android:layout_marginBottom="24dp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_login_card"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="SIZNING OILA KODINGIZ"
+                android:textAlignment="center"
+                android:textColor="@color/color_text_secondary"
+                android:textSize="11sp"
+                android:letterSpacing="0.12"
+                android:layout_marginBottom="12dp" />
+
+            <TextView
+                android:id="@+id/familyCodeText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:letterSpacing="0.2"
+                android:text="------"
+                android:textColor="@color/color_text_primary"
+                android:textSize="32sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="20dp" />
+
+            <Button
+                android:id="@+id/btnCopyCode"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:text="Koddan nusxa olish"
+                android:textAllCaps="false" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bola telefonida: «Bu farzandimning telefoni» → oila kodini kiriting → «Oilaga ulanish» tugmasini bosing."
+                android:textColor="@color/color_text_secondary"
+                android:textSize="12sp"
+                android:lineSpacingExtra="3dp"
+                android:layout_marginTop="18dp" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnOpenDashboard"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:text="Ota-ona paneliga o'tish"
+            android:textAllCaps="false"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:layout_marginTop="22dp" />
+    </LinearLayout>
+</ScrollView>
