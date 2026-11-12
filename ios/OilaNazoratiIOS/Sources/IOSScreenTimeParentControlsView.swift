@@ -21,7 +21,7 @@ struct IOSScreenTimeParentControlsView: View {
     @State private var error: String?
     @State private var limitEvents: [[String: Any]] = []
     @State private var policyListener: ListenerRegistration?
-    @State private var eventsListener: ListenerRegistration?
+    @State private var eventsListener: ListenerRegistration?\n    @State private var reportListener: ListenerRegistration?\n    @State private var dailySeconds: Double = 0\n    @State private var weeklySeconds: Double = 0
 
     private var policyRef: DocumentReference {
         Firestore.firestore().collection("families").document(familyCode)
@@ -94,6 +94,14 @@ struct IOSScreenTimeParentControlsView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
+                heading("Ekran vaqti hisoboti", detail: "Firebase orqali kelgan")
+                HStack(spacing: 12) {
+                    reportMetric(title: "Bugun", seconds: dailySeconds)
+                    reportMetric(title: "Hafta", seconds: weeklySeconds)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
                 heading("Limit hodisalari", detail: "Bola ilovasidan sinxronlangan")
                 if limitEvents.isEmpty {
                     Text("Hozircha limit tugagani haqida sinxronlangan hodisa yo‘q.")
@@ -123,6 +131,7 @@ struct IOSScreenTimeParentControlsView: View {
         .onDisappear {
             policyListener?.remove()
             eventsListener?.remove()
+            reportListener?.remove()
         }
     }
 
@@ -175,6 +184,28 @@ struct IOSScreenTimeParentControlsView: View {
                     limitEvents = snapshot?.documents.map { $0.data() } ?? []
                 }
             }
+        reportListener?.remove()
+        reportListener = Firestore.firestore().collection("families").document(familyCode)
+            .collection("children").document(childUid)
+            .collection("screen_time_reports").document("latest")
+            .addSnapshotListener { snapshot, _ in
+                let data = snapshot?.data() ?? [:]
+                DispatchQueue.main.async {
+                    dailySeconds = data["dailySeconds"] as? Double ?? 0
+                    weeklySeconds = data["weeklySeconds"] as? Double ?? 0
+                }
+            }
+    }
+
+    private func reportMetric(title: String, seconds: Double) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            Text(seconds > 0 ? seconds.formatted(.time(pattern: .hourMinute)) : "—")
+                .font(.title3.bold().monospacedDigit())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
     }
 
     private func savePolicy() {
