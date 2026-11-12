@@ -1,5 +1,4 @@
 import SwiftUI
-import Charts
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseCore
