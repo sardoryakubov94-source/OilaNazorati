@@ -532,7 +532,7 @@ class ParentDashboardActivity : AppCompatActivity() {
             })
             return EditText(this).apply {
                 setSingleLine(true)
-                inputType = if (numeric) InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_DATETIME
+                inputType = if (numeric) InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_TEXT
                 hint = initial
                 setText(initial)
                 textSize = 16f
