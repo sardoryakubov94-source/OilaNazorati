@@ -48,7 +48,8 @@ private enum UsageReportBuilder {
                 total += segment.totalActivityDuration
             }
         }
-        UserDefaults(suiteName: "group.uz.oilanazorati.shared")?.set(total, forKey: key)\n        return UsageReportConfiguration(totalDuration: total)
+        UserDefaults(suiteName: "group.uz.oilanazorati.shared")?.set(total, forKey: key)
+        return UsageReportConfiguration(totalDuration: total)
     }
 }
 
