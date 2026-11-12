@@ -48,6 +48,8 @@ struct ScreenTimeChildDashboardView: View {
             }
 
             Section("Nazorat qilinadigan ilovalar va saytlar") {
+                Text("Bu tanlovlar bolaning shu iPhone qurilmasida saqlanadi. Ota-ona vaqt limitlari va jadvallarni yuboradi.")
+                    .font(.caption).foregroundStyle(.secondary)
                 HStack {
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Tanlangan elementlar")
