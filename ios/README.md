@@ -30,6 +30,16 @@ iOS ilovasi SwiftUI asosida tayyorlanadi. Ushbu branch iOS bola va ota-ona panel
 
 **Ilova tanlovi bolaning iPhone'ida qilinadi.** FamilyActivityPicker bolaning qurilmasidagi Apple authorization bilan ishlaydi; ota-ona boshqa qurilmadan bolaning tokenlarini o'zboshimchalik bilan yaratmaydi. Ota-ona limit va jadval siyosatini yuboradi, bola esa ruxsat berganidan keyin tanlangan ilova/toifalarga shu siyosat tatbiq qilinadi.
 
+## 3. Platformalararo boshqaruv matritsasi
+
+Uchta asosiy kombinatsiya kodda alohida ajratilgan:
+
+- **iOS ota-ona → iOS bola:** ota-ona iOS panelidan kunlik limit, maktab/uyqu jadvali va sayt cheklov siyosatini yuboradi. Bola iPhone'ida Apple ruxsati va FamilyActivityPicker tanlovi asosida qo'llanadi. Joylashuv faqat bolaning roziligi bilan.
+- **Android ota-ona → iOS bola:** Android ilovasi bolaning `supportedCapabilities` ro'yxatini Firestore'dan o'qiydi. Ekran vaqti tugmasi iOS bola uchun maxsus siyosat oynasini ochadi va `screen_time_settings/current` ga limit, jadval va sayt cheklovlarini yuboradi. Batafsil ilova/toifa hisobotlari Android ota-onaga eksport qilinmaydi.
+- **iOS ota-ona → Android bola:** iOS ota-ona paneli Android bolaning mavjud faoliyat ko'rsatkichlarini va joylashuvini ko'rsatadi; umumiy Kontrol rejimini `focus_mode_settings/current` orqali yuboradi. Android'dagi SMS, qo'ng'iroq, screenshot va boshqa ma'lumotlar faqat bola Android ilovasida tegishli ruxsat/modul faol bo'lsa mavjud bo'ladi.
+
+Noma'lum platforma yoki e'lon qilinmagan imkoniyatlar avtomatik yoqilmaydi. Android ota-ona paneli iOS uchun faqat iOS bola ilovasi e'lon qilgan Screen Time siyosat imkoniyatlarini ko'rsatadi.
+
 ## 3. Apple platformasi bo'yicha muhim chegaralar
 
 - SMS mazmuni, qo'ng'iroqlar tarixi, kontaktlar, boshqa ilovalarning bildirishnoma matni, yashirin mikrofon va screenshot monitoringi iOS'da uchinchi tomon ota-ona ilovasiga Android'dagi kabi ochiq API bilan berilmaydi.
@@ -108,6 +118,9 @@ The repository's `firestore.rules` now contains dedicated rules for iOS Screen T
 - [x] Kunlik/haftalik app va category report extension manbasi
 - [x] App Group va extension entitlement fayllari
 - [x] XcodeGen orqali uchta target yaratish konfiguratsiyasi
+- [x] Android ota-ona ilovasida iOS bolaning capability ro'yxatini o'qish va Screen Time siyosatini yuborish
+- [x] iOS ota-ona panelida Android bola uchun umumiy Kontrol rejimini yuborish
+- [x] Platforma almashtirilganda Android ota-ona interfeysining asl ko'rinishini tiklash
 - [ ] Mac/Xcode'da project generate va compile
 - [ ] GoogleService-Info.plist va Google URL scheme
 - [ ] Apple Family Controls development/distribution entitlement tasdig'i
