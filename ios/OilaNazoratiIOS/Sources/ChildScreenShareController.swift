@@ -22,7 +22,7 @@ final class ChildScreenShareController: NSObject, ObservableObject, AgoraRtcEngi
     private var requestId = ""
     private var channelName = ""
     private var rtcUid: UInt = 0
-    private var pendingJoin = false
+    private var pendingJoin = false\n    private var maxSessionTimer: Timer?
 
     private let appGroup = "group.uz.oilanazorati.shared"
 
@@ -191,6 +191,10 @@ final class ChildScreenShareController: NSObject, ObservableObject, AgoraRtcEngi
         pendingJoin = false
         isPublishing = true
         status = "Broadcast oynasidan ekran uzatishni boshlang"
+        maxSessionTimer?.invalidate()
+        maxSessionTimer = Timer.scheduledTimer(withTimeInterval: 15 * 60, repeats: false) { [weak self] _ in
+            Task { @MainActor in self?.stopPublishing() }
+        }
         Firestore.firestore().collection("families").document(familyCode)
             .collection("children").document(childUid)
             .collection("screen_share_requests").document("current")
@@ -198,6 +202,8 @@ final class ChildScreenShareController: NSObject, ObservableObject, AgoraRtcEngi
     }
 
     func stopPublishing() {
+        maxSessionTimer?.invalidate()
+        maxSessionTimer = nil
         engine?.stopScreenCapture()
         engine?.leaveChannel(nil)
         engine?.disableVideo()
