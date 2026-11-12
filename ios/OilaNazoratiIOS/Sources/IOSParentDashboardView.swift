@@ -307,20 +307,27 @@ struct IOSParentDashboardView: View {
     private func iosControls(_ child: IOSChildDevice) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeading("iOS nazorati", detail: "Apple platformasi cheklovlari")
-            HStack(spacing: 12) {
-                Image(systemName: "hourglass").font(.title2).foregroundStyle(ParentPalette.accent)
-                    .frame(width: 42, height: 42).background(ParentPalette.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Kontrol rejimi").font(.subheadline.bold())
-                    Text("Family Controls ruxsati bo‘lsa ilova toifalarini cheklaydi")
-                        .font(.caption).foregroundStyle(ParentPalette.muted)
+            if child.capabilities.contains(.focusMode) {
+                HStack(spacing: 12) {
+                    Image(systemName: "hourglass").font(.title2).foregroundStyle(ParentPalette.accent)
+                        .frame(width: 42, height: 42).background(ParentPalette.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Kontrol rejimi").font(.subheadline.bold())
+                        Text("Family Controls ruxsati bo‘lsa ilova toifalarini cheklaydi")
+                            .font(.caption).foregroundStyle(ParentPalette.muted)
+                    }
+                    Spacer()
+                    Toggle("Kontrol rejimi", isOn: $focusEnabled)
+                        .labelsHidden().tint(ParentPalette.accent)
+                        .onChange(of: focusEnabled) { newValue in saveIOSFocusMode(newValue, child: child) }
                 }
-                Spacer()
-                Toggle("Kontrol rejimi", isOn: $focusEnabled)
-                    .labelsHidden().tint(ParentPalette.accent)
-                    .onChange(of: focusEnabled) { newValue in saveIOSFocusMode(newValue, child: child) }
+                .padding(14).background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 16))
+            } else {
+                Label("Kontrol rejimi bu iOS versiyasida qo‘llab-quvvatlanmaydi.", systemImage: "info.circle")
+                    .font(.footnote).foregroundStyle(ParentPalette.muted)
+                    .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 16))
             }
-            .padding(14).background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 16))
             VStack(alignment: .leading, spacing: 9) {
                 capabilityRow("Joylashuv", available: child.capabilities.contains(.location))
                 capabilityRow("Umumiy Kontrol rejimi", available: child.capabilities.contains(.focusMode))
