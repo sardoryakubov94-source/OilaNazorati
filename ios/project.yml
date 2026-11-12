@@ -32,6 +32,10 @@ targets:
         product: FirebaseFirestore
       - package: GoogleSignIn
         product: GoogleSignIn
+      - target: OilaNazoratiActivityMonitor
+        embed: true
+      - target: OilaNazoratiActivityReport
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: uz.oilanazorati.parentcontrol
