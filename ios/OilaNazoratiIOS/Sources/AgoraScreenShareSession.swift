@@ -101,6 +101,26 @@ final class AgoraScreenShareSession: NSObject, ObservableObject, AgoraRtcEngineD
         status = "Ekran uzatish to‘xtatildi"
     }
 
+
+    func rtcEngine(_ engine: AgoraRtcEngineKit,
+                   localVideoStateChangedOf state: AgoraVideoLocalState,
+                   reason: AgoraLocalVideoStreamReason,
+                   sourceType: AgoraVideoSourceType) {
+        if sourceType == .screen && state == .stopped {
+            isBroadcasting = false
+            status = "Ekran uzatish to‘xtadi"
+            if let request {
+                Firestore.firestore().collection("families").document(request.familyCode)
+                    .collection("children").document(request.childUid)
+                    .collection("screen_requests").document("current")
+                    .updateData(["status": "stopped", "stoppedAtMs": Int64(Date().timeIntervalSince1970 * 1000)])
+            }
+        } else if sourceType == .screen && state == .capturing {
+            isBroadcasting = true
+            status = "Ekran uzatilmoqda"
+        }
+    }
+
     func rtcEngine(_ engine: AgoraRtcEngineKit, didJoinChannel channel: String, withUid uid: UInt, elapsed: Int) {
         isJoined = true
         status = role == "screen_publisher" ? "Ekran kanaliga ulandi" : "Ekran kanaliga ulandi"
