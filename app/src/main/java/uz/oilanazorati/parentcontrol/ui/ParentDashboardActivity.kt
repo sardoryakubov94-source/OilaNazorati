@@ -685,7 +685,25 @@ class ParentDashboardActivity : AppCompatActivity() {
                 val label = TextView(this).apply {
                     text = name; textSize = 17f
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                    setOnClickListener { setChildId(childId); loadTodayStats(); dialog?.dismiss() }
+                    setOnClickListener {
+                        FirebaseRepo.fetchLinkedChildren(code) { devices ->
+                            val selected = devices.firstOrNull { it.id == childId }
+                            if (selected == null) {
+                                Toast.makeText(this@ParentDashboardActivity, "Farzand qurilmasi topilmadi", Toast.LENGTH_SHORT).show()
+                            } else {
+                                val platform = ChildDevicePlatform.from(selected.platform)
+                                if (platform == ChildDevicePlatform.UNKNOWN) {
+                                    Toast.makeText(this@ParentDashboardActivity, "Qurilma platformasi aniqlanmadi", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    setChildId(selected.id)
+                                    setChildPlatform(platform, selected.supportedCapabilities)
+                                    applyChildPlatformUi()
+                                    loadTodayStats()
+                                }
+                            }
+                            dialog?.dismiss()
+                        }
+                    }
                 }
                 val deleteBtn = TextView(this).apply {
                     text = "🗑"; textSize = 20f; setPadding(dp(14), dp(6), dp(6), dp(6))
