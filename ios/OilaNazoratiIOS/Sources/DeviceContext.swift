@@ -62,11 +62,11 @@ struct CrossPlatformConfiguration {
 /// Bola qurilmasining operatsion tizimi imkoniyatlari.
 /// Noma'lum platformada hech qanday nazorat funksiyasi avtomatik ochilmaydi.
 enum DeviceCapabilityMatrix {
-    static func capabilities(for platform: DevicePlatform) -> Set<MonitoringCapability> {
+    static func capabilities(\n        for platform: DevicePlatform,\n        iosMajorVersion: Int = ProcessInfo.processInfo.operatingSystemVersion.majorVersion\n    ) -> Set<MonitoringCapability> {
         switch platform {
         case .ios:
             // iOS: Apple ruxsat bergan va ilovada qisman amalga oshirilgan imkoniyatlar.
-            return [.location, .focusMode]
+            return iosMajorVersion >= 16 ? [.location, .focusMode] : [.location]
         case .android:
             // Android: mavjud Android nazorat modullari. Amaliy foydalanish
             // ota-ona autentifikatsiyasi, ruxsatlar va modul holatiga ham bog'liq.
