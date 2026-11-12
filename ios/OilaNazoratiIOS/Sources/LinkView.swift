@@ -91,7 +91,7 @@ struct LinkView: View {
                 "childPlatform": "ios",
                 "deviceRole": "child",
                 "capabilitySchemaVersion": 1,
-                "supportedCapabilities": ["location", "focus_mode"],
+                "supportedCapabilities": DeviceCapabilityMatrix.capabilities(for: .ios).map(\.rawValue).sorted(),
                 "yaratilganMs": Int64(Date().timeIntervalSince1970 * 1000)
             ], merge: true) { error in
                 isLinking = false
