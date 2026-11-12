@@ -11,7 +11,7 @@ on:
       - "gradle/**"
       - ".github/workflows/cross-platform-android-check.yml"
 concurrency:
-  group: cross-platform-android-${{ github.ref }}
+  group: cross-platform-android-${{ (github.head_ref || github.ref) }}
   cancel-in-progress: true
 
 jobs:
