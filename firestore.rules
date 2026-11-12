@@ -163,7 +163,9 @@ service cloud.firestore {
               request.resource.data.keys().hasOnly([
                 'eventId', 'type', 'activity', 'event', 'timestampMs', 'status'
               ]) &&
-              request.resource.data.eventId is string &&\n              request.resource.data.eventId == docId &&\n              request.resource.data.type == 'daily_limit_reached' &&
+              request.resource.data.eventId is string &&
+              request.resource.data.eventId == docId &&
+              request.resource.data.type == 'daily_limit_reached' &&
               request.resource.data.status == 'queued_on_child_device' &&
               request.resource.data.timestampMs is int;
           allow update, delete:
@@ -266,7 +268,9 @@ service cloud.firestore {
           allow read, write:
             if (isRealOwner() || isThisChildsOwnSession())
               && subcollection != 'screenshot_settings'
-              && subcollection != 'focus_mode_settings'\n              && subcollection != 'screen_time_settings'\n              && subcollection != 'screen_time_reports'
+              && subcollection != 'focus_mode_settings'
+              && subcollection != 'screen_time_settings'
+              && subcollection != 'screen_time_reports'
               && subcollection != 'screenshot_trigger_state'
               && subcollection != 'screenshot_requests'
               && subcollection != 'screenshots'
