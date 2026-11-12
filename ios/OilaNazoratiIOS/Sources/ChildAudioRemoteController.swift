@@ -68,18 +68,18 @@ final class ChildAudioRemoteController: ObservableObject {
                         }
                     }
                 } else if ["stopped", "cancelled", "expired"].contains(status) {
-                    self.stopPublishing(status: "Ovoz uzatish to‘xtatildi")
+                    self.stopPublishing(status: "Ovoz uzatish to‘xtatildi", updateRemote: false)
                 }
             }
         }
     }
 
-    func stopPublishing(status: String = "Ovoz uzatish to‘xtatildi") {
+    func stopPublishing(status: String = "Ovoz uzatish to‘xtatildi", updateRemote: Bool = true) {
         voiceSession.leave()
         isPublishing = false
         statusText = status
         handledRequestID = nil
-        if let requestRef {
+        if updateRemote, let requestRef {
             Task {
                 try? await requestRef.updateData([
                     "status": "stopped",
