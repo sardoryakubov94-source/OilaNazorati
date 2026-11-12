@@ -200,17 +200,6 @@ struct IOSScreenTimeParentControlsView: View {
             }
     }
 
-    private func reportMetric(title: String, seconds: Double) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
-            Text(seconds > 0 ? seconds.formatted(.time(pattern: .hourMinute)) : "—")
-                .font(.title3.bold().monospacedDigit())
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
-    }
-
     private func savePolicy() {
         isSaving = true
         error = nil
