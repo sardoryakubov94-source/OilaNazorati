@@ -263,8 +263,7 @@ class ParentDashboardActivity : AppCompatActivity() {
                         if (!premium) AlertDialog.Builder(this@ParentDashboardActivity)
                             .setTitle("⭐ Premium kerak")
                             .setMessage("Jonli ekran ko‘rish Premium uchun.")
-                            .setPositiveButton("Premiumni ochish") { _, _ -> startActivity(Intent(this@ParentDashboardActivity, PremiumActivity::class.java)) }
-                            .setNegativeButton("Bekor qilish", null).show()
+                            .setPositiveButton("Tushunarli", null).show()
                         else startActivity(Intent(this@ParentDashboardActivity, ScreenShareListenActivity::class.java))
                     }
                 }
