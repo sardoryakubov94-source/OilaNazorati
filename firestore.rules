@@ -131,6 +131,45 @@ service cloud.firestore {
             if isRealOwner();
         }
 
+        // iOS Screen Time policy: only the real family owner can change
+        // the current policy; the paired child device can read it.
+        match /screen_time_settings/{docId} {
+          allow read:
+            if isRealOwner() || isThisChildsOwnSession();
+          allow create, update:
+            if isRealOwner() &&
+              docId == 'current' &&
+              request.resource.data.keys().hasOnly([
+                'enabled', 'dailyLimitMinutes',
+                'schoolEnabled', 'schoolStart', 'schoolEnd',
+                'sleepEnabled', 'sleepStart', 'sleepEnd',
+                'websiteBlockingEnabled',
+                'updatedAtMs', 'updatedBy', 'schemaVersion'
+              ]) &&
+              request.resource.data.dailyLimitMinutes is int &&
+              request.resource.data.dailyLimitMinutes >= 0 &&
+              request.resource.data.dailyLimitMinutes <= 600;
+          allow delete:
+            if isRealOwner();
+        }
+
+        // The child may append only a known Screen Time event.
+        // Parent can read the event history but cannot forge child events.
+        match /screen_time_reports/{docId} {
+          allow read:
+            if isRealOwner();
+          allow create:
+            if isThisChildsOwnSession() &&
+              request.resource.data.keys().hasOnly([
+                'type', 'activity', 'event', 'timestampMs', 'status'
+              ]) &&
+              request.resource.data.type == 'daily_limit_reached' &&
+              request.resource.data.status == 'queued_on_child_device' &&
+              request.resource.data.timestampMs is int;
+          allow update, delete:
+            if false;
+        }
+
         match /screenshot_trigger_state/{docId} {
           allow read:
             if isRealOwner() || isThisChildsOwnSession();
@@ -227,7 +266,7 @@ service cloud.firestore {
           allow read, write:
             if (isRealOwner() || isThisChildsOwnSession())
               && subcollection != 'screenshot_settings'
-              && subcollection != 'focus_mode_settings'
+              && subcollection != 'focus_mode_settings'\n              && subcollection != 'screen_time_settings'\n              && subcollection != 'screen_time_reports'
               && subcollection != 'screenshot_trigger_state'
               && subcollection != 'screenshot_requests'
               && subcollection != 'screenshots'
