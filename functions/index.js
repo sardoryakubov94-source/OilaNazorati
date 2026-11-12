@@ -115,3 +115,57 @@ exports.agoraVoiceToken = onRequest(
     }
   }
 );
+
+exports.agoraScreenToken = onRequest(
+  { region: "us-central1", secrets: [AGORA_APP_CERTIFICATE], maxInstances: 10 },
+  async (req, res) => {
+    if (req.method !== "POST") return res.status(405).json({ error: "method_not_allowed" });
+    try {
+      const match = (req.get("Authorization") || "").match(/^Bearer (.+)$/);
+      if (!match) return res.status(401).json({ error: "unauthorized" });
+      const decoded = await getAuth().verifyIdToken(match[1]);
+      const { familyCode, childUid, requestId, channelName, uid, role } = req.body || {};
+      if (typeof familyCode !== "string" || !/^[A-Za-z0-9_-]{4,80}$/.test(familyCode) ||
+          typeof childUid !== "string" || childUid.length < 5 ||
+          typeof requestId !== "string" || requestId.length < 8 ||
+          typeof channelName !== "string" || !/^[A-Za-z0-9_]{4,64}$/.test(channelName) ||
+          !Number.isInteger(uid) || uid < 1 || uid > 4294967295 ||
+          !["publisher", "subscriber"].includes(role)) return res.status(400).json({ error: "invalid_request" });
+
+      const db = getFirestore();
+      const familyRef = db.collection("families").doc(familyCode);
+      const childRef = familyRef.collection("children").doc(childUid);
+      const [family, child, request, consent, parent] = await Promise.all([
+        familyRef.get(), childRef.get(), childRef.collection("screen_share_requests").doc("current").get(),
+        childRef.collection("screen_share_settings").doc("current").get(),
+        db.collection("parents").doc((await familyRef.get()).data()?.ownerUid || "__missing__").get()
+      ]);
+      if (!family.exists || !child.exists || !request.exists) return res.status(404).json({ error: "screen_session_not_found" });
+      const familyData = family.data() || {}, requestData = request.data() || {}, consentData = consent.data() || {};
+      const childPlatform = child.data()?.childPlatform || child.data()?.platform || "unknown";
+      if (childPlatform !== "ios" || consentData.screenShareConsent !== true || consentData.consentVersion !== 1)
+        return res.status(403).json({ error: "child_screen_consent_required" });
+      if (requestData.requestId !== requestId || requestData.channelName !== channelName ||
+          requestData.requestedByUid !== familyData.ownerUid) return res.status(403).json({ error: "screen_request_mismatch" });
+      const owner = decoded.uid === familyData.ownerUid && decoded.firebase?.sign_in_provider !== "anonymous";
+      const childSession = decoded.uid === childUid;
+      if (!parent.exists || parent.data()?.premium !== true) return res.status(403).json({ error: "premium_required" });
+      if (role === "publisher") {
+        if (!childSession || !["requested", "broadcast_ready"].includes(requestData.status))
+          return res.status(403).json({ error: "child_publisher_only" });
+      } else {
+        if (!owner || !["broadcast_ready", "active"].includes(requestData.status))
+          return res.status(403).json({ error: "parent_viewer_only" });
+      }
+      const appId = AGORA_APP_ID.value(), certificate = AGORA_APP_CERTIFICATE.value();
+      if (!appId || !certificate) return res.status(503).json({ error: "screen_service_not_configured" });
+      const lifetime = 3600;
+      const token = RtcTokenBuilder.buildTokenWithUid(appId, certificate, channelName, uid,
+        role === "publisher" ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER, lifetime, lifetime);
+      return res.status(200).json({ token, appId, expiresAt: Math.floor(Date.now()/1000) + lifetime });
+    } catch (error) {
+      console.error("agoraScreenToken failed", error);
+      return res.status(500).json({ error: "screen_token_generation_failed" });
+    }
+  }
+);
