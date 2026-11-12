@@ -700,10 +700,12 @@ struct IOSParentDashboardView: View {
                             return
                         }
                         childRef.collection("screenshot_data").document(document.documentID).getDocument { dataSnapshot, _ in
-                            guard selectedChildID == child.id,
-                                  let blob = dataSnapshot?.data()?["image"] as? Blob else { return }
+                            guard let blob = dataSnapshot?.data()?["image"] as? Blob else { return }
                             let image = UIImage(data: blob.data)
-                            DispatchQueue.main.async { latestAndroidScreenshot = image }
+                            DispatchQueue.main.async {
+                                guard selectedChildID == child.id else { return }
+                                latestAndroidScreenshot = image
+                            }
                         }
                     }
             }
@@ -731,6 +733,7 @@ struct IOSParentDashboardView: View {
             request.getDocuments { snapshot, _ in
                 let count = snapshot?.documents.count ?? 0
                 DispatchQueue.main.async {
+                    guard selectedChildID == childRef.documentID else { return }
                     metrics.removeAll { $0.id == collection }
                     metrics.append(IOSMetric(id: collection, title: title, value: count, symbol: symbol, tint: tint))
                     metrics.sort { $0.id < $1.id }
@@ -798,10 +801,6 @@ struct IOSParentDashboardView: View {
     private func refreshSelectedChild() {
         guard let child = selectedChild else { loadFamilyForCurrentUser(); return }
         bindSelectedChild(child)
-        if child.platform == .android, let code = familyCode {
-            loadAndroidMetrics(Firestore.firestore().collection("families").document(code)
-                .collection("children").document(child.id))
-        }
     }
 
     private func removeListeners() {
