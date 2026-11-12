@@ -3,6 +3,7 @@ import SwiftUI
 struct StatusView: View {
     let familyCode: String
     let childUid: String
+    @AppStorage("location_sharing_consent") private var locationSharingConsent = false
 
     var body: some View {
         NavigationStack {
@@ -20,7 +21,17 @@ struct StatusView: View {
                     .padding(.vertical, 8)
                 }
                 Section("Nazorat imkoniyatlari") {
-                    Label("Rozilik asosida joylashuv", systemImage: "location")
+                    Toggle(isOn: $locationSharingConsent) {
+                        Label("Joylashuvni oilam bilan ulashish", systemImage: "location")
+                    }
+                    .tint(.blue)
+                    .onChange(of: locationSharingConsent) { consent in
+                        if consent {
+                            LocationSync.shared.start(familyCode: familyCode, childUid: childUid)
+                        } else {
+                            LocationSync.shared.stop()
+                        }
+                    }
                     if #available(iOS 16.0, *) {
                         NavigationLink {
                             ScreenTimeChildDashboardView(familyCode: familyCode, childUid: childUid)
@@ -44,7 +55,9 @@ struct StatusView: View {
             .navigationTitle("Bola qurilmasi")
         }
         .onAppear {
-            LocationSync.shared.start(familyCode: familyCode, childUid: childUid)
+            if locationSharingConsent {
+                LocationSync.shared.start(familyCode: familyCode, childUid: childUid)
+            }
             if #available(iOS 16.0, *) {
                 FocusModeSync.shared.start(familyCode: familyCode, childUid: childUid)
                 ScreenTimeController.shared.start(familyCode: familyCode, childUid: childUid)
