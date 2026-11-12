@@ -39,6 +39,7 @@ final class LocationSync: NSObject, CLLocationManagerDelegate, ObservableObject 
         self.childUid = childUid
         manager.requestAlwaysAuthorization()
         authorizationStatus = manager.authorizationStatus
+        publishAuthorizationStatus(consent: true)
         guard manager.authorizationStatus == .authorizedAlways ||
               manager.authorizationStatus == .authorizedWhenInUse else { return }
         manager.startUpdatingLocation()
@@ -51,6 +52,7 @@ final class LocationSync: NSObject, CLLocationManagerDelegate, ObservableObject 
     func stop() {
         manager.stopUpdatingLocation()
         manager.stopMonitoringSignificantLocationChanges()
+        publishAuthorizationStatus(consent: false)
         familyCode = nil
         childUid = nil
     }
@@ -58,6 +60,7 @@ final class LocationSync: NSObject, CLLocationManagerDelegate, ObservableObject 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         authorizationStatus = manager.authorizationStatus
         guard familyCode != nil, childUid != nil else { return }
+        publishAuthorizationStatus(consent: true)
         if manager.authorizationStatus == .authorizedAlways ||
            manager.authorizationStatus == .authorizedWhenInUse {
             manager.startUpdatingLocation()
@@ -65,6 +68,26 @@ final class LocationSync: NSObject, CLLocationManagerDelegate, ObservableObject 
                 manager.startMonitoringSignificantLocationChanges()
             }
         }
+    }
+
+    private func publishAuthorizationStatus(consent: Bool) {
+        guard let familyCode, let childUid else { return }
+        let status: String
+        switch manager.authorizationStatus {
+        case .notDetermined: status = "notDetermined"
+        case .restricted: status = "restricted"
+        case .denied: status = "denied"
+        case .authorizedWhenInUse: status = "authorizedWhenInUse"
+        case .authorizedAlways: status = "authorizedAlways"
+        @unknown default: status = "unknown"
+        }
+        Firestore.firestore().collection("families").document(familyCode)
+            .collection("children").document(childUid)
+            .setData([
+                "locationAuthorizationStatus": status,
+                "locationSharingConsent": consent,
+                "locationStatusUpdatedAtMs": Int64(Date().timeIntervalSince1970 * 1000)
+            ], merge: true)
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
