@@ -119,6 +119,7 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: OilaNazoratiIOS/Extensions/ScreenBroadcast-Info.plist
         CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Extensions/ScreenBroadcast.entitlements
+        SWIFT_OBJC_BRIDGING_HEADER: OilaNazoratiIOS/Extensions/ScreenBroadcast-Bridging-Header.h
         SKIP_INSTALL: YES
 
 schemes:
