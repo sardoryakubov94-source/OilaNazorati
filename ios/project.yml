@@ -118,7 +118,7 @@ schemes:
       path: OilaNazoratiIOS/Extensions/ScreenBroadcast.entitlements
     dependencies:
       - package: AgoraRtcEngine_iOS
-        product: RtcBasic
+        product: ReplayKit
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: uz.oilanazorati.parentcontrol.ScreenBroadcast
