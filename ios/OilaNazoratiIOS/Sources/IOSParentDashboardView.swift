@@ -417,7 +417,7 @@ struct IOSParentDashboardView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 sectionHeading("Jonli ekran", detail: "iOS ReplayKit + Agora")
-                if screenSession.remoteScreenUID != nil {
+                if screenRequestState == "active" || screenSession.isJoined || screenSession.remoteScreenUID != nil {
                     AgoraRemoteScreenView(session: screenSession)
                         .frame(height: 280)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
