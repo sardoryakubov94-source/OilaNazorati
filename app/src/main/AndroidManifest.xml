@@ -36,6 +36,7 @@
         <activity android:name=".ui.ChildSetupActivity" android:exported="false" />
         <activity android:name=".ui.ParentDashboardActivity" android:launchMode="singleTask" android:exported="false" />
         <activity android:name=".ui.AmbientListenActivity" android:exported="false" />
+        <activity android:name=".ui.ScreenShareListenActivity" android:exported="false" />
         <activity android:name=".ui.TrendsActivity" android:launchMode="singleTask" android:exported="false" />
         <activity android:name=".ui.SettingsActivity" android:launchMode="singleTask" android:exported="false" />
         <activity android:name=".ui.ScreenshotSettingsActivity" android:exported="false" />
