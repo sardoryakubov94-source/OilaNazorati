@@ -4,7 +4,6 @@ import FirebaseAuth
 import Foundation
 
 enum AgoraVoiceError: LocalizedError {
-    case missingAppID
     case missingTokenEndpoint
     case invalidTokenResponse
     case notSignedIn
@@ -12,7 +11,6 @@ enum AgoraVoiceError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .missingAppID: return "Agora App ID sozlanmagan."
         case .missingTokenEndpoint: return "Xavfsiz Agora token serveri sozlanmagan."
         case .invalidTokenResponse: return "Token serveridan noto‘g‘ri javob olindi."
         case .notSignedIn: return "Qurilma hisobi tasdiqlanmagan."
@@ -32,12 +30,8 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
     private var activeChannel: String?
     private var isPublisher = false
 
-    func join(channel: String, role: String, completion: @escaping (Result<Void, Error>) -> Void) {
-        guard let appID = Bundle.main.object(forInfoDictionaryKey: "AGORA_APP_ID") as? String,
-              !appID.isEmpty, !appID.contains("$(") else {
-            completion(.failure(AgoraVoiceError.missingAppID))
-            return
-        }
+    func join(channel: String, role: String, familyCode: String, childUid: String, requestID: String,
+              completion: @escaping (Result<Void, Error>) -> Void) {
         guard let endpointString = Bundle.main.object(forInfoDictionaryKey: "AGORA_TOKEN_ENDPOINT") as? String,
               let endpoint = URL(string: endpointString), endpoint.scheme == "https" else {
             completion(.failure(AgoraVoiceError.missingTokenEndpoint))
@@ -68,7 +62,10 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
             request.httpBody = try? JSONSerialization.data(withJSONObject: [
                 "channelName": channel,
                 "uid": uid,
-                "role": role
+                "role": role,
+                "familyCode": familyCode,
+                "childUid": childUid,
+                "requestId": requestID
             ])
 
             URLSession.shared.dataTask(with: request) { data, response, requestError in
@@ -81,7 +78,8 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
                       let data,
                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       let token = json["token"] as? String,
-                      !token.isEmpty else {
+                      let appID = json["appId"] as? String,
+                      !token.isEmpty, !appID.isEmpty else {
                     Task { @MainActor in completion(.failure(AgoraVoiceError.invalidTokenResponse)) }
                     return
                 }
