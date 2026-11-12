@@ -43,6 +43,7 @@ final class ScreenTimeController: ObservableObject {
         do {
             try await AuthorizationCenter.shared.requestAuthorization(for: .child)
             authorizationStatus = AuthorizationCenter.shared.authorizationStatus
+            syncAuthorizationStatus()
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
             lastError = nil
             if authorizationStatus == .approved, let latestPolicy {
@@ -50,6 +51,7 @@ final class ScreenTimeController: ObservableObject {
             }
         } catch {
             authorizationStatus = AuthorizationCenter.shared.authorizationStatus
+            syncAuthorizationStatus()
             lastError = "Screen Time ruxsati berilmadi: \(error.localizedDescription)"
         }
     }
@@ -87,6 +89,7 @@ final class ScreenTimeController: ObservableObject {
                     self.apply(policy: data)
                 }
             }
+        syncAuthorizationStatus()
         syncQueuedEvents()
     }
 
@@ -97,6 +100,23 @@ final class ScreenTimeController: ObservableObject {
 
     func refreshAuthorization() {
         authorizationStatus = AuthorizationCenter.shared.authorizationStatus
+        syncAuthorizationStatus()
+    }
+
+    private func syncAuthorizationStatus() {
+        guard let familyCode, let childUid else { return }
+        let value: String
+        switch authorizationStatus {
+        case .approved: value = "approved"
+        case .denied: value = "denied"
+        case .notDetermined: value = "notDetermined"
+        @unknown default: value = "unknown"
+        }
+        Firestore.firestore().collection("families").document(familyCode)
+            .collection("children").document(childUid).setData([
+                "screenTimeAuthorizationStatus": value,
+                "screenTimeAuthorizationUpdatedAtMs": Int64(Date().timeIntervalSince1970 * 1000)
+            ], merge: true)
     }
 
     private func apply(policy: [String: Any]) {
