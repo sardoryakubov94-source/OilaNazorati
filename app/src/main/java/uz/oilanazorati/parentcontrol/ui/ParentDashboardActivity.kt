@@ -239,7 +239,38 @@ class ParentDashboardActivity : AppCompatActivity() {
 
         val simCard = content.findViewWithTag<View>("sim_info_card")
         val idx = content.indexOfChild(simCard)
-        content.addView(row, if (idx >= 0) idx + 1 else content.childCount)
+        val rowIndex = if (idx >= 0) idx + 1 else content.childCount
+        content.addView(row, rowIndex)
+
+        val screenShareCard = TextView(this).apply {
+            tag = "ios_screen_share_parent_card"
+            text = "▣  iPhone ekranini jonli ko‘rish"
+            textSize = 15f
+            gravity = Gravity.CENTER_VERTICAL
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, R.color.color_text_primary))
+            setPadding(dp(18), dp(16), dp(18), dp(16))
+            background = GradientDrawable().apply {
+                cornerRadius = dp(16).toFloat()
+                setColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, R.color.color_surface))
+                setStroke(dp(1), androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, R.color.color_border))
+            }
+            layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
+                topMargin = dp(8); bottomMargin = dp(12)
+            }
+            isClickable = true; isFocusable = true
+            setOnClickListener {
+                if (FirebaseRepo.childId.isNullOrBlank()) {
+                    Toast.makeText(this@ParentDashboardActivity, "Avval farzand qurilmasini tanlang", Toast.LENGTH_SHORT).show()
+                } else {
+                    FirebaseRepo.checkIsPremium { premium ->
+                        if (premium) startActivity(Intent(this@ParentDashboardActivity, IOSScreenShareViewerActivity::class.java))
+                        else startActivity(Intent(this@ParentDashboardActivity, PremiumActivity::class.java))
+                    }
+                }
+            }
+        }
+        content.addView(screenShareCard, rowIndex + 1)
     }
 
     /** Yonma-yon joylashadigan ikkita bo'lakdan biri: markazlashtirilgan ikonka, sarlavha va kichik izoh. */
