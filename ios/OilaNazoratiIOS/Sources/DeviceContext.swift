@@ -51,14 +51,22 @@ struct CrossPlatformConfiguration {
 
     static func resolve(
         parentPlatform: DevicePlatform,
-        childPlatform: DevicePlatform
+        childPlatform: DevicePlatform,
+        declaredCapabilities: Set<MonitoringCapability>? = nil
     ) -> CrossPlatformConfiguration {
         let style: ParentInterfaceStyle = parentPlatform == .android ? .android : .ios
+        // Parent qurilmasining iOS versiyasi bola iPhone versiyasini anglatmaydi.
+        // Bola metadata yubormasa, iOS uchun faqat xavfsiz joylashuv fallback'i.
+        let capabilities = declaredCapabilities ?? (
+            childPlatform == .ios
+                ? Set<MonitoringCapability>([.location])
+                : DeviceCapabilityMatrix.capabilities(for: childPlatform)
+        )
         return CrossPlatformConfiguration(
             parentPlatform: parentPlatform,
             childPlatform: childPlatform,
             parentInterfaceStyle: style,
-            capabilities: DeviceCapabilityMatrix.capabilities(for: childPlatform)
+            capabilities: capabilities
         )
     }
 }
