@@ -64,6 +64,13 @@ final class ScreenTimeController: ObservableObject {
     func start(familyCode: String, childUid: String) {
         self.familyCode = familyCode
         self.childUid = childUid
+        Firestore.firestore().collection("families").document(familyCode)
+            .collection("children").document(childUid).setData([
+                "platform": "ios",
+                "childPlatform": "ios",
+                "capabilitySchemaVersion": 2,
+                "supportedCapabilities": DeviceCapabilityMatrix.capabilities(for: .ios).map(\.rawValue).sorted()
+            ], merge: true)
         policyListener?.remove()
         policyListener = Firestore.firestore()
             .collection("families").document(familyCode)
