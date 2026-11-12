@@ -92,11 +92,11 @@ kichik nom farqi bo'ladi, mantiq to'g'ri).
 | iOS | Android | iOS ko'rinishi | Android imkoniyatlari |
 | Android | Android | Amaldagi Android ko'rinishi | Android imkoniyatlari |
 
-Bu jadval — markaziy siyosat. U hali to'rtta yo'nalishning barchasi ishlaydi degani emas: iOS ota-ona paneli va iOS ichida Android bolaning to'liq boshqaruv interfeysi keyingi bosqichlarda ulanadi. Android ilovasining mavjud ota-ona paneli va uning Android→Android ishlashiga bu branchda tegilmagan.
+Bu jadval — markaziy siyosat. Platforma bo‘yicha ruxsat etilgan funksiyalarni aniqlaydi, lekin har bir modulning to‘liq interfeysi mavjudligini anglatmaydi. iOS ota-ona paneli ushbu branchda qo‘shildi; iOS ichida Android bolani boshqarish imkoniyatlari keyingi bosqichlarda kengaytiriladi. Android ilovasining mavjud ota-ona paneli va Android→Android ishlashiga bu branchda tegilmagan.
 
 Yangi iOS o'rnatilishida qurilma roli tanlanadi. Avvaldan oila kodiga ulangan iOS qurilmalari avtomatik ravishda `child` rolida davom etadi. iOS bola bog'lanayotganda Firestore hujjatiga `childPlatform: ios`, `platform: ios` va imkoniyatlar ro'yxati yoziladi. Android ilovasining mavjud `childPlatform: android` maydoni ham saqlanadi.
 
-**Hozirgi cheklov:** iOS ota-ona rejimi hozircha aniq ogohlantiruvchi ekran bilan to'xtaydi; to'liq ota-ona paneli sifatida ko'rsatilmaydi. `focus_mode` iOS'da Family Controls ruxsati va Apple entitlement'iga bog'liq. Platforma bo'yicha qo'llab-quvvatlash mavjudligi — foydalanuvchi ruxsat bergan yoki funksiya real qurilmada ishlayotganini anglatmaydi.
+**Hozirgi cheklov:** iOS ota-ona paneli qo‘shildi, ammo Android bolaning barcha maxsus boshqaruv ekranlari va amallari hali to‘liq ko‘chirilmagan. Hozircha joylashuv va bir nechta faoliyat hisoblagichlari ko‘rsatiladi. `focus_mode` iOS'da Family Controls ruxsati va Apple entitlement'iga bog‘liq. Platforma bo‘yicha qo‘llab-quvvatlash mavjudligi — foydalanuvchi ruxsat bergan yoki funksiya real qurilmada ishlayotganini anglatmaydi.
 
 
 ## Android ota-ona panelida platformaga mos ko'rinish (keyingi bosqich)
