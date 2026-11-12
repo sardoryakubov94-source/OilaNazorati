@@ -9,7 +9,7 @@ struct ScreenTimeChildDashboardView: View {
 
     @StateObject private var controller = ScreenTimeController.shared
     @State private var showingPicker = false
-    @State private var authorizationBusy = false
+    @State private var authorizationBusy = false\n    @Environment(\\.scenePhase) private var scenePhase
 
     var body: some View {
         List {
@@ -112,9 +112,13 @@ struct ScreenTimeChildDashboardView: View {
         ))
         .onAppear {
             controller.refreshAuthorization()
-            controller.start(familyCode: familyCode, childUid: childUid)
         }
-        .onDisappear { controller.stop() }
+        .onChange(of: scenePhase) { phase in
+            if phase == .active {
+                controller.refreshAuthorization()
+                controller.syncQueuedEvents()
+            }
+        }
     }
 
     private var authorizationText: String {
