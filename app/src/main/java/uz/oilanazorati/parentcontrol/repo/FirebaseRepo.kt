@@ -345,11 +345,25 @@ object FirebaseRepo {
                     LinkedChildDevice(
                         id = doc.id,
                         name = doc.getString("nomi")?.takeIf { it.isNotBlank() } ?: "Farzand (${doc.id.take(5)})",
-                        platform = (doc.getString("childPlatform") ?: doc.getString("platform") ?: "android").lowercase()
+                        platform = (doc.getString("childPlatform") ?: doc.getString("platform") ?: "unknown").lowercase()
                     )
                 }.sortedBy { it.name.lowercase() })
             }
     }
+    /** Platforma metama'lumotlari bilan bolalar ro'yxati. */
+    fun fetchLinkedChildren(code: String, onResult: (List<LinkedChildDevice>) -> Unit) {
+        db.collection("families").document(code).collection("children").get()
+            .addOnSuccessListener { snap ->
+                onResult(snap.documents.map { doc ->
+                    LinkedChildDevice(
+                        id = doc.id,
+                        name = doc.getString("nomi")?.takeIf { it.isNotBlank() } ?: "Farzand (${doc.id.take(5)})",
+                        platform = (doc.getString("childPlatform") ?: doc.getString("platform") ?: "unknown").lowercase()
+                    )
+                }.sortedBy { it.name.lowercase() })
+            }.addOnFailureListener { onResult(emptyList()) }
+    }
+
     fun fetchChildren(code: String, onResult: (List<Pair<String, String>>) -> Unit) {
         db.collection("families").document(code).collection("children").get()
             .addOnSuccessListener { snap ->
