@@ -159,7 +159,9 @@ struct IOSParentDashboardView: View {
                         platformBanner(child)
                         locationCard
                         if child.platform == .android {
-                            androidMetrics
+                            if child.capabilities.contains(.appUsage) {
+                                androidMetrics
+                            }
                             androidControls(child)
                         } else if child.platform == .ios {
                             iosControls(child)
@@ -682,7 +684,7 @@ struct IOSParentDashboardView: View {
                     DispatchQueue.main.async { focusEnabled = snapshot?.data()?["enabled"] as? Bool ?? false }
                 }
         }
-        if child.platform == .android {
+        if child.platform == .android, child.capabilities.contains(.appUsage) {
             loadAndroidMetrics(childRef)
         }
     }
