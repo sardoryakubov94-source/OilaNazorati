@@ -168,7 +168,11 @@ service cloud.firestore {
               request.resource.data.type == 'daily_limit_reached' &&
               request.resource.data.status == 'queued_on_child_device' &&
               request.resource.data.timestampMs is int;
-          allow update, delete:
+          allow update:
+            if isThisChildsOwnSession() &&
+              request.resource.data.eventId == docId &&
+              request.resource.data == resource.data;
+          allow delete:
             if false;
         }
 
