@@ -58,6 +58,7 @@ struct IOSParentDashboardView: View {
     @State private var focusListener: ListenerRegistration?
     @State private var voiceListener: ListenerRegistration?
     @State private var voiceStatus = "Ulanmagan"
+    @State private var voiceRequestState = ""
     @State private var voiceRequestID: String?
     @State private var voiceChannelName: String?
     @StateObject private var voiceSession = AgoraVoiceSession()
@@ -451,7 +452,7 @@ struct IOSParentDashboardView: View {
                     Circle().fill(ParentPalette.teal).frame(width: 9, height: 9)
                 }
             }
-            if voiceStatus == "requested" || voiceStatus == "active" || voiceSession.isConnected {
+            if voiceRequestState == "requested" || voiceRequestState == "active" || voiceSession.isConnected {
                 Button(role: .destructive, action: stopRemoteVoice) {
                     Label("Ovoz ulanishini to‘xtatish", systemImage: "stop.fill")
                         .frame(maxWidth: .infinity)
@@ -481,7 +482,8 @@ struct IOSParentDashboardView: View {
         let channel = "on_\(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased())"
         voiceRequestID = requestID
         voiceChannelName = channel
-        voiceStatus = "requested"
+        voiceRequestState = "requested"
+        voiceStatus = "Bola qurilmasiga so‘rov yuborildi"
         let request: [String: Any] = [
             "requestId": requestID,
             "channelName": channel,
@@ -770,6 +772,7 @@ struct IOSParentDashboardView: View {
         voiceListener?.remove()
         voiceSession.leave()
         voiceStatus = "Ulanmagan"
+        voiceRequestState = ""
         voiceRequestID = nil
         voiceChannelName = nil
         location = nil
@@ -812,7 +815,16 @@ struct IOSParentDashboardView: View {
                             voiceStatus = "Bola ruxsatini kutmoqda"
                             return
                         }
-                        voiceStatus = status
+                        voiceRequestState = status
+                        switch status {
+                        case "requested": voiceStatus = "Bola qurilmasiga so‘rov yuborildi"
+                        case "active": voiceStatus = "Jonli ovoz faol"
+                        case "stopped": voiceStatus = "Ovoz uzatish to‘xtatildi"
+                        case "consent_not_enabled": voiceStatus = "Bola qurilmasida oldindan rozilik yoqilmagan"
+                        case "failed": voiceStatus = "Ovoz ulanishida xatolik"
+                        case "expired": voiceStatus = "So‘rov muddati tugadi"
+                        default: voiceStatus = status
+                        }
                         let requestID = data["requestId"] as? String
                         let channel = data["channelName"] as? String
                         if status == "active", let requestID, let channel,
