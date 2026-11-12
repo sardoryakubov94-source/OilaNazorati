@@ -39,18 +39,31 @@ final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
         guard event == DeviceActivityEvent.Name("daily_limit") else { return }
         addActiveReason("daily_limit")
         applyCurrentShields()
+        let defaults = UserDefaults(suiteName: "group.uz.oilanazorati.shared") ?? .standard
+        let dayStart = Calendar.current.startOfDay(for: Date())
+        let dayKey = Int(dayStart.timeIntervalSince1970)
+        // One stable event per activity/event/day prevents duplicate callbacks
+        // from creating multiple parent alerts after retries or app restarts.
+        let eventId = "\(activity.rawValue)_\(event.rawValue)_\(dayKey)"
+        var handled = defaults.stringArray(forKey: "screenTimeHandledEventIds") ?? []
+        guard !handled.contains(eventId) else { return }
+        handled.append(eventId)
+        if handled.count > 60 { handled = Array(handled.suffix(60)) }
+        defaults.set(handled, forKey: "screenTimeHandledEventIds")
+
         let payload: [String: Any] = [
-            "eventId": UUID().uuidString,
+            "eventId": eventId,
             "type": "daily_limit_reached",
             "activity": activity.rawValue,
             "event": event.rawValue,
             "timestampMs": Int64(Date().timeIntervalSince1970 * 1000),
             "status": "queued_on_child_device"
         ]
-        let defaults = UserDefaults(suiteName: "group.uz.oilanazorati.shared") ?? .standard
         var queue = defaults.array(forKey: "screenTimePendingEvents") as? [[String: Any]] ?? []
-        queue.append(payload)
-        defaults.set(queue, forKey: "screenTimePendingEvents")
+        if !queue.contains(where: { ($0["eventId"] as? String) == eventId }) {
+            queue.append(payload)
+            defaults.set(queue, forKey: "screenTimePendingEvents")
+        }
         notify(title: "Kunlik limit tugadi", body: "Tanlangan ilova va saytlar uchun vaqt limiti yakunlandi.")
     }
 
