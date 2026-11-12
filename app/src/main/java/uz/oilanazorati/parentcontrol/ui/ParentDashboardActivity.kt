@@ -587,7 +587,7 @@ class ParentDashboardActivity : AppCompatActivity() {
                 if (snapshot.isEmpty) {
                     eventsLabel.text = "Limit hodisalari: hozircha yo'q"
                 } else {
-                    eventsLabel.text = snapshot.documents.joinToString("\\n", prefix = "So'nggi limit hodisalari:\\n") { doc ->
+                    eventsLabel.text = snapshot.documents.joinToString("\n", prefix = "So'nggi limit hodisalari:\n") { doc ->
                         val millis = doc.getLong("timestampMs") ?: 0L
                         val time = java.text.SimpleDateFormat("dd.MM HH:mm", Locale.getDefault()).format(Date(millis))
                         "• $time"
