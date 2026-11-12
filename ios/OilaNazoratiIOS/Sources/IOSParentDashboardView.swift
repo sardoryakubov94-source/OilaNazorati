@@ -325,14 +325,14 @@ struct IOSParentDashboardView: View {
 
     private func iosControls(_ child: IOSChildDevice) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeading("iOS nazorati", detail: "Apple platformasi cheklovlari")
+            sectionHeading("iOS nazorati", detail: "Apple Screen Time")
             if child.capabilities.contains(.focusMode) {
                 HStack(spacing: 12) {
                     Image(systemName: "hourglass").font(.title2).foregroundStyle(ParentPalette.accent)
                         .frame(width: 42, height: 42).background(ParentPalette.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Kontrol rejimi").font(.subheadline.bold())
-                        Text("Family Controls ruxsati bo‘lsa ilova toifalarini cheklaydi")
+                        Text("Umumiy Kontrol rejimi").font(.subheadline.bold())
+                        Text("Eski Android/iOS mosligi uchun umumiy cheklov")
                             .font(.caption).foregroundStyle(ParentPalette.muted)
                     }
                     Spacer()
@@ -341,22 +341,23 @@ struct IOSParentDashboardView: View {
                         .onChange(of: focusEnabled) { newValue in saveIOSFocusMode(newValue, child: child) }
                 }
                 .padding(14).background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 16))
-            } else {
-                Label("Kontrol rejimi bu iOS versiyasida qo‘llab-quvvatlanmaydi.", systemImage: "info.circle")
-                    .font(.footnote).foregroundStyle(ParentPalette.muted)
-                    .padding(14).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 16))
             }
+
+            if let familyCode {
+                IOSScreenTimeParentControlsView(familyCode: familyCode, childUid: child.id)
+            }
+
             VStack(alignment: .leading, spacing: 9) {
-                capabilityRow("Joylashuv", available: child.capabilities.contains(.location))
-                capabilityRow("Umumiy Kontrol rejimi", available: child.capabilities.contains(.focusMode))
-                capabilityRow("Ilovalar statistikasi", available: false)
-                capabilityRow("Qo‘ng‘iroq va SMS tarixi", available: false)
-                capabilityRow("Kontaktlar va bildirishnomalar", available: false)
-                capabilityRow("Ekran surati va fon mikrofoni", available: false)
+                capabilityRow("Rozilik asosida joylashuv", available: child.capabilities.contains(.location))
+                capabilityRow("Ilova va toifa statistikasi", available: child.capabilities.contains(.appUsage))
+                capabilityRow("Kunlik / haftalik hisobot", available: child.capabilities.contains(.usageReports))
+                capabilityRow("Kunlik vaqt limiti", available: child.capabilities.contains(.timeLimits))
+                capabilityRow("Maktab va uyqu jadvali", available: child.capabilities.contains(.schedules))
+                capabilityRow("Sayt cheklovlari", available: child.capabilities.contains(.websiteRestrictions))
             }
             .padding(14).background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 16))
-            Text("iOS’da Android’dagi kabi SMS, qo‘ng‘iroq, kontakt, bildirishnoma matni yoki yashirin mikrofon kuzatuvi mavjud emas. Kontrol rejimi Apple Family Controls entitlement va bolaning iPhone ruxsatiga bog‘liq.")
+
+            Text("iOS nazorati Apple Family Controls ruxsati, bola qurilmasidagi ilova tanlovi va Xcode extension sozlamalariga bog‘liq. SMS, qo‘ng‘iroq tarixi, kontaktlar, bildirishnoma matni, yashirin mikrofon va screenshot nazorati iOS’da ochiq API orqali berilmaydi.")
                 .font(.caption2).foregroundStyle(ParentPalette.muted)
         }
     }
