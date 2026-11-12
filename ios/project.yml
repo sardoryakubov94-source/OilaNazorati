@@ -37,6 +37,8 @@ targets:
         product: GoogleSignIn
       - package: AgoraRtcEngine_iOS
         product: RtcBasic
+      - target: OilaNazoratiScreenShare
+        embed: true
       - target: OilaNazoratiActivityMonitor
         embed: true
       - target: OilaNazoratiActivityReport
@@ -74,6 +76,30 @@ targets:
         CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Extensions/DeviceActivityMonitor.entitlements
         SKIP_INSTALL: YES
 
+  OilaNazoratiScreenShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: OilaNazoratiIOS/ScreenShareExtension/SampleHandler.swift
+    info:
+      path: OilaNazoratiIOS/ScreenShareExtension/Info.plist
+    entitlements:
+      path: OilaNazoratiIOS/ScreenShareExtension/ScreenShareExtension.entitlements
+    dependencies:
+      - package: AgoraRtcEngine_iOS
+        product: ReplayKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uz.oilanazorati.parentcontrol.ScreenShare
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        CODE_SIGN_STYLE: Automatic
+        APPLICATION_EXTENSION_API_ONLY: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: OilaNazoratiIOS/ScreenShareExtension/Info.plist
+        CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/ScreenShareExtension/ScreenShareExtension.entitlements
+        SKIP_INSTALL: YES
+
   OilaNazoratiActivityReport:
     type: app-extension
     platform: iOS
@@ -102,5 +128,6 @@ schemes:
         OilaNazoratiIOS: all
         OilaNazoratiActivityMonitor: all
         OilaNazoratiActivityReport: all
+        OilaNazoratiScreenShare: all
     run:
       config: Debug
