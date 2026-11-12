@@ -82,7 +82,9 @@ final class ChildAudioRemoteController: ObservableObject {
                             }
                         }
                     }
-                } else if ["stop_requested", "stopped", "cancelled", "expired"].contains(status) {
+                } else if status == "stop_requested" {
+                    self.stopPublishing(status: "Ota-ona so‘rovi bilan ovoz uzatish to‘xtatildi")
+                } else if ["stopped", "cancelled", "expired"].contains(status) {
                     self.stopPublishing(status: "Ovoz uzatish to‘xtatildi", updateRemote: false)
                 }
             }
