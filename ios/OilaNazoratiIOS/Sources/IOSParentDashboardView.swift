@@ -833,9 +833,9 @@ struct IOSParentDashboardView: View {
     }
 
     private func select(_ child: IOSChildDevice) {
-        if let oldChildID = boundChildID, oldChildID != child.id,
-           voiceRequestState == "requested" || voiceRequestState == "active" {
-            sendVoiceStopRequest(to: oldChildID)
+        if let oldChildID = boundChildID, oldChildID != child.id {
+            if voiceRequestState == "requested" || voiceRequestState == "active" { sendVoiceStopRequest(to: oldChildID) }
+            if screenRequestState == "requested" || screenRequestState == "active" { sendScreenStopRequest(to: oldChildID) }
         }
         selectedChildID = child.id
         bindSelectedChild(child)
@@ -983,6 +983,14 @@ struct IOSParentDashboardView: View {
     }
 
 
+    private func sendScreenStopRequest(to childID: String) {
+        guard let code = familyCode else { return }
+        Firestore.firestore().collection("families").document(code)
+            .collection("children").document(childID).collection("screen_requests").document("current")
+            .updateData(["status": "stop_requested", "stoppedAtMs": Int64(Date().timeIntervalSince1970 * 1000)])
+        screenSession.stopCapture()
+    }
+
     private func requestScreenShare(child: IOSChildDevice) {
         guard let code = familyCode, let owner = Auth.auth().currentUser?.uid else { return }
         let requestID = "scr_\(UUID().uuidString)"
@@ -1096,9 +1104,9 @@ struct IOSParentDashboardView: View {
     }
 
     private func removeListeners() {
-        if let childID = boundChildID,
-           voiceRequestState == "requested" || voiceRequestState == "active" {
-            sendVoiceStopRequest(to: childID)
+        if let childID = boundChildID {
+            if voiceRequestState == "requested" || voiceRequestState == "active" { sendVoiceStopRequest(to: childID) }
+            if screenRequestState == "requested" || screenRequestState == "active" { sendScreenStopRequest(to: childID) }
         }
         childrenListener?.remove()
         locationListener?.remove()
