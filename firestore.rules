@@ -246,6 +246,23 @@ service cloud.firestore {
             if isRealOwner();
         }
 
+        // Ovozga rozilik faqat bolaning o‘z qurilmasidan yoziladi.
+        match /mic_settings/{docId} {
+          allow read:
+            if isRealOwner() || isThisChildsOwnSession();
+          allow create, update:
+            if isThisChildsOwnSession() &&
+              docId == 'current' &&
+              request.resource.data.keys().hasOnly([
+                'remoteAudioConsent', 'updatedAtMs', 'consentVersion'
+              ]) &&
+              request.resource.data.remoteAudioConsent is bool &&
+              request.resource.data.updatedAtMs is int &&
+              request.resource.data.consentVersion == 1;
+          allow delete:
+            if false;
+        }
+
         match /mic_audio/{docId} {
           allow create:
             if isThisChildsOwnSession();
@@ -280,6 +297,7 @@ service cloud.firestore {
               && subcollection != 'screenshots'
               && subcollection != 'screenshot_data'
               && subcollection != 'mic_requests'
+              && subcollection != 'mic_settings'
               && subcollection != 'mic_audio'
               && subcollection != 'voice_recordings';
         }
