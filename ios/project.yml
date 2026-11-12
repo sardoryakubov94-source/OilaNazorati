@@ -51,8 +51,6 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Resources/OilaNazoratiIOS.entitlements
         INFOPLIST_FILE: OilaNazoratiIOS/Resources/Info.plist
-        AGORA_APP_ID: $(AGORA_APP_ID)
-        AGORA_TOKEN_ENDPOINT: $(AGORA_TOKEN_ENDPOINT)
         ENABLE_PREVIEWS: YES
 
   OilaNazoratiActivityMonitor:
