@@ -59,3 +59,29 @@ Bu kod Xcode'da kompilyatsiya qilinmagan — `ManagedSettings`/`FamilyControls`
 API nomlari iOS versiyalari orasida sal farq qilishi mumkin. Xatolik chiqsa,
 Xcode'ning o'zi aniq qaysi qatorni va qanday tuzatishni ko'rsatadi (odatda
 kichik nom farqi bo'ladi, mantiq to'g'ri).
+
+
+## Platforma va qurilma roli boshqaruvi (yangi)
+
+`Sources/DeviceContext.swift` yagona siyosat qatlamini beradi:
+
+- `DeviceRole` — qurilma ota-onaniki yoki farzandniki ekanini belgilaydi.
+- `DevicePlatform` — Android/iOS/aniqlanmagan platformani ifodalaydi.
+- `ChildPlatformResolver` — Firestore'dagi `childPlatform` va eski `platform` maydonlarini bir xil talqin qiladi.
+- `DeviceCapabilityMatrix` — bola qurilmasi platformasiga qarab mavjud nazorat imkoniyatlarini qaytaradi.
+- `CrossPlatformConfiguration` — ota-ona interfeysi platformasi va bola imkoniyatlarini birlashtiradi. Noma'lum bola platformasida imkoniyatlar yopiq qoladi.
+
+### To'rtta kombinatsiya uchun qoida
+
+| Ota-ona qurilmasi | Bola qurilmasi | Ota-ona interfeysi | Bola uchun imkoniyatlar |
+|---|---|---|---|
+| iOS | iOS | iOS ko'rinishi | iOS ruxsat bergan imkoniyatlar |
+| Android | iOS | Android ko'rinishi | iOS ruxsat bergan imkoniyatlar |
+| iOS | Android | iOS ko'rinishi | Android imkoniyatlari |
+| Android | Android | Amaldagi Android ko'rinishi | Android imkoniyatlari |
+
+Bu jadval — markaziy siyosat. U hali to'rtta yo'nalishning barchasi ishlaydi degani emas: iOS ota-ona paneli va iOS ichida Android bolaning to'liq boshqaruv interfeysi keyingi bosqichlarda ulanadi. Android ilovasining mavjud ota-ona paneli va uning Android→Android ishlashiga bu branchda tegilmagan.
+
+Yangi iOS o'rnatilishida qurilma roli tanlanadi. Avvaldan oila kodiga ulangan iOS qurilmalari avtomatik ravishda `child` rolida davom etadi. iOS bola bog'lanayotganda Firestore hujjatiga `childPlatform: ios`, `platform: ios` va imkoniyatlar ro'yxati yoziladi. Android ilovasining mavjud `childPlatform: android` maydoni ham saqlanadi.
+
+**Hozirgi cheklov:** iOS ota-ona rejimi hozircha aniq ogohlantiruvchi ekran bilan to'xtaydi; to'liq ota-ona paneli sifatida ko'rsatilmaydi. `focus_mode` iOS'da Family Controls ruxsati va Apple entitlement'iga bog'liq. Platforma bo'yicha qo'llab-quvvatlash mavjudligi — foydalanuvchi ruxsat bergan yoki funksiya real qurilmada ishlayotganini anglatmaydi.
