@@ -51,6 +51,7 @@ class ParentDashboardActivity : AppCompatActivity() {
     private var isPremiumUser = false
     private var selectedChildPlatform: ChildDevicePlatform = ChildDevicePlatform.UNKNOWN
     private var selectedChildCapabilities: Set<ParentFeature> = emptySet()
+    private var platformUiDefaults: Map<View, Int>? = null
     private var simInfoListener: com.google.firebase.firestore.ListenerRegistration? = null
     // MUHIM: bular ilgari saqlanmagani uchun har safar loadTodayStats() chaqirilganda
     // (masalan bola almashtirilganda) ESKI listenerlar o'chirilmay, ustiga yangisi
@@ -454,12 +455,17 @@ class ParentDashboardActivity : AppCompatActivity() {
             (binding.btnTrends.parent as View).parent as View,
             binding.cardStatScreenshot.parent as View
         )
+        val platformViews = (hiddenForIos + listOfNotNull(
+            binding.root.findViewWithTag<View>("sim_info_card"),
+            binding.root.findViewWithTag<View>("ovoz_xavf_row")
+        )).distinct()
+        if (platformUiDefaults == null) {
+            platformUiDefaults = platformViews.associateWith { it.visibility }
+        }
 
         if (!isIos) {
-            // Android tanlanganda avval iOS uchun yashirilgan bloklarni qayta tiklaymiz.
-            hiddenForIos.forEach { it.visibility = View.VISIBLE }
-            binding.root.findViewWithTag<View>("sim_info_card")?.visibility = View.VISIBLE
-            binding.root.findViewWithTag<View>("ovoz_xavf_row")?.visibility = View.VISIBLE
+            // Android tanlanganda XML'dagi asl ko'rinish holatlarini tiklaymiz.
+            platformUiDefaults?.forEach { (view, visibility) -> view.visibility = visibility }
             binding.premiumBannerHome.visibility = if (isPremiumUser) View.GONE else View.VISIBLE
             binding.btnFocusMode.text = "Kontrol rejimi"
             binding.btnFocusMode.visibility =
@@ -480,10 +486,8 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding.btnLocationHistory.visibility =
             if (selectedChildCapabilities.contains(ParentFeature.LOCATION)) View.VISIBLE else View.GONE
 
-        hiddenForIos.forEach { it.visibility = View.GONE }
+        platformViews.forEach { it.visibility = View.GONE }
         binding.premiumBannerHome.visibility = View.GONE
-        binding.root.findViewWithTag<View>("sim_info_card")?.visibility = View.GONE
-        binding.root.findViewWithTag<View>("ovoz_xavf_row")?.visibility = View.GONE
     }
 
     /**
