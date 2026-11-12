@@ -161,9 +161,9 @@ service cloud.firestore {
           allow create:
             if isThisChildsOwnSession() &&
               request.resource.data.keys().hasOnly([
-                'type', 'activity', 'event', 'timestampMs', 'status'
+                'eventId', 'type', 'activity', 'event', 'timestampMs', 'status'
               ]) &&
-              request.resource.data.type == 'daily_limit_reached' &&
+              request.resource.data.eventId is string &&\n              request.resource.data.eventId == docId &&\n              request.resource.data.type == 'daily_limit_reached' &&
               request.resource.data.status == 'queued_on_child_device' &&
               request.resource.data.timestampMs is int;
           allow update, delete:
