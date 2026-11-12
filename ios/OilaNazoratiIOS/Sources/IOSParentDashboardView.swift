@@ -870,7 +870,7 @@ struct IOSParentDashboardView: View {
                         let requestID = data["requestId"] as? String
                         let channel = data["channelName"] as? String
                         if status == "active", let requestID, let channel,
-                           voiceRequestID == requestID, !voiceSession.isConnected {
+                           voiceRequestID == requestID, !voiceSession.isConnected, !voiceSession.isConnecting {
                             voiceSession.join(channel: channel, role: "subscriber", familyCode: familyCode ?? "", childUid: child.id, requestID: requestID) { result in
                                 if case .failure(let error) = result {
                                     voiceStatus = error.localizedDescription
