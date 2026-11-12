@@ -391,8 +391,8 @@ struct IOSParentDashboardView: View {
 
             VStack(alignment: .leading, spacing: 9) {
                 capabilityRow("Rozilik asosida joylashuv", available: child.capabilities.contains(.location))
-                capabilityRow("Ilova va toifa statistikasi", available: child.capabilities.contains(.appUsage))
-                capabilityRow("Kunlik / haftalik hisobot", available: child.capabilities.contains(.usageReports))
+                capabilityRow("Ilova/toifa statistikasi (bola qurilmasida)", available: child.capabilities.contains(.appUsage))
+                capabilityRow("Kunlik/haftalik hisobot (bola qurilmasida)", available: child.capabilities.contains(.usageReports))
                 capabilityRow("Kunlik vaqt limiti", available: child.capabilities.contains(.timeLimits))
                 capabilityRow("Maktab va uyqu jadvali", available: child.capabilities.contains(.schedules))
                 capabilityRow("Sayt cheklovlari", available: child.capabilities.contains(.websiteRestrictions))
