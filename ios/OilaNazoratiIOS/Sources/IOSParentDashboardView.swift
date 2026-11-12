@@ -63,6 +63,10 @@ struct IOSParentDashboardView: View {
     @State private var focusListener: ListenerRegistration?
     @State private var screenshotListener: ListenerRegistration?
     @State private var latestScreenshotListener: ListenerRegistration?
+    @State private var boundChildID: String?
+    @State private var boundChildPlatform: DevicePlatform?
+    @State private var boundCapabilities: Set<MonitoringCapability>?
+    @State private var boundFamilyCode: String?
 
     private var selectedChild: IOSChildDevice? {
         children.first { $0.id == selectedChildID }
@@ -647,11 +651,29 @@ struct IOSParentDashboardView: View {
                             locationSharingConsent: data["locationSharingConsent"] as? Bool ?? false
                         )
                     }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-                    children = loaded
                     if !loaded.contains(where: { $0.id == selectedChildID }) {
                         selectedChildID = loaded.first?.id
                     }
-                    if let child = selectedChild { bindSelectedChild(child) }
+                    children = loaded
+                    if let child = selectedChild {
+                        let needsRebind = boundChildID != child.id ||
+                            boundChildPlatform != child.platform ||
+                            boundCapabilities != child.capabilities ||
+                            boundFamilyCode != code
+                        if needsRebind { bindSelectedChild(child) }
+                    } else {
+                        locationListener?.remove()
+                        focusListener?.remove()
+                        screenshotListener?.remove()
+                        latestScreenshotListener?.remove()
+                        location = nil
+                        metrics = []
+                        latestAndroidScreenshot = nil
+                        boundChildID = nil
+                        boundChildPlatform = nil
+                        boundCapabilities = nil
+                        boundFamilyCode = nil
+                    }
                 }
             }
     }
@@ -662,6 +684,10 @@ struct IOSParentDashboardView: View {
     }
 
     private func bindSelectedChild(_ child: IOSChildDevice) {
+        boundChildID = child.id
+        boundChildPlatform = child.platform
+        boundCapabilities = child.capabilities
+        boundFamilyCode = familyCode
         locationListener?.remove()
         focusListener?.remove()
         screenshotListener?.remove()
