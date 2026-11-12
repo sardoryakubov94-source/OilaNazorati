@@ -149,6 +149,8 @@ final class ScreenTimeController: ObservableObject {
         guard minutes > 0,
               !selection.applicationTokens.isEmpty || !selection.categoryTokens.isEmpty || !selection.webDomainTokens.isEmpty else {
             center.stopMonitoring([ScreenTimeContract.activityName])
+            removeActiveReason("daily_limit")
+            refreshShieldsFromActiveReasons()
             return
         }
         let schedule = DeviceActivitySchedule(
@@ -178,6 +180,8 @@ final class ScreenTimeController: ObservableObject {
         let activity = DeviceActivityName("uz.oilanazorati.\(name)")
         guard enabled, let startTime = Self.hourMinute(start), let endTime = Self.hourMinute(end) else {
             center.stopMonitoring([activity])
+            removeActiveReason(activity.rawValue)
+            refreshShieldsFromActiveReasons()
             return
         }
         let schedule = DeviceActivitySchedule(
@@ -197,6 +201,19 @@ final class ScreenTimeController: ObservableObject {
         guard parts.count == 2, let hour = Int(parts[0]), let minute = Int(parts[1]),
               (0...23).contains(hour), (0...59).contains(minute) else { return nil }
         return (hour, minute)
+    }
+
+    private func removeActiveReason(_ reason: String) {
+        let defaults = UserDefaults(suiteName: ScreenTimeContract.appGroup)
+        let reasons = (defaults?.stringArray(forKey: "activeScreenTimeReasons") ?? []).filter { $0 != reason }
+        defaults?.set(reasons, forKey: "activeScreenTimeReasons")
+    }
+
+    private func refreshShieldsFromActiveReasons() {
+        let defaults = UserDefaults(suiteName: ScreenTimeContract.appGroup)
+        let reasons = defaults?.stringArray(forKey: "activeScreenTimeReasons") ?? []
+        settings.shield.applications = reasons.isEmpty || selection.applicationTokens.isEmpty ? nil : selection.applicationTokens
+        settings.shield.applicationCategories = reasons.isEmpty || selection.categoryTokens.isEmpty ? nil : .specific(selection.categoryTokens)
     }
 
     private func clearAllShields() {
