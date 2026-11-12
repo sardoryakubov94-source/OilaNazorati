@@ -333,13 +333,16 @@ struct IOSParentDashboardView: View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeading("Android boshqaruvi", detail: "Mavjud Android modullari")
             if child.capabilities.contains(.focusMode) {
-                Toggle(isOn: $focusEnabled) {
+                Toggle(isOn: Binding(
+                    get: { focusEnabled },
+                    set: { value in
+                        focusEnabled = value
+                        saveFocusMode(value, child: child)
+                    }
+                )) {
                     Label("Kontrol rejimi", systemImage: "hand.raised.fill")
                 }
                 .tint(ParentPalette.accent)
-                .onChange(of: focusEnabled) { value in
-                    saveFocusMode(value, child: child)
-                }
                 Text("Yoqilganda Android bolaning qurilmasida ruxsat etilgan asosiy tizim ilovalaridan tashqari ilovalar Accessibility xizmati orqali cheklanadi.")
                     .font(.caption2).foregroundStyle(ParentPalette.muted)
             } else {
@@ -390,9 +393,14 @@ struct IOSParentDashboardView: View {
                             .font(.caption).foregroundStyle(ParentPalette.muted)
                     }
                     Spacer()
-                    Toggle("Kontrol rejimi", isOn: $focusEnabled)
-                        .labelsHidden().tint(ParentPalette.accent)
-                        .onChange(of: focusEnabled) { newValue in saveFocusMode(newValue, child: child) }
+                    Toggle("Kontrol rejimi", isOn: Binding(
+                        get: { focusEnabled },
+                        set: { newValue in
+                            focusEnabled = newValue
+                            saveFocusMode(newValue, child: child)
+                        }
+                    ))
+                    .labelsHidden().tint(ParentPalette.accent)
                 }
                 .padding(14).background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 16))
             }
