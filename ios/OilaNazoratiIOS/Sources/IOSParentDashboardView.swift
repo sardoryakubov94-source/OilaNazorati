@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 import FirebaseAuth
 import FirebaseFirestore
 import FirebaseCore
@@ -227,7 +228,7 @@ struct IOSParentDashboardView: View {
 
     private func platformBanner(_ child: IOSChildDevice) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: child.isIOS ? "apple.logo" : "android")
+            Image(systemName: child.isIOS ? "apple.logo" : "smartphone")
                 .font(.title2)
                 .foregroundStyle(child.isIOS ? ParentPalette.ink : ParentPalette.teal)
                 .frame(width: 44, height: 44)
@@ -284,6 +285,25 @@ struct IOSParentDashboardView: View {
     private var androidMetrics: some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeading("Android faoliyati", detail: "Bugungi ma’lumotlar")
+            if !metrics.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Faollik taqsimoti").font(.subheadline.weight(.semibold))
+                    Chart(metrics) { metric in
+                        BarMark(
+                            x: .value("Yozuvlar", metric.value),
+                            y: .value("Bo‘lim", metric.title)
+                        )
+                        .foregroundStyle(metric.tint.gradient)
+                        .cornerRadius(5)
+                    }
+                    .chartXAxis { AxisMarks(position: .bottom) }
+                    .chartYAxis { AxisMarks(position: .leading) }
+                    .frame(height: 190)
+                    .accessibilityLabel("Android faoliyati bo‘yicha kunlik ko‘rsatkichlar")
+                }
+                .padding(14)
+                .background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 17))
+            }
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 ForEach(metrics) { metric in
                     HStack(spacing: 10) {
