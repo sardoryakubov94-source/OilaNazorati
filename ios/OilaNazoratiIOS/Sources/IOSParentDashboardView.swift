@@ -457,10 +457,16 @@ struct IOSParentDashboardView: View {
                     Circle().fill(ParentPalette.teal).frame(width: 9, height: 9)
                 }
             }
-            Label(voiceConsentEnabled ? "Bola jonli ovozga rozilik bergan" : "Bola qurilmasida bir martalik rozilik kerak",
-                  systemImage: voiceConsentEnabled ? "checkmark.shield.fill" : "lock.shield")
-                .font(.caption)
-                .foregroundStyle(voiceConsentEnabled ? ParentPalette.teal : ParentPalette.orange)
+            if child.platform == .ios {
+                Label(voiceConsentEnabled ? "Bola jonli ovozga rozilik bergan" : "Bola qurilmasida bir martalik rozilik kerak",
+                      systemImage: voiceConsentEnabled ? "checkmark.shield.fill" : "lock.shield")
+                    .font(.caption)
+                    .foregroundStyle(voiceConsentEnabled ? ParentPalette.teal : ParentPalette.orange)
+            } else {
+                Label("Android mikrofon ruxsati va faol xizmat talab qilinadi", systemImage: "mic.badge.checkmark")
+                    .font(.caption)
+                    .foregroundStyle(ParentPalette.teal)
+            }
             if voiceRequestState == "requested" || voiceRequestState == "active" || voiceSession.isConnected {
                 Button(role: .destructive, action: stopRemoteVoice) {
                     Label("Ovoz ulanishini to‘xtatish", systemImage: "stop.fill")
@@ -476,8 +482,13 @@ struct IOSParentDashboardView: View {
                 .tint(ParentPalette.accent)
                 .disabled(!voiceConsentEnabled)
             }
-            Text("Bola qurilmasida masofaviy ovozga oldindan rozilik yoqilgan bo‘lishi kerak. Ovoz faqat bola ilovasi faol va ochiq turganida uzatiladi; mikrofon indikatori ko‘rinadi.")
-                .font(.caption2).foregroundStyle(ParentPalette.muted)
+            if child.platform == .ios {
+                Text("iOS’da bola bir marta rozilik beradi. Keyin ota-ona so‘rovi ilova faol va ochiq turganida avtomatik qabul qilinadi. Mikrofon indikatori ko‘rinadi; ilova fonda to‘xtasa, sessiya ham tugaydi.")
+                    .font(.caption2).foregroundStyle(ParentPalette.muted)
+            } else {
+                Text("Android’da mavjud Agora xizmati ishlatiladi. Bola qurilmasida mikrofon ruxsati va tizimning faol xizmat bildirishnomasi saqlanadi.")
+                    .font(.caption2).foregroundStyle(ParentPalette.muted)
+            }
         }
         .padding(16)
         .background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 18))
