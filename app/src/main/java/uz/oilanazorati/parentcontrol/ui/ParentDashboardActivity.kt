@@ -407,7 +407,7 @@ class ParentDashboardActivity : AppCompatActivity() {
                     return@fetchLinkedChildren
                 }
                 setChildId(selectedChild.id)
-                setChildPlatform(platform)
+                setChildPlatform(platform, selectedChild.supportedCapabilities)
                 applyChildPlatformUi()
                 loadTodayStats()
             } else {
@@ -430,9 +430,9 @@ class ParentDashboardActivity : AppCompatActivity() {
             .apply()
     }
 
-    private fun setChildPlatform(platform: ChildDevicePlatform) {
+    private fun setChildPlatform(platform: ChildDevicePlatform, declaredCapabilities: Set<String>? = null) {
         selectedChildPlatform = platform
-        selectedChildCapabilities = ChildPlatformPolicy.capabilities(platform)
+        selectedChildCapabilities = ChildPlatformPolicy.capabilities(platform, declaredCapabilities)
         getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
             .putString("parent_selected_platform", if (platform == ChildDevicePlatform.IOS) "ios" else "android")
             .apply()
