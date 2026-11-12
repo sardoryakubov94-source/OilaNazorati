@@ -183,12 +183,6 @@ final class ChildScreenShareController: NSObject, ObservableObject, AgoraRtcEngi
             engine = nil
             completion(.failure(ScreenShareError.joinFailed(result)))
         } else {
-            // AgoraReplayKitExtension bridges ReplayKit samples to this RTC engine.
-            let parameters = AgoraScreenCaptureParameters()
-            parameters.dimensions = CGSize(width: 720, height: 1280)
-            parameters.frameRate = 10
-            parameters.bitrate = 1200
-            rtc.startScreenCapture(parameters)
             completion(.success(()))
         }
     }
