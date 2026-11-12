@@ -516,9 +516,7 @@ struct IOSParentDashboardView: View {
 
     private func stopRemoteScreenShare() {
         guard let code = familyCode, let child = selectedChild else { return }
-        Firestore.firestore().collection("families").document(code)
-            .collection("children").document(child.id).collection("screen_share_requests").document("current")
-            .updateData(["status": "stop_requested", "updatedAtMs": Int64(Date().timeIntervalSince1970 * 1000)])
+        sendScreenStopRequest(to: child.id)
         screenViewer.leave()
         screenShareStatus = "Ekran uzatish to‘xtatilmoqda…"
     }
@@ -882,9 +880,9 @@ struct IOSParentDashboardView: View {
     }
 
     private func select(_ child: IOSChildDevice) {
-        if let oldChildID = boundChildID, oldChildID != child.id,
-           voiceRequestState == "requested" || voiceRequestState == "active" {
-            sendVoiceStopRequest(to: oldChildID)
+        if let oldChildID = boundChildID, oldChildID != child.id {
+            if voiceRequestState == "requested" || voiceRequestState == "active" { sendVoiceStopRequest(to: oldChildID) }
+            if ["requested", "broadcast_ready", "active"].contains(screenShareRequestState) { sendScreenStopRequest(to: oldChildID) }
         }
         selectedChildID = child.id
         bindSelectedChild(child)
@@ -901,6 +899,14 @@ struct IOSParentDashboardView: View {
             ])
     }
 
+    private func sendScreenStopRequest(to childID: String) {
+        guard let code = familyCode else { return }
+        Firestore.firestore().collection("families").document(code)
+            .collection("children").document(childID)
+            .collection("screen_share_requests").document("current")
+            .updateData(["status": "stop_requested", "updatedAtMs": Int64(Date().timeIntervalSince1970 * 1000)])
+    }
+
     private func bindSelectedChild(_ child: IOSChildDevice) {
         boundChildID = child.id
         boundChildPlatform = child.platform
@@ -915,6 +921,8 @@ struct IOSParentDashboardView: View {
         screenViewer.leave()
         screenConsentEnabled = false
         screenShareRequestState = ""
+        screenShareRequestID = nil
+        screenShareChannel = nil
         screenShareStatus = "So‘rov yuborilmagan"
         voiceConsentEnabled = false
         voiceSession.leave()
@@ -1120,9 +1128,9 @@ struct IOSParentDashboardView: View {
     }
 
     private func removeListeners() {
-        if let childID = boundChildID,
-           voiceRequestState == "requested" || voiceRequestState == "active" {
-            sendVoiceStopRequest(to: childID)
+        if let childID = boundChildID {
+            if voiceRequestState == "requested" || voiceRequestState == "active" { sendVoiceStopRequest(to: childID) }
+            if ["requested", "broadcast_ready", "active"].contains(screenShareRequestState) { sendScreenStopRequest(to: childID) }
         }
         childrenListener?.remove()
         locationListener?.remove()
