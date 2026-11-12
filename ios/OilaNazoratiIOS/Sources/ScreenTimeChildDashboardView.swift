@@ -81,11 +81,6 @@ struct ScreenTimeChildDashboardView: View {
                     ))
                     .frame(minHeight: 90)
                 }
-                Button {
-                    controller.syncReportSummary()
-                } label: {
-                    Label("Hisobotni ota-onaga yuborish", systemImage: "icloud.and.arrow.up")
-                }
             }
 
             Section("Jadval va cheklovlar") {
