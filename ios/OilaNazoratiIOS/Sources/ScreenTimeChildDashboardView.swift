@@ -33,6 +33,9 @@ struct ScreenTimeChildDashboardView: View {
                         authorizationBusy = true
                         Task {
                             await controller.requestChildAuthorization()
+                            if controller.authorizationStatus == .approved {
+                                FocusModeSync.shared.refreshAuthorization()
+                            }
                             authorizationBusy = false
                         }
                     } label: {
