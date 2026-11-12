@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Bu alohida fayl emas — Xcode loyihangiz Info.plist'iga shu kalitlarni
+  QO'LDA qo'shib qo'ying (Xcode'da: target > Info tab > "+").
+-->
+<plist version="1.0">
+<dict>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Farzandingiz xavfsizligi uchun joylashuvni kuzatish talab qilinadi.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Farzandingiz xavfsizligi uchun joylashuvni kuzatish talab qilinadi.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>Farzandingiz xavfsizligi uchun joylashuvni kuzatish talab qilinadi.</string>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>location</string>
+        <string>fetch</string>
+    </array>
+</dict>
+</plist>
