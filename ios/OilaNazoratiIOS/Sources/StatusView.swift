@@ -159,4 +159,42 @@ struct StatusView: View {
             }
         }
     }
-}
+}                Section("Ekran ulashish") {
+                    Toggle("Ekran ulashishga oldindan rozilik", isOn: Binding(
+                        get: { screenShare.consentEnabled },
+                        set: { screenShare.setConsent($0) }
+                    ))
+                    .tint(.blue)
+                    Label(screenShare.status, systemImage: screenShare.isPublishing ? "rectangle.inset.filled" : "rectangle.on.rectangle")
+                        .font(.footnote).foregroundStyle(screenShare.isPublishing ? .green : .secondary)
+                    if screenShare.requestPending && screenShare.consentEnabled {
+                        Button {
+                            screenShare.prepareBroadcast { result in
+                                DispatchQueue.main.async {
+                                    switch result {
+                                    case .success: showScreenBroadcastPicker = true
+                                    case .failure(let error): screenShareError = error.localizedDescription
+                                    }
+                                }
+                            }
+                        } label: { Label("Ota-ona so‘roviga ekran ulashish", systemImage: "dot.radiowaves.left.and.right") }
+                        .disabled(screenShare.isPublishing)
+                    }
+                    if showScreenBroadcastPicker {
+                        ScreenBroadcastPicker().frame(height: 52)
+                        Text("Tizim oynasida Oila Nazoratini tanlab, Broadcast boshlashni tasdiqlang. Ekran uzatilganda iOS qizil indikator ko‘rsatadi.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    if screenShare.isPublishing {
+                        Button(role: .destructive) {
+                            screenShare.stopPublishing()
+                            showScreenBroadcastPicker = false
+                        } label: { Label("Ekran uzatishni to‘xtatish", systemImage: "stop.circle") }
+                    }
+                    if let screenShareError {
+                        Text(screenShareError).font(.footnote).foregroundStyle(.red)
+                    }
+                    Text("Ekran faqat bolaning roziligi va iOS Broadcast tasdig‘i bilan uzatiladi. Ota-ona so‘rovi yashirin yozuvni boshlamaydi.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+
