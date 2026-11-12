@@ -100,10 +100,12 @@ exports.agoraVoiceToken = onRequest(
       }
 
       const now = Math.floor(Date.now() / 1000);
-      const expiresAt = now + 3600;
+      const tokenLifetimeSeconds = 3600;
+      const expiresAt = now + tokenLifetimeSeconds;
       const tokenRole = role === "publisher" ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER;
       const token = RtcTokenBuilder.buildTokenWithUid(
-        appId, certificate, channelName, uid, tokenRole, expiresAt, expiresAt
+        appId, certificate, channelName, uid, tokenRole,
+        tokenLifetimeSeconds, tokenLifetimeSeconds
       );
 
       return res.status(200).json({ token, appId, expiresAt });
