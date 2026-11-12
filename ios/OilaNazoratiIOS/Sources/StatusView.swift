@@ -9,6 +9,18 @@ struct StatusView: View {
     @StateObject private var audioConsent = ChildAudioConsent()
     @StateObject private var audioRemote = ChildAudioRemoteController()
 
+
+    private func saveRemoteAudioConsent(_ enabled: Bool) {
+        Firestore.firestore().collection("families").document(familyCode)
+            .collection("children").document(childUid)
+            .collection("mic_settings").document("current")
+            .setData([
+                "remoteAudioConsent": enabled,
+                "updatedAtMs": Int64(Date().timeIntervalSince1970 * 1000),
+                "consentVersion": 1
+            ], merge: true)
+    }
+
     private var locationPermissionText: String {
         switch locationSync.authorizationStatus {
         case .notDetermined: return "So‘ralmagan"
@@ -77,14 +89,17 @@ struct StatusView: View {
                             if enabled {
                                 audioConsent.enable { granted in
                                     if granted {
+                                        saveRemoteAudioConsent(true)
                                         audioRemote.startListening(familyCode: familyCode, childUid: childUid, consent: audioConsent)
                                     } else {
                                         audioConsent.disable()
+                                        saveRemoteAudioConsent(false)
                                         audioRemote.stopListening()
                                     }
                                 }
                             } else {
                                 audioConsent.disable()
+                                saveRemoteAudioConsent(false)
                                 audioRemote.stopPublishing()
                             }
                         }
@@ -114,6 +129,7 @@ struct StatusView: View {
             .navigationTitle("Bola qurilmasi")
         }
         .onAppear {
+            saveRemoteAudioConsent(audioConsent.isEnabled)
             audioRemote.startListening(familyCode: familyCode, childUid: childUid, consent: audioConsent)
             if locationSharingConsent {
                 LocationSync.shared.start(familyCode: familyCode, childUid: childUid)
@@ -125,7 +141,9 @@ struct StatusView: View {
         }
         .onChange(of: scenePhase) { phase in
             if phase == .active {
+                let hadAudioConsent = audioConsent.isEnabled
                 audioConsent.refreshPermission()
+                if hadAudioConsent && !audioConsent.isEnabled { saveRemoteAudioConsent(false) }
                 audioRemote.startListening(familyCode: familyCode, childUid: childUid, consent: audioConsent)
                 if #available(iOS 16.0, *) {
                     ScreenTimeController.shared.syncQueuedEvents()
