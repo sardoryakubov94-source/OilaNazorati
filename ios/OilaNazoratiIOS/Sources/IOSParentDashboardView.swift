@@ -56,6 +56,11 @@ struct IOSParentDashboardView: View {
     @State private var childrenListener: ListenerRegistration?
     @State private var locationListener: ListenerRegistration?
     @State private var focusListener: ListenerRegistration?
+    @State private var voiceListener: ListenerRegistration?
+    @State private var voiceStatus = "Ulanmagan"
+    @State private var voiceRequestID: String?
+    @State private var voiceChannelName: String?
+    @StateObject private var voiceSession = AgoraVoiceSession()
     @State private var boundChildID: String?
     @State private var boundChildPlatform: DevicePlatform?
     @State private var boundCapabilities: Set<MonitoringCapability>?
@@ -418,9 +423,108 @@ struct IOSParentDashboardView: View {
             }
             .padding(14).background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 16))
 
+            if child.capabilities.contains(.ambientAudio) {
+                voiceControls(child)
+            }
             Text("iOS nazorati Apple Family Controls ruxsati, bola qurilmasidagi ilova tanlovi va Xcode extension sozlamalariga bog‘liq. SMS, qo‘ng‘iroq tarixi, kontaktlar, bildirishnoma matni, yashirin mikrofon va screenshot nazorati iOS’da ochiq API orqali berilmaydi.")
                 .font(.caption2).foregroundStyle(ParentPalette.muted)
         }
+    }
+
+    private func voiceControls(_ child: IOSChildDevice) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeading("Jonli ovoz", detail: "Bolaning oldindan bergan roziligi asosida")
+            HStack(spacing: 10) {
+                Image(systemName: voiceSession.isConnected ? "waveform" : "mic")
+                    .font(.title2)
+                    .foregroundStyle(voiceSession.isConnected ? ParentPalette.teal : ParentPalette.accent)
+                    .frame(width: 42, height: 42)
+                    .background(ParentPalette.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(voiceSession.isConnected ? "Ovoz ulandi" : "Ovoz holati")
+                        .font(.subheadline.bold())
+                    Text(voiceStatus)
+                        .font(.caption).foregroundStyle(ParentPalette.muted)
+                }
+                Spacer()
+                if voiceSession.isConnected {
+                    Circle().fill(ParentPalette.teal).frame(width: 9, height: 9)
+                }
+            }
+            if voiceStatus == "requested" || voiceStatus == "active" || voiceSession.isConnected {
+                Button(role: .destructive, action: stopRemoteVoice) {
+                    Label("Ovoz ulanishini to‘xtatish", systemImage: "stop.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            } else {
+                Button(action: { requestRemoteVoice(child) }) {
+                    Label("Jonli ovozni eshitish", systemImage: "headphones")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(ParentPalette.accent)
+            }
+            Text("Bola qurilmasida masofaviy ovozga oldindan rozilik yoqilgan bo‘lishi kerak. Ovoz faqat bola ilovasi faol va ochiq turganida uzatiladi; mikrofon indikatori ko‘rinadi.")
+                .font(.caption2).foregroundStyle(ParentPalette.muted)
+        }
+        .padding(16)
+        .background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 18))
+    }
+
+    private func requestRemoteVoice(_ child: IOSChildDevice) {
+        guard let code = familyCode, let uid = Auth.auth().currentUser?.uid else {
+            errorMessage = "Ota-ona hisobi aniqlanmadi."
+            return
+        }
+        let requestID = UUID().uuidString
+        let channel = "on_\(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased())"
+        voiceRequestID = requestID
+        voiceChannelName = channel
+        voiceStatus = "requested"
+        let request: [String: Any] = [
+            "requestId": requestID,
+            "channelName": channel,
+            "status": "requested",
+            "requestedByUid": uid,
+            "requestedAtMs": Int64(Date().timeIntervalSince1970 * 1000),
+            "expiresAtMs": Int64(Date().addingTimeInterval(90).timeIntervalSince1970 * 1000),
+            "platform": "ios"
+        ]
+        Firestore.firestore().collection("families").document(code)
+            .collection("children").document(child.id)
+            .collection("mic_requests").document("current")
+            .setData(request, merge: true) { error in
+                DispatchQueue.main.async {
+                    if let error {
+                        voiceStatus = "Ovoz so‘rovini yuborib bo‘lmadi"
+                        errorMessage = error.localizedDescription
+                    } else {
+                        infoMessage = "Ovoz so‘rovi yuborildi. Bola qurilmasi faol bo‘lishi kerak."
+                    }
+                }
+            }
+    }
+
+    private func stopRemoteVoice() {
+        guard let code = familyCode, let child = selectedChild else {
+            voiceSession.leave()
+            return
+        }
+        voiceSession.leave()
+        voiceStatus = "To‘xtatilmoqda…"
+        Firestore.firestore().collection("families").document(code)
+            .collection("children").document(child.id)
+            .collection("mic_requests").document("current")
+            .updateData([
+                "status": "stopped",
+                "stoppedAtMs": Int64(Date().timeIntervalSince1970 * 1000)
+            ]) { error in
+                DispatchQueue.main.async {
+                    voiceStatus = error == nil ? "Ulanish to‘xtatildi" : "To‘xtatish holati yuborilmadi"
+                    if let error { errorMessage = error.localizedDescription }
+                }
+            }
     }
 
     private var unsupportedCard: some View {
@@ -635,6 +739,11 @@ struct IOSParentDashboardView: View {
                     } else {
                         locationListener?.remove()
                         focusListener?.remove()
+                        voiceListener?.remove()
+                        voiceSession.leave()
+                        voiceStatus = "Ulanmagan"
+                        voiceRequestID = nil
+                        voiceChannelName = nil
                         location = nil
                         androidAppUsage = []
                         boundChildID = nil
@@ -658,6 +767,11 @@ struct IOSParentDashboardView: View {
         boundFamilyCode = familyCode
         locationListener?.remove()
         focusListener?.remove()
+        voiceListener?.remove()
+        voiceSession.leave()
+        voiceStatus = "Ulanmagan"
+        voiceRequestID = nil
+        voiceChannelName = nil
         location = nil
         metrics = []
         guard let code = familyCode else { return }
@@ -682,6 +796,41 @@ struct IOSParentDashboardView: View {
             focusListener = childRef.collection("focus_mode_settings").document("current")
                 .addSnapshotListener { snapshot, _ in
                     DispatchQueue.main.async { focusEnabled = snapshot?.data()?["enabled"] as? Bool ?? false }
+                }
+        }
+        if child.platform == .ios, child.capabilities.contains(.ambientAudio) {
+            voiceListener = childRef.collection("mic_requests").document("current")
+                .addSnapshotListener { snapshot, error in
+                    DispatchQueue.main.async {
+                        if let error {
+                            voiceStatus = "Ovoz holatini o‘qib bo‘lmadi"
+                            errorMessage = error.localizedDescription
+                            return
+                        }
+                        guard let data = snapshot?.data(),
+                              let status = data["status"] as? String else {
+                            voiceStatus = "Bola ruxsatini kutmoqda"
+                            return
+                        }
+                        voiceStatus = status
+                        let requestID = data["requestId"] as? String
+                        let channel = data["channelName"] as? String
+                        if status == "active", let requestID, let channel,
+                           voiceRequestID == requestID, !voiceSession.isConnected {
+                            voiceSession.join(channel: channel, role: "subscriber") { result in
+                                if case .failure(let error) = result {
+                                    voiceStatus = error.localizedDescription
+                                } else {
+                                    voiceStatus = "Jonli ovoz ulandi"
+                                }
+                            }
+                        } else if ["stopped", "cancelled", "expired", "failed", "consent_not_enabled"].contains(status) {
+                            voiceSession.leave()
+                            if status == "consent_not_enabled" {
+                                voiceStatus = "Bola qurilmasida ovoz roziligi yoqilmagan"
+                            }
+                        }
+                    }
                 }
         }
         if child.platform == .android, child.capabilities.contains(.appUsage) {
@@ -773,6 +922,8 @@ struct IOSParentDashboardView: View {
         childrenListener?.remove()
         locationListener?.remove()
         focusListener?.remove()
+        voiceListener?.remove()
+        voiceSession.leave()
         boundChildID = nil
         boundChildPlatform = nil
         boundCapabilities = nil
