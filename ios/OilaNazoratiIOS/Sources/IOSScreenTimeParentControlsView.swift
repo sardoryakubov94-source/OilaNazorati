@@ -190,10 +190,10 @@ struct IOSScreenTimeParentControlsView: View {
             .addSnapshotListener { snapshot, _ in
                 let documents = snapshot?.documents ?? []
                 let currentIds = Set(documents.map(\.documentID))
-                let newestEvent = hasLoadedInitialEvents
-                    ? documents.first(where: { !knownEventIds.contains($0.documentID) })
-                    : nil
                 DispatchQueue.main.async {
+                    let newestEvent = hasLoadedInitialEvents
+                        ? documents.first(where: { !knownEventIds.contains($0.documentID) })
+                        : nil
                     limitEvents = documents.map { $0.data() }
                     if let newestEvent {
                         let millis = newestEvent.data()["timestampMs"] as? Int64 ?? 0
