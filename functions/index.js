@@ -61,8 +61,9 @@ exports.agoraVoiceToken = onRequest(
           return res.status(403).json({ error: "child_consent_required" });
         }
       }
+      const requestExpiresAt = Number(requestData.expiresAtMs || 0);
       if (requestData.status === "requested" &&
-          Number(requestData.expiresAtMs || 0) < Date.now()) {
+          requestExpiresAt > 0 && requestExpiresAt < Date.now()) {
         return res.status(410).json({ error: "voice_request_expired" });
       }
       if (
