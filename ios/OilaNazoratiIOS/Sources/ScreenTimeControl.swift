@@ -263,17 +263,22 @@ final class ScreenTimeController: ObservableObject {
     func syncQueuedEvents() {
         guard let code = familyCode, let uid = childUid else { return }
         let defaults = UserDefaults(suiteName: ScreenTimeContract.appGroup) ?? .standard
-        guard let events = defaults.array(forKey: "screenTimePendingEvents") as? [[String: Any]], !events.isEmpty else { return }
+        guard var events = defaults.array(forKey: "screenTimePendingEvents") as? [[String: Any]], !events.isEmpty else { return }
+        // Persist generated IDs before upload so retries are idempotent.
+        for index in events.indices {
+            if events[index]["eventId"] as? String == nil {
+                events[index]["eventId"] = UUID().uuidString
+            }
+        }
+        defaults.set(events, forKey: "screenTimePendingEvents")
         let database = Firestore.firestore()
         let batch = database.batch()
         for event in events {
-            let eventId = event["eventId"] as? String ?? UUID().uuidString
+            guard let eventId = event["eventId"] as? String else { continue }
             let reference = database.collection("families").document(code)
                 .collection("children").document(uid)
                 .collection(ScreenTimeContract.reportCollection).document(eventId)
-            var payload = event
-            payload["eventId"] = eventId
-            batch.setData(payload, forDocument: reference)
+            batch.setData(event, forDocument: reference)
         }
         batch.commit { [weak self] error in
             if let error {
