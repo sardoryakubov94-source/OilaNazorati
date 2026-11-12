@@ -13,6 +13,7 @@ final class AgoraScreenShareSession: NSObject, ObservableObject, AgoraRtcEngineD
     @Published var remoteScreenUID: UInt?
     @Published var isBroadcasting = false
     private var engine: AgoraRtcEngineKit?
+    private var mediaOptions: AgoraRtcChannelMediaOptions?
     private var role = ""
     private var request: (familyCode: String, childUid: String, requestId: String, channel: String)?
     private weak var renderView: UIView?
@@ -62,6 +63,7 @@ final class AgoraScreenShareSession: NSObject, ObservableObject, AgoraRtcEngineD
                     options.publishScreenCaptureAudio = false
                     options.autoSubscribeAudio = false
                     options.autoSubscribeVideo = role == "screen_subscriber"
+                    self.mediaOptions = options
                     let result = rtc.joinChannel(byToken: token, channelId: channel,
                         uid: UInt(uid), mediaOptions: options)
                     guard result == 0 else {
@@ -82,7 +84,7 @@ final class AgoraScreenShareSession: NSObject, ObservableObject, AgoraRtcEngineD
         params.captureAudio = false
         let video = AgoraScreenVideoParameters()
         video.dimensions = CGSize(width: 720, height: 1280)
-        video.frameRate = 15
+        video.frameRate = AgoraVideoFrameRate.fps15.rawValue
         video.bitrate = AgoraVideoBitrateStandard
         params.videoParams = video
         engine.startScreenCapture(params)
@@ -96,6 +98,7 @@ final class AgoraScreenShareSession: NSObject, ObservableObject, AgoraRtcEngineD
         engine?.leaveChannel(nil)
         AgoraRtcEngineKit.destroy()
         engine = nil
+        mediaOptions = nil
         isJoined = false
         isBroadcasting = false
         remoteScreenUID = nil
@@ -108,6 +111,9 @@ final class AgoraScreenShareSession: NSObject, ObservableObject, AgoraRtcEngineD
                    reason: AgoraLocalVideoStreamReason,
                    sourceType: AgoraVideoSourceType) {
         if sourceType == .screen && state == .stopped {
+            mediaOptions?.publishScreenCaptureVideo = false
+            mediaOptions?.publishScreenCaptureAudio = false
+            engine.updateChannel(with: mediaOptions!)
             isBroadcasting = false
             status = "Ekran uzatish to‘xtadi"
             if let request {
@@ -117,6 +123,9 @@ final class AgoraScreenShareSession: NSObject, ObservableObject, AgoraRtcEngineD
                     .updateData(["status": "stopped", "stoppedAtMs": Int64(Date().timeIntervalSince1970 * 1000)])
             }
         } else if sourceType == .screen && state == .capturing {
+            mediaOptions?.publishScreenCaptureVideo = true
+            mediaOptions?.publishScreenCaptureAudio = false
+            if let mediaOptions { engine.updateChannel(with: mediaOptions) }
             isBroadcasting = true
             status = "Ekran uzatilmoqda"
         }
