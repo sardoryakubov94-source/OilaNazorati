@@ -114,8 +114,8 @@ final class ScreenTimeController: ObservableObject {
                 start: policy["sleepStart"] as? String ?? "21:30",
                 end: policy["sleepEnd"] as? String ?? "07:00"
             )
-            if websiteBlocking {
-                settings.webContent.blockedByFilter = .all(except: [])
+            if websiteBlocking && !selection.webDomainTokens.isEmpty {
+                settings.webContent.blockedByFilter = .specific(selection.webDomainTokens)
             } else {
                 settings.webContent.blockedByFilter = nil
             }
@@ -126,9 +126,8 @@ final class ScreenTimeController: ObservableObject {
 
     private func applySelectionIfNeeded() {
         guard authorizationStatus == .approved else { return }
-        settings.shield.applications = selection.applicationTokens.isEmpty ? nil : selection.applicationTokens
-        settings.shield.applicationCategories = selection.categoryTokens.isEmpty ? nil : .specific(selection.categoryTokens)
-        settings.webContent.blockedByFilter = selection.webDomainTokens.isEmpty ? nil : .specific(selection.webDomainTokens)
+        // Selection itself must never block apps. Shields are applied only by
+        // DeviceActivityMonitor when a schedule starts or a usage threshold is reached.
     }
 
     private func configureDailyLimit(minutes: Int) {
@@ -203,6 +202,32 @@ final class ScreenTimeController: ObservableObject {
         if let data, let decoded = try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: data) {
             selection = decoded
         }
+    }
+
+    /// Upload report totals prepared by the DeviceActivityReport extension.
+    func syncReportSummary() {
+        guard let code = familyCode, let uid = childUid else { return }
+        let defaults = UserDefaults(suiteName: ScreenTimeContract.appGroup) ?? .standard
+        let daily = defaults.double(forKey: "latestDailyScreenTimeSeconds")
+        let weekly = defaults.double(forKey: "latestWeeklyScreenTimeSeconds")
+        guard daily > 0 || weekly > 0 else {
+            lastError = "Hisobot hali tayyor emas. Kunlik yoki haftalik hisobot ochilgach qayta urinib ko‘ring."
+            return
+        }
+        Firestore.firestore().collection("families").document(code)
+            .collection("children").document(uid)
+            .collection(ScreenTimeContract.reportCollection).document(ScreenTimeContract.reportDocument)
+            .setData([
+                "dailySeconds": daily,
+                "weeklySeconds": weekly,
+                "updatedAtMs": Int64(Date().timeIntervalSince1970 * 1000),
+                "source": "apple_device_activity_report"
+            ], merge: true) { [weak self] error in
+                Task { @MainActor in
+                    if let error { self?.lastError = "Hisobot Firebase'ga yuborilmadi: \\(error.localizedDescription)" }
+                    else { self?.lastError = nil }
+                }
+            }
     }
 
     /// DeviceActivityMonitor extension queues threshold events locally. Upload on next app launch.
