@@ -699,13 +699,15 @@ struct IOSParentDashboardView: View {
                 let grouped = Dictionary(grouping: snapshot?.documents ?? [], by: {
                     $0.data()["ilovaNomi"] as? String ?? "Noma'lum ilova"
                 })
-                let usage = grouped.map { name, documents in
-                    IOSAppUsage(
-                        id: name,
-                        appName: name,
-                        durationSeconds: documents.reduce(0) {
-                            $0 + Int($1.data()["davomiylikSoniya"] as? Int64 ?? 0)
-                        }
+                let usage = grouped.map { entry in
+                    let totalSeconds = entry.value.reduce(0) { total, document in
+                        let seconds = (document.data()["davomiylikSoniya"] as? NSNumber)?.intValue ?? 0
+                        return total + max(0, seconds)
+                    }
+                    return IOSAppUsage(
+                        id: entry.key,
+                        appName: entry.key,
+                        durationSeconds: totalSeconds
                     )
                 }.sorted { $0.durationSeconds > $1.durationSeconds }
                 DispatchQueue.main.async {
