@@ -32,6 +32,7 @@ final class ChildAudioRemoteController: ObservableObject {
                       let status = data["status"] as? String else { return }
                 let requestID = data["requestId"] as? String ?? ""
                 let channel = data["channelName"] as? String ?? ""
+                guard data["transport"] as? String == "agora" else { return }
 
                 if status == "requested", !requestID.isEmpty, !channel.isEmpty {
                     let expiresAtMs = (data["expiresAtMs"] as? NSNumber)?.int64Value ?? 0
