@@ -1,6 +1,7 @@
 import Foundation
 import CoreLocation
 import FirebaseFirestore
+import Combine
 
 /// Android'dagi MonitorForegroundService.logLocation() bilan BIR XIL yozuv
 /// joyiga (families/{code}/children/{childId}/locations, maydonlar: lat,
@@ -13,10 +14,11 @@ import FirebaseFirestore
 /// CLLocationManager'ning "Always" ruxsati va background location rejimi
 /// ishlatiladi, lekin yangilanish chastotasi tizim tomonidan boshqariladi
 /// (odatda bir necha daqiqada bir, harakatlanish tezligiga qarab).
-final class LocationSync: NSObject, CLLocationManagerDelegate {
+final class LocationSync: NSObject, CLLocationManagerDelegate, ObservableObject {
     static let shared = LocationSync()
 
     private let manager = CLLocationManager()
+    @Published private(set) var authorizationStatus: CLAuthorizationStatus = .notDetermined
     private var familyCode: String?
     private var childUid: String?
     private var lastSentAt: Date = .distantPast
@@ -35,6 +37,7 @@ final class LocationSync: NSObject, CLLocationManagerDelegate {
         self.familyCode = familyCode
         self.childUid = childUid
         manager.requestAlwaysAuthorization()
+        authorizationStatus = manager.authorizationStatus
         guard manager.authorizationStatus == .authorizedAlways ||
               manager.authorizationStatus == .authorizedWhenInUse else { return }
         manager.startUpdatingLocation()
@@ -52,6 +55,7 @@ final class LocationSync: NSObject, CLLocationManagerDelegate {
     }
 
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        authorizationStatus = manager.authorizationStatus
         guard familyCode != nil, childUid != nil else { return }
         if manager.authorizationStatus == .authorizedAlways ||
            manager.authorizationStatus == .authorizedWhenInUse {
