@@ -1,121 +1,104 @@
 # Oila Nazorati — iOS
 
-Bu papkada SwiftUI asosidagi iOS bola va ota-ona interfeyslari mavjud. **Bu muhitda iOS build qilish imkoni yo‘q** —
-`.ipa` fayl yasash uchun **Mac + Xcode** kerak. Quyida nima ishlayotgani,
-nima ishlamasligi va qanday build qilishni toping.
+iOS ilovasi SwiftUI asosida tayyorlanadi. Ushbu branch iOS bola va ota-ona panellarini, Apple Screen Time modullarini hamda Xcode project yaratish konfiguratsiyasini o'z ichiga oladi.
 
-## Avval — nima ISHLAYDI va nima ISHLAMAYDI
+> **Hozirgi holat:** manba kod va XcodeGen konfiguratsiyasi tayyorlanmoqda. Ushbu muhitda macOS/Xcode yo'q, shuning uchun iOS targetlari hali Xcode'da build qilinmagan va haqiqiy iPhone'da sinovdan o'tkazilmagan. Apple entitlement tasdig'i va signing talab qilinadi.
 
-### Bola rejimi
-- **Oila kodi bilan bog'lash** — Android'dagi bilan bir xil Firestore
-  bazasiga yoziladi. Ota-ona Android ilovasida yaratgan kodni kiritasiz.
-- **Joylashuvni kuzatish** — Ota-ona panelidagi "So'nggi joylashuv"
-  kartasida iPhone ham ko'rinadi, hech qanday Android-tomon o'zgarishsiz.
-- **Kontrol rejim** — Android ilovasidagi "Kontrol rejim" tugmasi (🛡)
-  endi iPhone'ni ham boshqaradi. **Lekin**: iOS'da aniq bitta-bitta
-  dastur tanlab bo'lmaydi (Apple ruxsat bermaydi) — shuning uchun
-  yoqilganda deyarli **BARCHA** dastur toifalari bloklanadi (ijtimoiy
-  tarmoq, o'yin, messenjer...). Telefon va Favqulodda chaqiruv — Apple
-  o'zi himoyalagan, ular baribir ishlayveradi.
+## 1. iOS bola paneli
 
-### UMUMAN ishlamaydi (Apple texnik jihatdan yopib qo'ygan, ruxsat so'rab
-ham bo'lmaydi)
-- SMS o'qish, qo'ng'iroqlar tarixi
-- Bildirishnoma matnini o'qish (Telegram/Instagram xabarlari)
-- Ekran suratini olish / "Xavf signali" (NSFW tahlil)
-- Fonda mikrofon eshitish
-- Kontaktlar ro'yxati
+- Oila kodi orqali mavjud Firebase oilasiga ulanish.
+- Joylashuvni oilaga ulashish uchun alohida, bolaning o'zi yoqadigan rozilik tugmasi.
+- Family Controls ruxsat holatini ko'rsatish va bolaning qurilmasida ruxsat so'rash.
+- Apple FamilyActivityPicker orqali ilova, toifa va saytlarni bolaning o'z iPhone'ida tanlash.
+- Kunlik va haftalik DeviceActivity hisobotlari; tanlangan ilovalar va toifalar bo'yicha foydalanish vaqti.
+- Ota-ona yuborgan kunlik limit, maktab va uyqu jadvalini olish.
+- DeviceActivityMonitor orqali limit/jadval hodisalarida ManagedSettings cheklovlarini faollashtirish.
+- Limit tugaganda bolaning qurilmasiga mahalliy bildirishnoma.
+- Limit hodisasini App Group'da navbatga qo'yish va bola ilovasi keyingi safar faol bo'lib internetga ulanganda Firebase'ga yuborish.
 
-### Ota-ona rejimi (yangi)
+## 2. iOS ota-ona paneli
 
-iOS ota-ona paneli `IOSParentDashboardView.swift` ichida:
-- Android ota-ona ilovasidagi kabi Google hisob orqali autentifikatsiya qiladi; anonim sessiya ota-ona sifatida qabul qilinmaydi.
-- Firestore'dan faqat joriy Google UID egasi bo‘lgan oilani qidiradi (`ownerUid == uid`), keyin ulangan bolalarni real vaqtda kuzatadi.
-- Bola qurilmasi platformasini `childPlatform` / eski `platform` maydonidan aniqlaydi.
-- iPhone/iPad uchun faqat joylashuv va Apple Family Controls orqali umumiy Kontrol rejimi ko‘rsatiladi.
-- Android bola uchun mavjud Firestore yozuvlari bo‘yicha faoliyat ko‘rsatkichlari va joylashuv ko‘rsatiladi. Android-only funksiyalar iOS bola tanlanganda yashiriladi.
-- Ranglar iOS tizim ranglariga mos, Light/Dark rejimni avtomatik qo‘llaydi; asosiy sahifa, qurilmalar va sozlamalar alohida tablarda.
+- Google Sign-In va Firebase Auth.
+- ownerUid bo'yicha faqat joriy hisob egasining oilasini topish.
+- Bolalar ro'yxati, qurilma platformasi va joylashuv.
+- iOS bola uchun kunlik limitni belgilash.
+- Maktab va uyqu vaqtlarini belgilash.
+- Tanlangan saytlarni cheklashni yoqish/o'chirish.
+- Sozlamalarni families/{code}/children/{uid}/screen_time_settings/current manziliga yuborish.
+- Bola qurilmasidan Firebase'ga kelgan limit hodisalari tarixini ko'rish.
+- Android bola tanlanganda mavjud Android ko'rinishi saqlanadi; iOS-only boshqaruv Android qurilmaga ko'rsatilmaydi.
 
-**Muhim:** iOS ota-ona paneli Android ilovasining barcha maxsus ekranlari va barcha amallarini hali to‘liq takrorlamaydi. Android bola uchun hozirgi bosqichda joylashuv va mavjud Firestore faoliyat hisoblagichlari ko‘rsatiladi. Android'dagi app allowlist asosidagi Kontrol rejimini iOS'dan boshqarish bu bosqichda yoqilmagan — noto‘g‘ri bo‘sh allowlist yuborib barcha ilovalarni tasodifan bloklash xavfi oldi olinadi.
+**Ilova tanlovi bolaning iPhone'ida qilinadi.** FamilyActivityPicker bolaning qurilmasidagi Apple authorization bilan ishlaydi; ota-ona boshqa qurilmadan bolaning tokenlarini o'zboshimchalik bilan yaratmaydi. Ota-ona limit va jadval siyosatini yuboradi, bola esa ruxsat berganidan keyin tanlangan ilova/toifalarga shu siyosat tatbiq qilinadi.
 
-## Xcode'da qanday ishga tushirish
+## 3. Apple platformasi bo'yicha muhim chegaralar
 
-1. Xcode'da **yangi iOS App loyihasi** yarating (SwiftUI, Swift).
-2. Shu papkadagi barcha `.swift` fayllarni (`Sources/`) loyihangizga
-   sudrab tashlang ("Copy items if needed" belgilangan holda).
-3. **Firebase**: [Firebase Console](https://console.firebase.google.com)
-   da **xuddi shu loyihaga** (Android ilova turgan loyiha — `oilanazorat-3c8de`)
-   yangi **iOS ilova** qo'shing. U sizga `GoogleService-Info.plist` fayl
-   beradi — shuni yuklab, Xcode loyihangizga qo'shing.
-4. **Swift Package**: File > Add Package Dependencies orqali:
-   - `https://github.com/firebase/firebase-ios-sdk` — `FirebaseAuth`, `FirebaseFirestore`, `FirebaseCore`.
-   - `https://github.com/google/GoogleSignIn-iOS` — `GoogleSignIn`.
-5. **Google Sign-In URL scheme**: `GoogleService-Info.plist` ichidagi
-   `REVERSED_CLIENT_ID` qiymatini Target > Info > URL Types bo‘limida URL Scheme sifatida qo‘shing.
-6. `Resources/Info-additions.plist` dagi kalitlarni loyihangizning asosiy Info.plist'iga qo‘lda qo‘shing.
-7. `Resources/OilaNazoratiIOS.entitlements` faylini loyihaga qo‘shing va
-   target > Signing & Capabilities > "+ Capability" > **Family Controls**
-   ni yoqing.
-8. **MUHIM — Apple'dan alohida ruxsat**: Family Controls entitlement'i
-   tarqatish uchun Apple tomonidan tasdiqlanishi kerak:
-   https://developer.apple.com/contact/request/family-controls-distribution
-9. Build qiling, o'z iPhone'ingizga (Developer akkaunt bilan) o'rnating.
+- SMS mazmuni, qo'ng'iroqlar tarixi, kontaktlar, boshqa ilovalarning bildirishnoma matni, yashirin mikrofon va screenshot monitoringi iOS'da uchinchi tomon ota-ona ilovasiga Android'dagi kabi ochiq API bilan berilmaydi.
+- Screen Time ilova/toifa hisobotlari DeviceActivityReport extension ichida maxfiylik sandboxida chiziladi. Shu sabab batafsil ilova/toifa hisobotlari hozircha bolaning iPhone'ida ko'rsatiladi; ularni Firebase orqali ota-onaga yuborish yoqilmagan.
+- Apple'ning FamilyActivityData orqali batafsil usage ma'lumotini ilovadan eksport qilish API'si Family Controls App and Website Usage entitlementini va approvedWithDataAccess ruxsatini talab qiladi. Apple hujjatlariga ko'ra, mijozlar uchun bu data-access API faqat EU hududidagi Apple Account bilan ishlaydi. O'zbekistondagi foydalanuvchi uchun bu yo'lni hozir ishlaydi deb hisoblash mumkin emas.
+- Limit tugaganidagi hodisa bola qurilmasida navbatga qo'yiladi. Hozircha ota-onaga real-time push xabari emas, bola ilovasi qayta ochilib Firebase'ga sinxronlangandan keyin ota-ona panelidagi hodisalar ro'yxati ishlaydi.
+- iOS fon joylashuvi faqat bolaning roziligi va iOS ruxsat darajasiga bog'liq; yangilanish chastotasini iOS boshqaradi.
 
-**Minimal iOS versiyasi:** 16.0 (SwiftUI NavigationStack va Charts ishlatiladi).
+## 4. Xcode project yaratish
 
-, o'z iPhone'ingizga (Developer akkaunt bilan) o'rnating.
+Mac kompyuterda:
 
-## Build qilib ko'rmaganman
+1. Xcode va Xcode Command Line Tools o'rnating.
+2. XcodeGen o'rnating: brew install xcodegen.
+3. Terminalda repository ichidagi ios papkasiga o'ting.
+4. xcodegen generate buyrug'ini bajaring.
+5. OilaNazorati.xcodeproj loyihasini Xcode'da oching.
 
-Bu kod Xcode'da kompilyatsiya qilinmagan — `ManagedSettings`/`FamilyControls`
-API nomlari iOS versiyalari orasida sal farq qilishi mumkin. Xatolik chiqsa,
-Xcode'ning o'zi aniq qaysi qatorni va qanday tuzatishni ko'rsatadi (odatda
-kichik nom farqi bo'ladi, mantiq to'g'ri).
+project.yml quyidagi uchta targetni yaratadi:
+- OilaNazoratiIOS — asosiy iOS ilova;
+- OilaNazoratiActivityMonitor — Device Activity Monitor extension;
+- OilaNazoratiActivityReport — Device Activity Report extension.
 
+## 5. Siz Apple Developer hisobida bajaradigan ishlar
 
-## Platforma va qurilma roli boshqaruvi (yangi)
+1. Apple Developer Program a'zoligini faollashtiring.
+2. Bundle ID uz.oilanazorati.parentcontrol ni Apple Developer portalida ro'yxatdan o'tkazing. Agar Firebase'da boshqa iOS Bundle ID ishlatsangiz, ios/project.yml dagi uchta Bundle ID'ni moslang.
+3. App ID va uchala target uchun App Groups capability'ni yoqing va group.uz.oilanazorati.shared guruhini yarating.
+4. Xcode'da asosiy ilova, Device Activity Monitor va Device Activity Report targetlarining har biriga Family Controls capability qo'shing.
+5. Apple'ga Family Controls distribution entitlement so'rovini yuboring. Asosiy ilova bilan birga Screen Time ishlatadigan ikkala extension uchun ham so'rov talab qilinadi. Tasdiq avtomatik berilmaydi.
+6. Firebase Console'da oilanazorat-3c8de loyihasiga iOS app qo'shing. Bundle ID aynan Xcode targetdagi ID bilan bir xil bo'lsin. GoogleService-Info.plist ni yuklab, asosiy app targetiga qo'shing.
+7. GoogleService-Info.plist ichidagi REVERSED_CLIENT_ID ni Xcode > Target > Info > URL Types > URL Schemes bo'limiga qo'shing.
+8. Signing & Capabilities bo'limida Apple Team va Automatic Signing'ni sozlang; entitlement tasdiqlangach provisioning profile'larni yangilang.
+9. Avval bola iPhone'ida ilovani ishga tushiring, Family Controls ruxsatini bering, so'ng FamilyActivityPicker'da nazorat qilinadigan ilova/toifa/saytlarni tanlang.
+10. Ota-ona iPhone'ida Google hisob bilan kiring va limit/jadvallarni sinang.
 
-`Sources/DeviceContext.swift` yagona siyosat qatlamini beradi:
+## 6. Firebase ma'lumotlar sxemasi
 
-- `DeviceRole` — qurilma ota-onaniki yoki farzandniki ekanini belgilaydi.
-- `DevicePlatform` — Android/iOS/aniqlanmagan platformani ifodalaydi.
-- `ChildPlatformResolver` — Firestore'dagi `childPlatform` va eski `platform` maydonlarini bir xil talqin qiladi.
-- `DeviceCapabilityMatrix` — bola qurilmasi platformasiga qarab mavjud nazorat imkoniyatlarini qaytaradi.
-- `CrossPlatformConfiguration` — ota-ona interfeysi platformasi va bola imkoniyatlarini birlashtiradi. Noma'lum bola platformasida imkoniyatlar yopiq qoladi.
+Ota-onadan bolaga siyosat:
+families/{code}/children/{uid}/screen_time_settings/current
 
-### To'rtta kombinatsiya uchun qoida
+Maydonlar:
+- enabled
+- dailyLimitMinutes
+- schoolEnabled, schoolStart, schoolEnd
+- sleepEnabled, sleepStart, sleepEnd
+- websiteBlockingEnabled
+- updatedAtMs, updatedBy, schemaVersion
 
-| Ota-ona qurilmasi | Bola qurilmasi | Ota-ona interfeysi | Bola uchun imkoniyatlar |
-|---|---|---|---|
-| iOS | iOS | iOS ko'rinishi | iOS ruxsat bergan imkoniyatlar |
-| Android | iOS | Android ko'rinishi | iOS ruxsat bergan imkoniyatlar |
-| iOS | Android | iOS ko'rinishi | Android imkoniyatlari |
-| Android | Android | Amaldagi Android ko'rinishi | Android imkoniyatlari |
+Bola qurilmasidan limit hodisalari:
+families/{code}/children/{uid}/screen_time_reports/{eventId}
 
-Bu jadval — markaziy siyosat. Platforma bo‘yicha ruxsat etilgan funksiyalarni aniqlaydi, lekin har bir modulning to‘liq interfeysi mavjudligini anglatmaydi. iOS ota-ona paneli ushbu branchda qo‘shildi; iOS ichida Android bolani boshqarish imkoniyatlari keyingi bosqichlarda kengaytiriladi. Android ilovasining mavjud ota-ona paneli va Android→Android ishlashiga bu branchda tegilmagan.
+Firestore Security Rules ushbu yo'llarda faqat oila egasi siyosat yozishi va tegishli bola qurilmasi o'z hodisasini yozishi mumkinligini tekshirishi shart. Ochiq allow read, write: if true qoidasini ishlatmang.
 
-Yangi iOS o'rnatilishida qurilma roli tanlanadi. Avvaldan oila kodiga ulangan iOS qurilmalari avtomatik ravishda `child` rolida davom etadi. iOS bola bog'lanayotganda Firestore hujjatiga `childPlatform: ios`, `platform: ios` va imkoniyatlar ro'yxati yoziladi. Android ilovasining mavjud `childPlatform: android` maydoni ham saqlanadi.
+## 7. Build va sinov holati
 
-**Hozirgi cheklov:** iOS ota-ona paneli qo‘shildi, ammo Android bolaning barcha maxsus boshqaruv ekranlari va amallari hali to‘liq ko‘chirilmagan. Hozircha joylashuv va bir nechta faoliyat hisoblagichlari ko‘rsatiladi. `focus_mode` iOS'da Family Controls ruxsati va Apple entitlement'iga bog‘liq. Platforma bo‘yicha qo‘llab-quvvatlash mavjudligi — foydalanuvchi ruxsat bergan yoki funksiya real qurilmada ishlayotganini anglatmaydi.
+- [x] iOS bola va ota-ona UI modullari
+- [x] Firebase siyosat sinxronlash kodi
+- [x] FamilyActivityPicker va Screen Time authorization oqimi
+- [x] DeviceActivityMonitor extension manbasi
+- [x] Kunlik/haftalik app va category report extension manbasi
+- [x] App Group va extension entitlement fayllari
+- [x] XcodeGen orqali uchta target yaratish konfiguratsiyasi
+- [ ] Mac/Xcode'da project generate va compile
+- [ ] GoogleService-Info.plist va Google URL scheme
+- [ ] Apple Family Controls development/distribution entitlement tasdig'i
+- [ ] App Group va provisioning profile signing
+- [ ] Haqiqiy iPhone'da ruxsat, limit, jadval, sayt va hisobot sinovi
+- [ ] Firebase Security Rules va real ota-ona/bola qurilmalararo sinov
+- [ ] Ota-onaga server push xabari (FCM backend) — alohida server sozlamasi talab qiladi
 
-
-## Android ota-ona panelida platformaga mos ko'rinish (keyingi bosqich)
-
-`ParentFamilyLinkActivity` bolalar ro'yxatidagi qurilma platformasini ko'rsatadi va iOS bolani tanlashni bloklamaydi. Tanlangan bola platformasi Firestore hujjatidan qayta tekshiriladi; noma'lum platforma bo'lsa boshqaruv paneli ochilmaydi.
-
-Android ota-ona paneli iOS bola uchun hozircha faqat:
-- Joylashuv va joylashuv tarixini;
-- iOS Screen Time / Family Controls orqali ishlaydigan umumiy Kontrol rejimini
-
-ko'rsatadi. Qo'ng'iroqlar, SMS, kontaktlar, ilovalar statistikasi, screenshot, bildirishnoma, SIM, jonli mikrofon va xavfsizlik signallari kabi Android'ga xos bo'limlar yashiriladi, ularga tegishli listenerlar ham ulanmaydi. iOS'da alohida ilovalarni tanlab bloklash Android'dagi kabi mavjud emas; ota-ona faqat umumiy yoqish/o'chirishni yuboradi.
-
-Android bola tanlanganda mavjud dashboard ko'rinishi va funksiyalar matritsasi o'zgarmaydi. Platforma metama'lumoti yo'q bo'lgan eski/nomalum yozuvlar uchun Android imkoniyatlari taxmin qilinmaydi.
-
-
-## Ota-ona paneli bo‘yicha xavfsizlik va test holati
-
-- Ota-ona kirishi Firebase Google credential orqali amalga oshadi; bola qurilmasidagi anonim Firebase sessiyasi ota-ona sifatida ishlatilmaydi.
-- Oila qidiruvi faqat autentifikatsiyalangan foydalanuvchining `ownerUid` maydoniga teng UID bilan bajariladi. Firestore Rules ham egani tekshirishi shart.
-- Noma’lum platforma uchun capability ro‘yxati bo‘sh qoladi.
-- iOS bola uchun Android-only SMS, qo‘ng‘iroq, kontakt, bildirishnoma, screenshot va fon mikrofon imkoniyatlari ko‘rsatilmaydi.
-- Ushbu branchda Swift kodini Xcode bilan kompilyatsiya qilish yoki haqiqiy iPhone'da sinash imkoni bo‘lmadi. GoogleSignIn URL scheme, Firebase iOS konfiguratsiyasi, Apple Family Controls entitlement va real qurilma ruxsatlari Xcode’da tekshirilishi shart.
+**Hech bir iOS funksiyasi Xcode build va haqiqiy qurilma sinovisiz 100% tayyor deb belgilanmaydi.**
