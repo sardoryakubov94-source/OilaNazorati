@@ -48,7 +48,8 @@ object ChildPlatformPolicy {
                 ParentFeature.FOCUS_MODE,
                 ParentFeature.SCREEN_TIME_LIMITS,
                 ParentFeature.SCREEN_TIME_SCHEDULES,
-                ParentFeature.WEBSITE_RESTRICTIONS
+                ParentFeature.WEBSITE_RESTRICTIONS,
+                ParentFeature.AMBIENT_AUDIO
             )
             if (declaredCapabilities == null) safeDefault
             else ParentFeature.values().filter { it in iosParentFeatures && it.wireName in declaredCapabilities }.toSet()
