@@ -248,7 +248,11 @@ final class ScreenTimeController: ObservableObject {
         settings.webContent.blockedByFilter = nil
         UserDefaults(suiteName: ScreenTimeContract.appGroup)?.removeObject(forKey: "activeScreenTimeReasons")
         UserDefaults(suiteName: ScreenTimeContract.appGroup)?.set(false, forKey: "websiteBlockingEnabled")
-        center.stopMonitoring()
+        center.stopMonitoring([
+            ScreenTimeContract.activityName,
+            DeviceActivityName("uz.oilanazorati.school"),
+            DeviceActivityName("uz.oilanazorati.sleep")
+        ])
     }
 
     private func saveSelection() {
