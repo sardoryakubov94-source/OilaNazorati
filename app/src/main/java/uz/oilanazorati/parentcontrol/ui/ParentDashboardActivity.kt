@@ -531,6 +531,8 @@ class ParentDashboardActivity : AppCompatActivity() {
             setTextColor(resources.getColor(R.color.color_text_secondary, theme))
             setPadding(0, dp(8), 0, dp(8))
         }
+        var eventsListener: com.google.firebase.firestore.ListenerRegistration? = null
+        var knownEventIds: Set<String>? = null
         fun addHint(value: String) {
             content.addView(TextView(this).apply {
                 text = value
@@ -616,8 +618,6 @@ class ParentDashboardActivity : AppCompatActivity() {
             .setNegativeButton("Bekor qilish", null)
             .create()
 
-        var eventsListener: com.google.firebase.firestore.ListenerRegistration? = null
-        var knownEventIds: Set<String>? = null
         dialog.setOnDismissListener { eventsListener?.remove() }
 
         dialog.setOnShowListener {
