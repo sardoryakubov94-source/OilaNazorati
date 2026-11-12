@@ -867,6 +867,10 @@ struct IOSParentDashboardView: View {
         focusListener?.remove()
         screenshotListener?.remove()
         latestScreenshotListener?.remove()
+        boundChildID = nil
+        boundChildPlatform = nil
+        boundCapabilities = nil
+        boundFamilyCode = nil
     }
 
     private func signOut() {
@@ -878,6 +882,8 @@ struct IOSParentDashboardView: View {
         selectedChildID = nil
         location = nil
         metrics = []
+        latestAndroidScreenshot = nil
+        screenshotRequestStatus = "Hali so'rov yuborilmagan"
         errorMessage = nil
     }
 }
