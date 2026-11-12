@@ -38,6 +38,9 @@ iOS ilovasi SwiftUI asosida tayyorlanadi. Ushbu branch iOS bola va ota-ona panel
 - Limit tugaganidagi hodisa bola qurilmasida navbatga qo'yiladi. Hozircha ota-onaga real-time push xabari emas, bola ilovasi qayta ochilib Firebase'ga sinxronlangandan keyin ota-ona panelidagi hodisalar ro'yxati ishlaydi.
 - iOS fon joylashuvi faqat bolaning roziligi va iOS ruxsat darajasiga bog'liq; yangilanish chastotasini iOS boshqaradi.
 
+
+**Apple Family Sharing ham kerak:** bolaning iPhone'ida Family Controls ruxsatini so'raganda ota-ona yoki vasiy shu Apple Family Sharing guruhida bo'lishi va tizim oynasida so'rovni tasdiqlashi kerak. Oila Nazorati ichidagi Google hisob/oila kodi Apple Family Sharing o'rnini bosmaydi.
+
 ## 4. Xcode project yaratish
 
 Mac kompyuterda:
