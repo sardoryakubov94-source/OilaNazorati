@@ -7,6 +7,7 @@ struct StatusView: View {
     let childUid: String
     @AppStorage("location_sharing_consent") private var locationSharingConsent = false
     @StateObject private var audioConsent = ChildAudioConsent()
+    @StateObject private var audioRemote = ChildAudioRemoteController()
 
     private var locationPermissionText: String {
         switch locationSync.authorizationStatus {
@@ -75,17 +76,24 @@ struct StatusView: View {
                         set: { enabled in
                             if enabled {
                                 audioConsent.enable { granted in
-                                    if !granted {
+                                    if granted {
+                                        audioRemote.startListening(familyCode: familyCode, childUid: childUid, consent: audioConsent)
+                                    } else {
                                         audioConsent.disable()
+                                        audioRemote.stopListening()
                                     }
                                 }
                             } else {
                                 audioConsent.disable()
+                                audioRemote.stopPublishing()
                             }
                         }
                     ))
                     .tint(.blue)
-                    Text("Bu rozilik mikrofonni avtomatik yoqmaydi. Ovoz faqat bola boshlagan va indikator ko‘rinib turgan faol sessiyada uzatiladi. Ruxsat bir marta berilgach, iOS uni saqlaydi; ruxsat bekor qilinsa, iPhone sozlamalaridan qayta yoqish kerak.")
+                    Label(audioRemote.statusText, systemImage: audioRemote.isPublishing ? "waveform" : "mic.badge.xmark")
+                        .font(.footnote)
+                        .foregroundStyle(audioRemote.isPublishing ? .green : .secondary)
+                    Text("Rozilik bir marta yoqiladi. Keyin ota-ona so‘rov yuborganda, ilova ochiq va faol bo‘lsa, ovoz avtomatik uzatiladi — boladan har safar alohida tasdiq so‘ralmaydi. Mikrofon ishlayotganida iOS indikatori ko‘rinadi. Ilova faol bo‘lmaganida uzatish to‘xtaydi.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
@@ -98,6 +106,7 @@ struct StatusView: View {
             .navigationTitle("Bola qurilmasi")
         }
         .onAppear {
+            audioRemote.startListening(familyCode: familyCode, childUid: childUid, consent: audioConsent)
             if locationSharingConsent {
                 LocationSync.shared.start(familyCode: familyCode, childUid: childUid)
             }
@@ -107,8 +116,13 @@ struct StatusView: View {
             }
         }
         .onChange(of: scenePhase) { phase in
-            if #available(iOS 16.0, *), phase == .active {
-                ScreenTimeController.shared.syncQueuedEvents()
+            if phase == .active {
+                audioRemote.startListening(familyCode: familyCode, childUid: childUid, consent: audioConsent)
+                if #available(iOS 16.0, *) {
+                    ScreenTimeController.shared.syncQueuedEvents()
+                }
+            } else {
+                audioRemote.stopListening()
             }
         }
     }
