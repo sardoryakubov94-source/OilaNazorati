@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/ios-parent-dashboard
+      - feature/ios-*
     paths:
       - "app/**"
       - "build.gradle"
