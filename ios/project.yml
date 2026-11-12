@@ -41,6 +41,8 @@ targets:
         embed: true
       - target: OilaNazoratiActivityReport
         embed: true
+      - target: OilaNazoratiScreenBroadcast
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: uz.oilanazorati.parentcontrol
@@ -104,3 +106,27 @@ schemes:
         OilaNazoratiActivityReport: all
     run:
       config: Debug
+
+  OilaNazoratiScreenBroadcast:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: OilaNazoratiIOS/Extensions/ScreenBroadcastSampleHandler.swift
+    info:
+      path: OilaNazoratiIOS/Extensions/ScreenBroadcast-Info.plist
+    entitlements:
+      path: OilaNazoratiIOS/Extensions/ScreenBroadcast.entitlements
+    dependencies:
+      - package: AgoraRtcEngine_iOS
+        product: RtcBasic
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uz.oilanazorati.parentcontrol.ScreenBroadcast
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        CODE_SIGN_STYLE: Automatic
+        APPLICATION_EXTENSION_API_ONLY: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: OilaNazoratiIOS/Extensions/ScreenBroadcast-Info.plist
+        CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Extensions/ScreenBroadcast.entitlements
+        SKIP_INSTALL: YES
