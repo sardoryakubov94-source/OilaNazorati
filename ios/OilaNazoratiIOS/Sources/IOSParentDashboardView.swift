@@ -500,7 +500,10 @@ struct IOSParentDashboardView: View {
                 DispatchQueue.main.async {
                     if let error {
                         voiceStatus = "Ovoz so‘rovini yuborib bo‘lmadi"
-                        errorMessage = error.localizedDescription
+                        let nsError = error as NSError
+                        errorMessage = nsError.code == FirestoreErrorCode.permissionDenied.rawValue
+                            ? "Jonli ovoz Premium obunasi bilan ishlaydi."
+                            : error.localizedDescription
                     } else {
                         infoMessage = "Ovoz so‘rovi yuborildi. Bola qurilmasi faol bo‘lishi kerak."
                     }
