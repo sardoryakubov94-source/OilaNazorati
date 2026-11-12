@@ -29,6 +29,7 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
     private var engine: AgoraRtcEngineKit?
     private var activeChannel: String?
     private var isPublisher = false
+    private var pendingJoinCompletion: ((Result<Void, Error>) -> Void)?
 
     func join(channel: String, role: String, familyCode: String, childUid: String, requestID: String,
               completion: @escaping (Result<Void, Error>) -> Void) {
@@ -113,6 +114,13 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
             }
             rtc.setClientRole(.broadcaster)
         } else {
+            do {
+                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.allowBluetooth])
+                try AVAudioSession.sharedInstance().setActive(true)
+            } catch {
+                completion(.failure(error))
+                return
+            }
             rtc.setClientRole(.audience)
         }
 
@@ -125,17 +133,18 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
 
         activeChannel = channel
         statusText = "Ovoz kanaliga ulanmoqda…"
+        pendingJoinCompletion = completion
         let result = rtc.joinChannel(byToken: token, channelId: channel, uid: uid,
                                      mediaOptions: options, joinSuccess: nil)
         if result != 0 {
+            pendingJoinCompletion = nil
             statusText = "Ulanish amalga oshmadi"
             completion(.failure(AgoraVoiceError.joinFailed(Int(result))))
-        } else {
-            completion(.success(()))
         }
     }
 
     func leave() {
+        pendingJoinCompletion = nil
         engine?.leaveChannel(nil)
         engine?.disableAudio()
         AgoraRtcEngineKit.destroy()
@@ -143,15 +152,22 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
         activeChannel = nil
         isConnected = false
         statusText = "Ulanmagan"
-        if isPublisher {
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        }
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         isPublisher = false
     }
 
     func rtcEngine(_ engine: AgoraRtcEngineKit, didJoinChannel channel: String, withUid uid: UInt, elapsed: Int) {
         isConnected = true
         statusText = isPublisher ? "Ovoz uzatilmoqda" : "Ota-ona tinglamoqda"
+        let completion = pendingJoinCompletion
+        pendingJoinCompletion = nil
+        completion?(.success(()))
+    }
+
+    func rtcEngine(_ engine: AgoraRtcEngineKit, didOccurError errorCode: AgoraErrorCode) {
+        guard let completion = pendingJoinCompletion else { return }
+        pendingJoinCompletion = nil
+        completion(.failure(AgoraVoiceError.joinFailed(Int(errorCode.rawValue))))
     }
 
     func rtcEngine(_ engine: AgoraRtcEngineKit, didLeaveChannelWith stats: AgoraChannelStats) {
@@ -159,7 +175,4 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
         statusText = "Ulanish tugadi"
     }
 
-    deinit {
-        engine?.leaveChannel(nil)
-    }
 }
