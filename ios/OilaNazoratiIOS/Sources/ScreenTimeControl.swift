@@ -33,7 +33,7 @@ final class ScreenTimeController: ObservableObject {
     private let settings = ManagedSettingsStore()
     private var policyListener: ListenerRegistration?
     private var familyCode: String?
-    private var childUid: String?
+    private var childUid: String?\n    private var latestPolicy: [String: Any]?
 
     private init() {
         loadSelection()
@@ -43,6 +43,7 @@ final class ScreenTimeController: ObservableObject {
         do {
             try await AuthorizationCenter.shared.requestAuthorization(for: .child)
             authorizationStatus = AuthorizationCenter.shared.authorizationStatus
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
             lastError = nil
         } catch {
             authorizationStatus = AuthorizationCenter.shared.authorizationStatus
@@ -54,6 +55,7 @@ final class ScreenTimeController: ObservableObject {
         selection = value
         saveSelection()
         applySelectionIfNeeded()
+        if let latestPolicy { apply(policy: latestPolicy) }
     }
 
     func start(familyCode: String, childUid: String) {
@@ -88,6 +90,7 @@ final class ScreenTimeController: ObservableObject {
     }
 
     private func apply(policy: [String: Any]) {
+        latestPolicy = policy
         guard authorizationStatus == .approved else {
             policyActive = false
             return
