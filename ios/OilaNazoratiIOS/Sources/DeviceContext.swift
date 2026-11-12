@@ -77,7 +77,9 @@ enum DeviceCapabilityMatrix {
         case .android:
             // Android: mavjud Android nazorat modullari. Amaliy foydalanish
             // ota-ona autentifikatsiyasi, ruxsatlar va modul holatiga ham bog'liq.
-            return Set(MonitoringCapability.allCases)
+            return Set(MonitoringCapability.allCases.filter { capability in
+                ![.usageReports, .timeLimits, .schedules, .websiteRestrictions].contains(capability)
+            })
         case .unknown:
             return []
         }
