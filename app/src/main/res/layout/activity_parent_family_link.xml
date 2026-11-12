@@ -7,46 +7,46 @@
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
+        android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="22dp">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:layout_marginBottom="8dp"
             android:text="OilaNazorati"
             android:textAlignment="center"
             android:textColor="@color/color_text_primary"
-            android:textSize="26sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="10dp" />
+            android:textSize="25sp"
+            android:textStyle="bold" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Oilaviy nazoratni boshlash"
+            android:layout_marginBottom="8dp"
+            android:text="Oilangiz va farzandlaringiz"
             android:textAlignment="center"
             android:textColor="@color/color_text_primary"
             android:textSize="20sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
+            android:textStyle="bold" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Quyidagi oila kodini farzandingiz telefonidagi OilaNazorati ilovasiga kiriting."
+            android:layout_marginBottom="20dp"
+            android:text="Oila kodingizni ko'ring va boshqaruv paneliga kirmoqchi bo'lgan farzandingizni tanlang."
             android:textAlignment="center"
             android:textColor="@color/color_text_secondary"
-            android:textSize="14sp"
-            android:layout_marginBottom="24dp" />
+            android:textSize="13sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="@drawable/bg_login_card"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:padding="20dp">
 
             <TextView
                 android:layout_width="match_parent"
@@ -56,7 +56,7 @@
                 android:textColor="@color/color_text_secondary"
                 android:textSize="11sp"
                 android:letterSpacing="0.12"
-                android:layout_marginBottom="12dp" />
+                android:layout_marginBottom="10dp" />
 
             <TextView
                 android:id="@+id/familyCodeText"
@@ -68,33 +68,59 @@
                 android:textColor="@color/color_text_primary"
                 android:textSize="32sp"
                 android:textStyle="bold"
-                android:layout_marginBottom="20dp" />
+                android:layout_marginBottom="16dp" />
 
             <Button
                 android:id="@+id/btnCopyCode"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:text="Koddan nusxa olish"
+                android:layout_height="50dp"
+                android:text="Oila kodidan nusxa olish"
                 android:textAllCaps="false" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Bola telefonida: «Bu farzandimning telefoni» → oila kodini kiriting → «Oilaga ulanish» tugmasini bosing."
+                android:layout_marginTop="14dp"
+                android:text="Yana farzand qo'shish uchun shu kodni uning telefonidagi ilovaga kiriting."
                 android:textColor="@color/color_text_secondary"
                 android:textSize="12sp"
-                android:lineSpacingExtra="3dp"
-                android:layout_marginTop="18dp" />
+                android:lineSpacingExtra="3dp" />
         </LinearLayout>
 
-        <Button
-            android:id="@+id/btnOpenDashboard"
+        <TextView
             android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:text="Ota-ona paneliga o'tish"
-            android:textAllCaps="false"
-            android:textSize="15sp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="10dp"
+            android:text="ULANGAN QURILMALAR"
+            android:textColor="@color/color_text_primary"
+            android:textSize="13sp"
             android:textStyle="bold"
-            android:layout_marginTop="22dp" />
+            android:letterSpacing="0.06" />
+
+        <TextView
+            android:id="@+id/emptyChildrenText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_login_card"
+            android:padding="18dp"
+            android:text="Hozircha farzand ulanmagan. Oila kodini bolaning telefoniga kiriting. Ulangach, shu yerda avtomatik ko'rinadi."
+            android:textAlignment="center"
+            android:textColor="@color/color_text_secondary"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:id="@+id/childrenContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <Button
+            android:id="@+id/btnAddChild"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="16dp"
+            android:text="＋  Yana farzand ulash"
+            android:textAllCaps="false" />
     </LinearLayout>
 </ScrollView>
