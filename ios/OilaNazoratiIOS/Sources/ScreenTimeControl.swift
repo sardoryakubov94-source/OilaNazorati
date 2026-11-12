@@ -216,32 +216,6 @@ final class ScreenTimeController: ObservableObject {
         }
     }
 
-    /// Upload report totals prepared by the DeviceActivityReport extension.
-    func syncReportSummary() {
-        guard let code = familyCode, let uid = childUid else { return }
-        let defaults = UserDefaults(suiteName: ScreenTimeContract.appGroup) ?? .standard
-        let daily = defaults.double(forKey: "latestDailyScreenTimeSeconds")
-        let weekly = defaults.double(forKey: "latestWeeklyScreenTimeSeconds")
-        guard daily > 0 || weekly > 0 else {
-            lastError = "Hisobot hali tayyor emas. Kunlik yoki haftalik hisobot ochilgach qayta urinib ko‘ring."
-            return
-        }
-        Firestore.firestore().collection("families").document(code)
-            .collection("children").document(uid)
-            .collection(ScreenTimeContract.reportCollection).document(ScreenTimeContract.reportDocument)
-            .setData([
-                "dailySeconds": daily,
-                "weeklySeconds": weekly,
-                "updatedAtMs": Int64(Date().timeIntervalSince1970 * 1000),
-                "source": "apple_device_activity_report"
-            ], merge: true) { [weak self] error in
-                Task { @MainActor in
-                    if let error { self?.lastError = "Hisobot Firebase'ga yuborilmadi: \(error.localizedDescription)" }
-                    else { self?.lastError = nil }
-                }
-            }
-    }
-
     /// DeviceActivityMonitor extension queues threshold events locally. Upload on next app launch.
     func syncQueuedEvents() {
         guard let code = familyCode, let uid = childUid else { return }
