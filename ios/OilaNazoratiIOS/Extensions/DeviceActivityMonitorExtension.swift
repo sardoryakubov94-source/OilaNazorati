@@ -40,6 +40,7 @@ final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
         addActiveReason("daily_limit")
         applyCurrentShields()
         let payload: [String: Any] = [
+            "eventId": UUID().uuidString,
             "type": "daily_limit_reached",
             "activity": activity.rawValue,
             "event": event.rawValue,
