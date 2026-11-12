@@ -381,7 +381,7 @@ struct IOSParentDashboardView: View {
             }
         }
         .navigationTitle("Qurilmalar")
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button(action: loadFamilyForCurrentUser) { Image(systemName: "arrow.clockwise") } } }
+        .toolbar { ToolbarItem(placement: .navigationBarTrailing) { Button(action: loadFamilyForCurrentUser) { Image(systemName: "arrow.clockwise") } } }
     }
 
     private var settingsView: some View {
@@ -574,22 +574,25 @@ struct IOSParentDashboardView: View {
     }
 
     private func loadAndroidMetrics(_ childRef: DocumentReference) {
-        let collections: [(String, String, String, Color)] = [
-            ("calls", "Qo‘ng‘iroqlar", "phone.arrow.up.right", ParentPalette.accent),
-            ("sms", "SMS", "message", ParentPalette.teal),
-            ("app_usage", "Ilova faolligi", "app.badge", ParentPalette.orange),
-            ("contacts", "Kontaktlar", "person.2", ParentPalette.accent),
-            ("notifications", "Bildirishnomalar", "bell", ParentPalette.orange),
-            ("risk_events", "Xavf signallari", "exclamationmark.shield", ParentPalette.red)
+        let startOfDay = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970 * 1000
+        let collections: [(String, String, String, Color, String?)] = [
+            ("calls", "Qo‘ng‘iroqlar", "phone.arrow.up.right", ParentPalette.accent, "boshlanishMs"),
+            ("sms", "SMS", "message", ParentPalette.teal, "vaqtMs"),
+            ("app_usage", "Ilova faolligi", "app.badge", ParentPalette.orange, "boshlanishMs"),
+            ("contacts", "Kontaktlar", "person.2", ParentPalette.accent, nil),
+            ("notifications", "Bildirishnomalar", "bell", ParentPalette.orange, "vaqtMs"),
+            ("risk_events", "Xavf signallari", "exclamationmark.shield", ParentPalette.red, "capturedAt")
         ]
-        let start = Calendar.current.startOfDay(for: Date())
-        for (collection, title, symbol, tint) in collections {
-            childRef.collection(collection).getDocuments { snapshot, _ in
-                let count = (snapshot?.documents ?? []).filter { document in
-                    let data = document.data()
-                    let millis = data["vaqtMs"] as? Double ?? (data["capturedAt"] as? Double) ?? 0
-                    return millis == 0 || millis >= start.timeIntervalSince1970 * 1000
-                }.count
+        for (collection, title, symbol, tint, dateField) in collections {
+            let reference = childRef.collection(collection)
+            let request: Query
+            if let dateField {
+                request = reference.whereField(dateField, isGreaterThanOrEqualTo: startOfDay)
+            } else {
+                request = reference
+            }
+            request.getDocuments { snapshot, _ in
+                let count = snapshot?.documents.count ?? 0
                 DispatchQueue.main.async {
                     metrics.removeAll { $0.id == collection }
                     metrics.append(IOSMetric(id: collection, title: title, value: count, symbol: symbol, tint: tint))
