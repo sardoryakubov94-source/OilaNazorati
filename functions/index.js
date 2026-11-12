@@ -56,6 +56,7 @@ exports.agoraVoiceToken = onRequest(
         return res.status(410).json({ error: "voice_request_expired" });
       }
       if (
+        requestData.requestedByUid !== familyData.ownerUid ||
         requestData.requestId !== requestId ||
         requestData.channelName !== channelName ||
         !["requested", "active"].includes(requestData.status)
@@ -65,14 +66,15 @@ exports.agoraVoiceToken = onRequest(
 
       const isOwner = familyData.ownerUid === decoded.uid;
       const isChild = decoded.uid === childUid;
+      const parent = await db.collection("parents").doc(familyData.ownerUid).get();
+      const premium = parent.exists && parent.data().premium === true;
+      if (!premium) return res.status(403).json({ error: "premium_required" });
       if (role === "publisher" && !isChild) {
         return res.status(403).json({ error: "child_publisher_only" });
       }
       if (role === "subscriber") {
         if (decoded.firebase?.sign_in_provider === "anonymous" || !isOwner) return res.status(403).json({ error: "family_owner_only" });
-        const parent = await db.collection("parents").doc(decoded.uid).get();
-        const premium = parent.exists && parent.data().premium === true;
-        if (!premium) return res.status(403).json({ error: "premium_required" });
+
       }
 
       const appId = AGORA_APP_ID.value();
