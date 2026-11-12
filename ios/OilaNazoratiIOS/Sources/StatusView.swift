@@ -133,7 +133,7 @@ struct StatusView: View {
                         .font(.footnote).foregroundStyle(screenShare.isPublishing ? .green : .secondary)
                     if screenShare.requestPending && screenShare.consentEnabled {
                         Button {
-                            screenShare.prepareBroadcast { result in
+                            audioRemote.stopPublishing() // Agora engine is shared; screen and mic publishers cannot run concurrently.\n                            screenShare.prepareBroadcast { result in
                                 DispatchQueue.main.async {
                                     switch result {
                                     case .success: showScreenBroadcastPicker = true
@@ -158,7 +158,7 @@ struct StatusView: View {
                     if let screenShareError {
                         Text(screenShareError).font(.footnote).foregroundStyle(.red)
                     }
-                    Text("Ekran faqat bolaning roziligi va iOS Broadcast tasdig‘i bilan uzatiladi. Ota-ona so‘rovi yashirin yozuvni boshlamaydi.")
+                    Text("Ekran faqat bolaning roziligi va iOS Broadcast tasdig‘i bilan uzatiladi. To‘xtatish uchun ilovadagi tugma va iOS qizil Broadcast indikatoridan foydalaning.")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 Section {
