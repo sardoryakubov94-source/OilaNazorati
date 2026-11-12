@@ -582,21 +582,31 @@ class ParentDashboardActivity : AppCompatActivity() {
             }
             authorizationLabel.text = label
         }
-        childReference?.collection("screen_time_reports")
+        eventsListener = childReference?.collection("screen_time_reports")
             ?.orderBy("timestampMs", com.google.firebase.firestore.Query.Direction.DESCENDING)
-            ?.limit(5)?.get()
-            ?.addOnSuccessListener { snapshot ->
-                if (snapshot.isEmpty) {
-                    eventsLabel.text = "Limit hodisalari: hozircha yo'q"
+            ?.limit(5)?.addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    eventsLabel.text = "Limit hodisalari hozircha olinmadi"
+                    return@addSnapshotListener
+                }
+                val documents = snapshot?.documents.orEmpty()
+                val currentIds = documents.map { it.id }.toSet()
+                val previousIds = knownEventIds
+                if (previousIds != null && currentIds.any { it !in previousIds }) {
+                    runOnUiThread {
+                        Toast.makeText(this, "iPhone'da kunlik ekran vaqti limiti tugadi", Toast.LENGTH_LONG).show()
+                    }
+                }
+                knownEventIds = currentIds
+                eventsLabel.text = if (documents.isEmpty()) {
+                    "Limit hodisalari: hozircha yo'q"
                 } else {
-                    eventsLabel.text = snapshot.documents.joinToString("\n", prefix = "So'nggi limit hodisalari:\n") { doc ->
+                    documents.joinToString("\n", prefix = "So'nggi limit hodisalari:\n") { doc ->
                         val millis = doc.getLong("timestampMs") ?: 0L
                         val time = java.text.SimpleDateFormat("dd.MM HH:mm", Locale.getDefault()).format(Date(millis))
                         "• $time"
                     }
                 }
-            }?.addOnFailureListener {
-                eventsLabel.text = "Limit hodisalari hozircha olinmadi"
             }
 
         val dialog = AlertDialog.Builder(this)
@@ -605,6 +615,10 @@ class ParentDashboardActivity : AppCompatActivity() {
             .setPositiveButton("Saqlash", null)
             .setNegativeButton("Bekor qilish", null)
             .create()
+
+        var eventsListener: com.google.firebase.firestore.ListenerRegistration? = null
+        var knownEventIds: Set<String>? = null
+        dialog.setOnDismissListener { eventsListener?.remove() }
 
         dialog.setOnShowListener {
             reference.get().addOnSuccessListener { snapshot ->
