@@ -1,12 +1,12 @@
-# Oila Nazorati — iOS (qisman)
+# Oila Nazorati — iOS
 
-Bu papkada Swift kodi bor. **Men bu kodni bu yerdan build qila olmayman** —
+Bu papkada SwiftUI asosidagi iOS bola va ota-ona interfeyslari mavjud. **Bu muhitda iOS build qilish imkoni yo‘q** —
 `.ipa` fayl yasash uchun **Mac + Xcode** kerak. Quyida nima ishlayotgani,
 nima ishlamasligi va qanday build qilishni toping.
 
 ## Avval — nima ISHLAYDI va nima ISHLAMAYDI
 
-### Ishlaydi
+### Bola rejimi
 - **Oila kodi bilan bog'lash** — Android'dagi bilan bir xil Firestore
   bazasiga yoziladi. Ota-ona Android ilovasida yaratgan kodni kiritasiz.
 - **Joylashuvni kuzatish** — Ota-ona panelidagi "So'nggi joylashuv"
@@ -25,6 +25,18 @@ ham bo'lmaydi)
 - Ekran suratini olish / "Xavf signali" (NSFW tahlil)
 - Fonda mikrofon eshitish
 - Kontaktlar ro'yxati
+
+### Ota-ona rejimi (yangi)
+
+iOS ota-ona paneli `IOSParentDashboardView.swift` ichida:
+- Android ota-ona ilovasidagi kabi Google hisob orqali autentifikatsiya qiladi; anonim sessiya ota-ona sifatida qabul qilinmaydi.
+- Firestore'dan faqat joriy Google UID egasi bo‘lgan oilani qidiradi (`ownerUid == uid`), keyin ulangan bolalarni real vaqtda kuzatadi.
+- Bola qurilmasi platformasini `childPlatform` / eski `platform` maydonidan aniqlaydi.
+- iPhone/iPad uchun faqat joylashuv va Apple Family Controls orqali umumiy Kontrol rejimi ko‘rsatiladi.
+- Android bola uchun mavjud Firestore yozuvlari bo‘yicha faoliyat ko‘rsatkichlari va joylashuv ko‘rsatiladi. Android-only funksiyalar iOS bola tanlanganda yashiriladi.
+- Ranglar iOS tizim ranglariga mos, Light/Dark rejimni avtomatik qo‘llaydi; asosiy sahifa, qurilmalar va sozlamalar alohida tablarda.
+
+**Muhim:** iOS ota-ona paneli Android ilovasining barcha maxsus ekranlari va barcha amallarini hali to‘liq takrorlamaydi. Android bola uchun hozirgi bosqichda joylashuv va mavjud Firestore faoliyat hisoblagichlari ko‘rsatiladi. Android'dagi app allowlist asosidagi Kontrol rejimini iOS'dan boshqarish bu bosqichda yoqilmagan — noto‘g‘ri bo‘sh allowlist yuborib barcha ilovalarni tasodifan bloklash xavfi oldi olinadi.
 
 ## Xcode'da qanday ishga tushirish
 
@@ -98,3 +110,12 @@ Android ota-ona paneli iOS bola uchun hozircha faqat:
 ko'rsatadi. Qo'ng'iroqlar, SMS, kontaktlar, ilovalar statistikasi, screenshot, bildirishnoma, SIM, jonli mikrofon va xavfsizlik signallari kabi Android'ga xos bo'limlar yashiriladi, ularga tegishli listenerlar ham ulanmaydi. iOS'da alohida ilovalarni tanlab bloklash Android'dagi kabi mavjud emas; ota-ona faqat umumiy yoqish/o'chirishni yuboradi.
 
 Android bola tanlanganda mavjud dashboard ko'rinishi va funksiyalar matritsasi o'zgarmaydi. Platforma metama'lumoti yo'q bo'lgan eski/nomalum yozuvlar uchun Android imkoniyatlari taxmin qilinmaydi.
+
+
+## Ota-ona paneli bo‘yicha xavfsizlik va test holati
+
+- Ota-ona kirishi Firebase Google credential orqali amalga oshadi; bola qurilmasidagi anonim Firebase sessiyasi ota-ona sifatida ishlatilmaydi.
+- Oila qidiruvi faqat autentifikatsiyalangan foydalanuvchining `ownerUid` maydoniga teng UID bilan bajariladi. Firestore Rules ham egani tekshirishi shart.
+- Noma’lum platforma uchun capability ro‘yxati bo‘sh qoladi.
+- iOS bola uchun Android-only SMS, qo‘ng‘iroq, kontakt, bildirishnoma, screenshot va fon mikrofon imkoniyatlari ko‘rsatilmaydi.
+- Ushbu branchda Swift kodini Xcode bilan kompilyatsiya qilish yoki haqiqiy iPhone'da sinash imkoni bo‘lmadi. GoogleSignIn URL scheme, Firebase iOS konfiguratsiyasi, Apple Family Controls entitlement va real qurilma ruxsatlari Xcode’da tekshirilishi shart.
