@@ -251,7 +251,9 @@ final class ScreenTimeController: ObservableObject {
             let reference = database.collection("families").document(code)
                 .collection("children").document(uid)
                 .collection(ScreenTimeContract.reportCollection).document(eventId)
-            batch.setData(event, forDocument: reference)
+            var payload = event
+            payload["eventId"] = eventId
+            batch.setData(payload, forDocument: reference)
         }
         batch.commit { [weak self] error in
             if let error {
