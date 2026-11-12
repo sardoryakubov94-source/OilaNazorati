@@ -17,7 +17,7 @@ child device, current Firestore microphone request, and Premium entitlement.
 3. Deploy the function:
 
    ```sh
-   firebase deploy --only functions:agoraVoiceToken --project oilanazorat-3c8de
+   firebase deploy --only functions:agoraVoiceToken,functions:agoraScreenToken --project oilanazorat-3c8de
    ```
 
 4. Publish the Firestore rules that restrict the new child-owned consent document:
@@ -44,3 +44,17 @@ is active. The child UI and iOS microphone indicator remain visible. The child c
 the current session or revoke consent at any time. iOS suspends ordinary apps in the
 background, so this implementation deliberately ends the audio session when the app
 leaves the active state; it does not claim silent background microphone access.
+
+
+## iOS screen sharing (ReplayKit)
+
+The separate `agoraScreenToken` endpoint checks the paired iOS child, the child's
+screen-share consent document, the active parent request, and Premium entitlement.
+It issues publisher tokens only to the child and subscriber tokens only to the family
+owner. The Broadcast Upload Extension is configured as a separate Xcode target and uses
+Agora's ReplayKit extension product. iOS requires the child to manually confirm the
+system Broadcast picker; a remote request never silently starts screen capture.
+
+The parent screen viewer joins only after the child app advances the request to
+`broadcast_ready`. End the broadcast from the iOS red recording indicator / Control Center
+on the child device as well as stopping the remote Agora session in the parent panel.
