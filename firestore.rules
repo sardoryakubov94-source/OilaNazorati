@@ -225,6 +225,26 @@ service cloud.firestore {
             if isRealOwner();
         }
 
+
+        // Live screen share request: owner starts/stops, paired child can
+        // only acknowledge the same active request. RTC credentials are server-only.
+        match /screen_requests/{docId} {
+          allow read: if isRealOwner() || isThisChildsOwnSession();
+          allow create: if isRealOwner() && docId == 'current' &&
+            request.resource.data.status == 'requested' &&
+            request.resource.data.requestedByUid == request.auth.uid &&
+            request.resource.data.keys().hasOnly([
+              'requestId', 'channelName', 'requestedByUid', 'status',
+              'transport', 'platform', 'requestedAtMs', 'expiresAtMs'
+            ]) &&
+            get(/databases/$(database)/documents/parents/$(request.auth.uid)).data.premium == true;
+          allow update: if (isRealOwner() && docId == 'current') ||
+            (isThisChildsOwnSession() && docId == 'current' &&
+              request.resource.data.requestId == resource.data.requestId &&
+              request.resource.data.status in ['active', 'stopped', 'failed']);
+          allow delete: if isRealOwner();
+        }
+
         match /mic_requests/{docId} {
           allow read:
             if isRealOwner() || isThisChildsOwnSession();
@@ -294,6 +314,7 @@ service cloud.firestore {
               && subcollection != 'screen_time_reports'
               && subcollection != 'screenshot_trigger_state'
               && subcollection != 'screenshot_requests'
+              && subcollection != 'screen_requests'
               && subcollection != 'screenshots'
               && subcollection != 'screenshot_data'
               && subcollection != 'mic_requests'
