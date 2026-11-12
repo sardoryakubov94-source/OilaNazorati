@@ -58,6 +58,14 @@ struct IOSParentDashboardView: View {
     @State private var focusListener: ListenerRegistration?
     @State private var voiceListener: ListenerRegistration?
     @State private var micSettingsListener: ListenerRegistration?
+    @State private var screenShareListener: ListenerRegistration?
+    @State private var screenShareSettingsListener: ListenerRegistration?
+    @State private var screenConsentEnabled = false
+    @State private var screenShareStatus = "So‘rov yuborilmagan"
+    @State private var screenShareRequestState = ""
+    @State private var screenShareRequestID: String?
+    @State private var screenShareChannel: String?
+    @StateObject private var screenViewer = AgoraScreenViewer()
     @State private var voiceConsentEnabled = false
     @State private var voiceStatus = "Ulanmagan"
     @State private var voiceRequestState = ""
@@ -432,9 +440,83 @@ struct IOSParentDashboardView: View {
             if child.capabilities.contains(.ambientAudio) {
                 voiceControls(child)
             }
+            screenShareControls(child)
             Text("iOS nazorati Apple Family Controls ruxsati, bola qurilmasidagi ilova tanlovi va Xcode extension sozlamalariga bog‘liq. SMS, qo‘ng‘iroq tarixi, kontaktlar, bildirishnoma matni, yashirin mikrofon va screenshot nazorati iOS’da ochiq API orqali berilmaydi.")
                 .font(.caption2).foregroundStyle(ParentPalette.muted)
         }
+    }
+
+
+    private func screenShareControls(_ child: IOSChildDevice) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionHeading("Jonli ekran", detail: "ReplayKit • bolaning tasdig‘i bilan")
+            HStack(spacing: 10) {
+                Image(systemName: screenViewer.connected ? "rectangle.inset.filled" : "rectangle.on.rectangle")
+                    .font(.title2).foregroundStyle(screenViewer.connected ? ParentPalette.teal : ParentPalette.accent)
+                    .frame(width: 42, height: 42).background(ParentPalette.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(screenViewer.connected ? "Ekran ulandi" : "Ekran holati").font(.subheadline.bold())
+                    Text(screenShareStatus).font(.caption).foregroundStyle(ParentPalette.muted)
+                }
+                Spacer()
+            }
+            if screenViewer.connected {
+                AgoraScreenVideoSurface(viewer: screenViewer)
+                    .frame(height: 300)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                Button(role: .destructive, action: stopRemoteScreenShare) {
+                    Label("Ekran ulashishni to‘xtatish", systemImage: "stop.fill").frame(maxWidth: .infinity)
+                }.buttonStyle(.bordered)
+            } else {
+                Label(screenConsentEnabled ? "Bola oldindan rozilik bergan" : "Bola qurilmasida ekran roziligi kerak",
+                      systemImage: screenConsentEnabled ? "checkmark.shield.fill" : "lock.shield")
+                    .font(.caption).foregroundStyle(screenConsentEnabled ? ParentPalette.teal : ParentPalette.orange)
+                Button(action: { requestRemoteScreenShare(child) }) {
+                    Label("Ekranni jonli ko‘rish", systemImage: "rectangle.on.rectangle")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent).tint(ParentPalette.accent)
+                .disabled(!screenConsentEnabled || ["requested", "broadcast_ready", "active"].contains(screenShareRequestState))
+            }
+            Text("iOS’da ota-ona so‘rovi uzatishni yashirin boshlamaydi. Bola ilovasida so‘rovni ko‘rib, Broadcast’ni o‘zi tasdiqlaydi; qizil iOS indikatori ko‘rinadi.")
+                .font(.caption2).foregroundStyle(ParentPalette.muted)
+        }
+        .padding(16).background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 18))
+    }
+
+    private func requestRemoteScreenShare(_ child: IOSChildDevice) {
+        guard let code = familyCode, let ownerUID = Auth.auth().currentUser?.uid else {
+            errorMessage = "Ota-ona hisobi aniqlanmadi."; return
+        }
+        let requestID = UUID().uuidString
+        let channel = "scr_\(UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased())"
+        screenShareRequestID = requestID
+        screenShareChannel = channel
+        screenShareRequestState = "requested"
+        screenShareStatus = "Bola qurilmasiga ekran so‘rovi yuborildi"
+        let ref = Firestore.firestore().collection("families").document(code)
+            .collection("children").document(child.id).collection("screen_share_requests").document("current")
+        ref.setData([
+            "requestId": requestID, "channelName": channel, "status": "requested",
+            "requestedByUid": ownerUID, "platform": "ios",
+            "createdAtMs": Int64(Date().timeIntervalSince1970 * 1000),
+            "updatedAtMs": Int64(Date().timeIntervalSince1970 * 1000),
+            "expiresAtMs": Int64(Date().timeIntervalSince1970 * 1000) + 10 * 60 * 1000
+        ]) { error in
+            DispatchQueue.main.async {
+                if let error { errorMessage = "Ekran so‘rovi yuborilmadi: \(error.localizedDescription)" }
+                else { infoMessage = "Ekran so‘rovi yuborildi. Bola qurilmasida tasdiqlanishini kuting." }
+            }
+        }
+    }
+
+    private func stopRemoteScreenShare() {
+        guard let code = familyCode, let child = selectedChild else { return }
+        Firestore.firestore().collection("families").document(code)
+            .collection("children").document(child.id).collection("screen_share_requests").document("current")
+            .updateData(["status": "stop_requested", "updatedAtMs": Int64(Date().timeIntervalSince1970 * 1000)])
+        screenViewer.leave()
+        screenShareStatus = "Ekran uzatish to‘xtatilmoqda…"
     }
 
     private func voiceControls(_ child: IOSChildDevice) -> some View {
@@ -824,6 +906,12 @@ struct IOSParentDashboardView: View {
         focusListener?.remove()
         voiceListener?.remove()
         micSettingsListener?.remove()
+        screenShareListener?.remove()
+        screenShareSettingsListener?.remove()
+        screenViewer.leave()
+        screenConsentEnabled = false
+        screenShareRequestState = ""
+        screenShareStatus = "So‘rov yuborilmagan"
         voiceConsentEnabled = false
         voiceSession.leave()
         voiceStatus = "Ulanmagan"
@@ -864,6 +952,36 @@ struct IOSParentDashboardView: View {
                 .addSnapshotListener { snapshot, _ in
                     DispatchQueue.main.async {
                         voiceConsentEnabled = snapshot?.data()?["remoteAudioConsent"] as? Bool ?? false
+                    }
+                }
+        }
+        if child.platform == .ios {
+            screenShareSettingsListener = childRef.collection("screen_share_settings").document("current")
+                .addSnapshotListener { snapshot, _ in
+                    DispatchQueue.main.async { screenConsentEnabled = snapshot?.data()?["screenShareConsent"] as? Bool ?? false }
+                }
+            screenShareListener = childRef.collection("screen_share_requests").document("current")
+                .addSnapshotListener { snapshot, error in
+                    DispatchQueue.main.async {
+                        if let error { screenShareStatus = error.localizedDescription; return }
+                        guard let data = snapshot?.data(), let status = data["status"] as? String else {
+                            screenShareStatus = "Bola ekran so‘rovini kutmoqda"; return
+                        }
+                        screenShareRequestState = status
+                        let rid = data["requestId"] as? String
+                        let channel = data["channelName"] as? String
+                        switch status {
+                        case "requested": screenShareStatus = "Bola qurilmasiga so‘rov yuborildi"
+                        case "broadcast_ready", "active":
+                            screenShareStatus = "Bola Broadcast’ni boshladi"
+                            if let rid, let channel, screenShareRequestID == rid, !screenViewer.connected {
+                                screenViewer.join(channel: channel, familyCode: code, childUid: child.id, requestID: rid)
+                            }
+                        case "stop_requested", "stopped", "failed", "expired", "cancelled":
+                            screenViewer.leave()
+                            screenShareStatus = status == "stopped" ? "Ekran uzatish tugadi" : "Ekran ulashish: \(status)"
+                        default: screenShareStatus = status
+                        }
                     }
                 }
         }
@@ -1008,6 +1126,7 @@ struct IOSParentDashboardView: View {
         voiceListener?.remove()
         micSettingsListener?.remove()
         voiceSession.leave()
+        screenViewer.leave()
         boundChildID = nil
         boundChildPlatform = nil
         boundCapabilities = nil
