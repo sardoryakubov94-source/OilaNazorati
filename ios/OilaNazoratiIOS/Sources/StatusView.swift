@@ -94,7 +94,6 @@ struct StatusView: View {
                                     if granted {
                                         saveRemoteAudioConsent(true)
                                         audioRemote.startListening(familyCode: familyCode, childUid: childUid, consent: audioConsent)
-            screenShare.configure(familyCode: familyCode, childUid: childUid)
                                     } else {
                                         audioConsent.disable()
                                         saveRemoteAudioConsent(false)
