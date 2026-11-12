@@ -45,6 +45,8 @@ class ParentDashboardActivity : AppCompatActivity() {
     private val smsAdapter = SmsHistoryAdapter()
     private val contactSummaryAdapter = ContactSummaryAdapter()
     private var isPremiumUser = false
+    private var selectedChildPlatform: ChildDevicePlatform = ChildDevicePlatform.UNKNOWN
+    private var selectedChildCapabilities: Set<ParentFeature> = emptySet()
     private var simInfoListener: com.google.firebase.firestore.ListenerRegistration? = null
     // MUHIM: bular ilgari saqlanmagani uchun har safar loadTodayStats() chaqirilganda
     // (masalan bola almashtirilganda) ESKI listenerlar o'chirilmay, ustiga yangisi
@@ -125,17 +127,17 @@ class ParentDashboardActivity : AppCompatActivity() {
     private fun setupBottomNav() { bindBottomNav(NavTab.HOME) }
 
     private fun setupSectionButtons() {
-        binding.btnLocationHistory.setOnClickListener { openIfChildSelected { LocationHistoryActivity::class.java } }
-        binding.btnCallHistory.setOnClickListener { openIfChildSelected { CallHistoryActivity::class.java } }
-        binding.btnSmsHistory.setOnClickListener { openIfChildSelected { SmsHistoryActivity::class.java } }
+        binding.btnLocationHistory.setOnClickListener { openIfChildSelected(ParentFeature.LOCATION) { LocationHistoryActivity::class.java } }
+        binding.btnCallHistory.setOnClickListener { openIfChildSelected(ParentFeature.CALLS) { CallHistoryActivity::class.java } }
+        binding.btnSmsHistory.setOnClickListener { openIfChildSelected(ParentFeature.SMS) { SmsHistoryActivity::class.java } }
         binding.btnSavedContacts.setOnClickListener { startActivity(Intent(this, SavedContactsActivity::class.java)) }
         binding.btnTrends.setOnClickListener { startActivity(Intent(this, TrendsActivity::class.java)) }
-        binding.cardStatCalls.setOnClickListener { openIfChildSelected { CallHistoryActivity::class.java } }
-        binding.cardStatSms.setOnClickListener { openIfChildSelected { SmsHistoryActivity::class.java } }
+        binding.cardStatCalls.setOnClickListener { openIfChildSelected(ParentFeature.CALLS) { CallHistoryActivity::class.java } }
+        binding.cardStatSms.setOnClickListener { openIfChildSelected(ParentFeature.SMS) { SmsHistoryActivity::class.java } }
         binding.cardStatContacts.setOnClickListener { startActivity(Intent(this, SavedContactsActivity::class.java)) }
         binding.premiumBannerHome.setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
         binding.btnPremiumCtaHome.setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
-        binding.cardStatScreenshot.setOnClickListener { openIfChildSelected { ScreenshotHistoryActivity::class.java } }
+        binding.cardStatScreenshot.setOnClickListener { openIfChildSelected(ParentFeature.SCREENSHOTS) { ScreenshotHistoryActivity::class.java } }
     }
 
 
@@ -200,7 +202,7 @@ class ParentDashboardActivity : AppCompatActivity() {
                         .show()
                     return@checkIsPremium
                 }
-                openIfChildSelected { AmbientListenActivity::class.java }
+                openIfChildSelected(ParentFeature.AMBIENT_AUDIO) { AmbientListenActivity::class.java }
             }
         }
 
@@ -219,7 +221,7 @@ class ParentDashboardActivity : AppCompatActivity() {
             0xFFF59E0B.toInt(),
             "Xavfsizlik", "Muhim signallar"
         ) {
-            openIfChildSelected { RiskAlertsActivity::class.java }
+            openIfChildSelected(ParentFeature.RISK_ALERTS) { RiskAlertsActivity::class.java }
         }
 
         row.addView(ovozHalf); row.addView(divider); row.addView(xavfHalf)
@@ -361,8 +363,15 @@ class ParentDashboardActivity : AppCompatActivity() {
         }
     }
 
-    private fun openIfChildSelected(activityClass: () -> Class<*>) {
-        if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) { Toast.makeText(this, "Avval oila kodini yuklab, farzandni tanlang", Toast.LENGTH_SHORT).show(); return }
+    private fun openIfChildSelected(requiredFeature: ParentFeature, activityClass: () -> Class<*>) {
+        if (FirebaseRepo.familyCode == null || FirebaseRepo.childId == null) {
+            Toast.makeText(this, "Avval oila kodini yuklab, farzandni tanlang", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (!selectedChildCapabilities.contains(requiredFeature)) {
+            Toast.makeText(this, "Bu funksiya tanlangan qurilmada qo'llab-quvvatlanmaydi", Toast.LENGTH_SHORT).show()
+            return
+        }
         startActivity(Intent(this, activityClass()))
     }
 
@@ -378,10 +387,22 @@ class ParentDashboardActivity : AppCompatActivity() {
         val selectedId = prefs.getString("parent_selected_child_id", null)
             ?: prefs.getString("child_id", null)
 
-        FirebaseRepo.fetchChildren(code) { children ->
-            val selectedExists = !selectedId.isNullOrBlank() && children.any { it.first == selectedId }
-            if (selectedExists) {
-                setChildId(selectedId!!)
+        FirebaseRepo.fetchLinkedChildren(code) { children ->
+            val selectedChild = children.firstOrNull { it.id == selectedId }
+            if (selectedChild != null) {
+                val platform = ChildDevicePlatform.from(selectedChild.platform)
+                if (platform == ChildDevicePlatform.UNKNOWN) {
+                    FirebaseRepo.childId = null
+                    Toast.makeText(this, "Bola qurilmasi platformasi aniqlanmadi. Ilovani yangilab qayta ulang.", Toast.LENGTH_LONG).show()
+                    startActivity(Intent(this, ParentFamilyLinkActivity::class.java).apply {
+                        putExtra(ParentFamilyLinkActivity.EXTRA_FAMILY_CODE, code)
+                    })
+                    finish()
+                    return@fetchLinkedChildren
+                }
+                setChildId(selectedChild.id)
+                setChildPlatform(platform)
+                applyChildPlatformUi()
                 loadTodayStats()
             } else {
                 // Tanlov yo'qolgan yoki bola oiladan chiqarilgan bo'lsa,
@@ -401,6 +422,84 @@ class ParentDashboardActivity : AppCompatActivity() {
             .putString("child_id", id)
             .putString("parent_selected_child_id", id)
             .apply()
+    }
+
+    private fun setChildPlatform(platform: ChildDevicePlatform) {
+        selectedChildPlatform = platform
+        selectedChildCapabilities = ChildPlatformPolicy.capabilities(platform)
+        getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
+            .putString("parent_selected_platform", if (platform == ChildDevicePlatform.IOS) "ios" else "android")
+            .apply()
+    }
+
+    /** iOS bola uchun faqat iOS kodida amalda qo'llab-quvvatlangan boshqaruvlar ko'rsatiladi. */
+    private fun applyChildPlatformUi() {
+        val isIos = selectedChildPlatform == ChildDevicePlatform.IOS
+        if (!isIos) return // Android→Android ko'rinishi aynan avvalgidek qoladi.
+
+        binding.btnFocusMode.visibility = if (selectedChildCapabilities.contains(ParentFeature.FOCUS_MODE)) View.VISIBLE else View.GONE
+        binding.btnLocationHistory.visibility = if (selectedChildCapabilities.contains(ParentFeature.LOCATION)) View.VISIBLE else View.GONE
+
+        listOf(
+            binding.premiumBannerHome,
+            binding.cardStatCalls,
+            binding.cardStatSms,
+            binding.cardStatContacts,
+            binding.cardStatScreenshot,
+            binding.btnCallHistory,
+            binding.timelineList,
+            binding.btnSmsHistory,
+            binding.smsTimelineList,
+            binding.smsSectionEmpty,
+            binding.btnSavedContacts,
+            binding.contactSummaryList,
+            binding.notificationsCardHome,
+            binding.btnNotificationsHome,
+            binding.btnTrends,
+            binding.appUsageList
+        ).forEach { it.visibility = View.GONE }
+
+        findViewById<View?>(R.id.btnPremiumCtaHome)?.visibility = View.GONE
+        findViewById<View?>(R.id.sim_info_card)?.visibility = View.GONE
+        findViewById<View?>(R.id.ozvoz_xavf_row)?.visibility = View.GONE
+        findViewById<View?>(R.id.ovo z_xavf_row)?.visibility = View.GONE
+    }
+
+    private fun showIosFocusModeDialog() {
+        val switch = Switch(this).apply {
+            text = "iPhone'da Kontrol rejimini yoqish"
+            textSize = 15f
+            setPadding(dp(20), dp(18), dp(20), dp(18))
+        }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("iOS Kontrol rejimi")
+            .setMessage("Yoqilganda iPhone'da Apple Screen Time ruxsatlari orqali ilovalar va ayrim saytlar toifalari cheklanadi. iOS'da Android kabi har bir ilovani alohida tanlash imkoniyati yo'q. Bu sozlama bolaning iPhone'ida Family Controls ruxsati berilgan bo'lsagina ishlaydi.")
+            .setView(switch)
+            .setPositiveButton("Saqlash", null)
+            .setNegativeButton("Bekor qilish", null)
+            .create()
+        dialog.setOnShowListener {
+            FocusModeRepository.getSettingsOnce { current ->
+                switch.isChecked = current.enabled
+            }
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                FocusModeRepository.saveSettings(
+                    uz.oilanazorati.parentcontrol.model.FocusModeSettings(
+                        enabled = switch.isChecked,
+                        allowedPackages = emptyList()
+                    )
+                ) { ok ->
+                    Toast.makeText(
+                        this,
+                        if (ok) "iOS Kontrol rejimi sozlamasi yuborildi. iPhone ruxsatlari ham talab qilinadi."
+                        else "Saqlab bo'lmadi — internetni tekshiring",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    if (ok) dialog.dismiss()
+                }
+            }
+        }
+        dialog.show()
     }
 
     private fun showChildPickerDialog(code: String, preloaded: List<Pair<String, String>>? = null) {
