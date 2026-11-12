@@ -128,6 +128,9 @@ struct StatusView: View {
             }
             .navigationTitle("Bola qurilmasi")
         }
+        .onDisappear {
+            audioRemote.stopListening()
+        }
         .onAppear {
             saveRemoteAudioConsent(audioConsent.isEnabled)
             audioRemote.startListening(familyCode: familyCode, childUid: childUid, consent: audioConsent)
