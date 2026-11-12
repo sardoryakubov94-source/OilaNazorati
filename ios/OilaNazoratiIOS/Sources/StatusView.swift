@@ -8,6 +8,9 @@ struct StatusView: View {
     @AppStorage("location_sharing_consent") private var locationSharingConsent = false
     @StateObject private var audioConsent = ChildAudioConsent()
     @StateObject private var audioRemote = ChildAudioRemoteController()
+    @StateObject private var screenShare = ChildScreenShareController()
+    @State private var showScreenBroadcastPicker = false
+    @State private var screenShareError: String?
 
 
     private func saveRemoteAudioConsent(_ enabled: Bool) {
@@ -91,6 +94,7 @@ struct StatusView: View {
                                     if granted {
                                         saveRemoteAudioConsent(true)
                                         audioRemote.startListening(familyCode: familyCode, childUid: childUid, consent: audioConsent)
+            screenShare.configure(familyCode: familyCode, childUid: childUid)
                                     } else {
                                         audioConsent.disable()
                                         saveRemoteAudioConsent(false)
