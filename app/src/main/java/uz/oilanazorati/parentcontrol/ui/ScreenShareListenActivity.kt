@@ -134,7 +134,7 @@ class ScreenShareListenActivity : AppCompatActivity() {
                         runOnUiThread { status.text = "iPhone ekraniga ulanildi…"; joined = true }
                     }
                     override fun onUserJoined(uid: Int, elapsed: Int) {
-                        if (uid in 1001..2000) runOnUiThread {
+                        if (uid in 501..1000) runOnUiThread {
                             val surface = SurfaceView(this@ScreenShareListenActivity)
                             videoContainer.removeAllViews()
                             videoContainer.addView(surface, FrameLayout.LayoutParams(-1, -1))
