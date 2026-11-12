@@ -25,7 +25,7 @@ struct DailyUsageReport<Content: View>: DeviceActivityReportScene {
     func makeConfiguration(
         representing data: DeviceActivityResults<DeviceActivityData>
     ) async -> UsageReportConfiguration {
-        await UsageReportBuilder.configuration(from: data)
+        await UsageReportBuilder.configuration(from: data, key: "latestDailyScreenTimeSeconds")
     }
 }
 
@@ -36,19 +36,19 @@ struct WeeklyUsageReport<Content: View>: DeviceActivityReportScene {
     func makeConfiguration(
         representing data: DeviceActivityResults<DeviceActivityData>
     ) async -> UsageReportConfiguration {
-        await UsageReportBuilder.configuration(from: data)
+        await UsageReportBuilder.configuration(from: data, key: "latestWeeklyScreenTimeSeconds")
     }
 }
 
 private enum UsageReportBuilder {
-    static func configuration(from data: DeviceActivityResults<DeviceActivityData>) async -> UsageReportConfiguration {
+    static func configuration(from data: DeviceActivityResults<DeviceActivityData>, key: String) async -> UsageReportConfiguration {
         var total: TimeInterval = 0
         for await day in data {
             for await segment in day.activitySegments {
                 total += segment.totalActivityDuration
             }
         }
-        return UsageReportConfiguration(totalDuration: total)
+        UserDefaults(suiteName: "group.uz.oilanazorati.shared")?.set(total, forKey: key)\n        return UsageReportConfiguration(totalDuration: total)
     }
 }
 
