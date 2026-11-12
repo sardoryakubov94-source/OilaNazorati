@@ -101,6 +101,11 @@ final class ScreenTimeController: ObservableObject {
     func refreshAuthorization() {
         authorizationStatus = AuthorizationCenter.shared.authorizationStatus
         syncAuthorizationStatus()
+        if let latestPolicy {
+            apply(policy: latestPolicy)
+        } else if authorizationStatus != .approved {
+            clearAllShields()
+        }
     }
 
     private func syncAuthorizationStatus() {
@@ -123,6 +128,7 @@ final class ScreenTimeController: ObservableObject {
         latestPolicy = policy
         guard authorizationStatus == .approved else {
             policyActive = false
+            clearAllShields()
             return
         }
         let enabled = policy["enabled"] as? Bool ?? false
