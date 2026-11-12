@@ -13,7 +13,6 @@ enum ScreenTimeContract {
     static let collection = "screen_time_settings"
     static let document = "current"
     static let reportCollection = "screen_time_reports"
-    static let reportDocument = "latest"
     static let activityName = DeviceActivityName("uz.oilanazorati.daily")
     static let dailyEventName = DeviceActivityEvent.Name("daily_limit")
     static let appGroup = "group.uz.oilanazorati.shared"
@@ -221,12 +220,20 @@ final class ScreenTimeController: ObservableObject {
         guard let code = familyCode, let uid = childUid else { return }
         let defaults = UserDefaults(suiteName: ScreenTimeContract.appGroup) ?? .standard
         guard let events = defaults.array(forKey: "screenTimePendingEvents") as? [[String: Any]], !events.isEmpty else { return }
-        let batch = Firestore.firestore().collection("families").document(code)
-            .collection("children").document(uid).collection(ScreenTimeContract.reportCollection)
-        let writes = events
-        for event in writes {
-            batch.addDocument(data: event)
+        let database = Firestore.firestore()
+        let batch = database.batch()
+        for event in events {
+            let reference = database.collection("families").document(code)
+                .collection("children").document(uid)
+                .collection(ScreenTimeContract.reportCollection).document()
+            batch.setData(event, forDocument: reference)
         }
-        defaults.removeObject(forKey: "screenTimePendingEvents")
+        batch.commit { [weak self] error in
+            if let error {
+                Task { @MainActor in self?.lastError = "Limit event Firebase sync error: " + error.localizedDescription }
+            } else {
+                defaults.removeObject(forKey: "screenTimePendingEvents")
+            }
+        }
     }
 }
