@@ -156,7 +156,7 @@ final class ScreenTimeController: ObservableObject {
             intervalEnd: DateComponents(hour: 23, minute: 59),
             repeats: true
         )
-        let threshold = DateComponents(minute: minutes)
+        let threshold = DateComponents(hour: minutes / 60, minute: minutes % 60)
         let event = DeviceActivityEvent(
             applications: selection.applicationTokens,
             categories: selection.categoryTokens,
