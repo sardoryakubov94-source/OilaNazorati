@@ -764,6 +764,10 @@ struct IOSParentDashboardView: View {
                             boundFamilyCode != code
                         if needsRebind { bindSelectedChild(child) }
                     } else {
+                        if let oldChildID = boundChildID,
+                           voiceRequestState == "requested" || voiceRequestState == "active" {
+                            sendVoiceStopRequest(to: oldChildID)
+                        }
                         locationListener?.remove()
                         focusListener?.remove()
                         voiceListener?.remove()
@@ -786,8 +790,23 @@ struct IOSParentDashboardView: View {
     }
 
     private func select(_ child: IOSChildDevice) {
+        if let oldChildID = boundChildID, oldChildID != child.id,
+           voiceRequestState == "requested" || voiceRequestState == "active" {
+            sendVoiceStopRequest(to: oldChildID)
+        }
         selectedChildID = child.id
         bindSelectedChild(child)
+    }
+
+    private func sendVoiceStopRequest(to childID: String) {
+        guard let code = familyCode else { return }
+        Firestore.firestore().collection("families").document(code)
+            .collection("children").document(childID)
+            .collection("mic_requests").document("current")
+            .updateData([
+                "status": "stop_requested",
+                "stoppedAtMs": Int64(Date().timeIntervalSince1970 * 1000)
+            ])
     }
 
     private func bindSelectedChild(_ child: IOSChildDevice) {
@@ -973,6 +992,10 @@ struct IOSParentDashboardView: View {
     }
 
     private func removeListeners() {
+        if let childID = boundChildID,
+           voiceRequestState == "requested" || voiceRequestState == "active" {
+            sendVoiceStopRequest(to: childID)
+        }
         childrenListener?.remove()
         locationListener?.remove()
         focusListener?.remove()
