@@ -121,7 +121,7 @@ struct StatusView: View {
                         .foregroundStyle(.secondary)
                 }
                 Section {
-                    Text("Apple Screen Time funksiyalari bolaning qurilmasidagi Family Controls ruxsati va ilova tanlovidan keyin ishlaydi. Android'dagi SMS, qo‘ng‘iroq tarixi, bildirishnoma matni, ekran surati va fon mikrofoni iOS’da mavjud emas.")
+                    Text("Apple Screen Time funksiyalari bolaning qurilmasidagi Family Controls ruxsati va ilova tanlovidan keyin ishlaydi. Android'dagi SMS, qo‘ng‘iroq tarixi, bildirishnoma matni, ekran surati va yashirin fon mikrofoni iOS’da mavjud emas. Jonli ovoz faqat yuqoridagi alohida rozilik va faol sessiya orqali ishlaydi.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
