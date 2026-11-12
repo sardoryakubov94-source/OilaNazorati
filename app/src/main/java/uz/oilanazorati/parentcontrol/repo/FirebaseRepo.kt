@@ -331,7 +331,7 @@ object FirebaseRepo {
     fun logAppUsage(event: AppUsageEvent) { childCollection("app_usage")?.add(event) }
     fun logLocation(event: LocationEvent) { childCollection("locations")?.add(event) }
 
-    data class LinkedChildDevice(val id: String, val name: String, val platform: String)
+    data class LinkedChildDevice(val id: String, val name: String, val platform: String, val supportedCapabilities: Set<String>? = null)
 
     /** Ota-ona oynasida ulangan bolalar ro'yxatini real vaqt rejimida kuzatadi. */
     fun listenChildren(code: String, onChange: (List<LinkedChildDevice>) -> Unit): com.google.firebase.firestore.ListenerRegistration {
@@ -345,11 +345,26 @@ object FirebaseRepo {
                     LinkedChildDevice(
                         id = doc.id,
                         name = doc.getString("nomi")?.takeIf { it.isNotBlank() } ?: "Farzand (${doc.id.take(5)})",
-                        platform = (doc.getString("childPlatform") ?: doc.getString("platform") ?: "android").lowercase()
+                        platform = (doc.getString("childPlatform") ?: doc.getString("platform") ?: "unknown").lowercase(),
+                        supportedCapabilities = (doc.get("supportedCapabilities") as? List<*>)?.mapNotNull { it as? String }?.toSet()
                     )
                 }.sortedBy { it.name.lowercase() })
             }
     }
+    /** Platforma metama'lumotlari bilan bolalar ro'yxati. */
+    fun fetchLinkedChildren(code: String, onResult: (List<LinkedChildDevice>) -> Unit) {
+        db.collection("families").document(code).collection("children").get()
+            .addOnSuccessListener { snap ->
+                onResult(snap.documents.map { doc ->
+                    LinkedChildDevice(
+                        id = doc.id,
+                        name = doc.getString("nomi")?.takeIf { it.isNotBlank() } ?: "Farzand (${doc.id.take(5)})",
+                        platform = (doc.getString("childPlatform") ?: doc.getString("platform") ?: "unknown").lowercase()
+                    )
+                }.sortedBy { it.name.lowercase() })
+            }.addOnFailureListener { onResult(emptyList()) }
+    }
+
     fun fetchChildren(code: String, onResult: (List<Pair<String, String>>) -> Unit) {
         db.collection("families").document(code).collection("children").get()
             .addOnSuccessListener { snap ->

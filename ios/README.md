@@ -85,3 +85,16 @@ Bu jadval — markaziy siyosat. U hali to'rtta yo'nalishning barchasi ishlaydi d
 Yangi iOS o'rnatilishida qurilma roli tanlanadi. Avvaldan oila kodiga ulangan iOS qurilmalari avtomatik ravishda `child` rolida davom etadi. iOS bola bog'lanayotganda Firestore hujjatiga `childPlatform: ios`, `platform: ios` va imkoniyatlar ro'yxati yoziladi. Android ilovasining mavjud `childPlatform: android` maydoni ham saqlanadi.
 
 **Hozirgi cheklov:** iOS ota-ona rejimi hozircha aniq ogohlantiruvchi ekran bilan to'xtaydi; to'liq ota-ona paneli sifatida ko'rsatilmaydi. `focus_mode` iOS'da Family Controls ruxsati va Apple entitlement'iga bog'liq. Platforma bo'yicha qo'llab-quvvatlash mavjudligi — foydalanuvchi ruxsat bergan yoki funksiya real qurilmada ishlayotganini anglatmaydi.
+
+
+## Android ota-ona panelida platformaga mos ko'rinish (keyingi bosqich)
+
+`ParentFamilyLinkActivity` bolalar ro'yxatidagi qurilma platformasini ko'rsatadi va iOS bolani tanlashni bloklamaydi. Tanlangan bola platformasi Firestore hujjatidan qayta tekshiriladi; noma'lum platforma bo'lsa boshqaruv paneli ochilmaydi.
+
+Android ota-ona paneli iOS bola uchun hozircha faqat:
+- Joylashuv va joylashuv tarixini;
+- iOS Screen Time / Family Controls orqali ishlaydigan umumiy Kontrol rejimini
+
+ko'rsatadi. Qo'ng'iroqlar, SMS, kontaktlar, ilovalar statistikasi, screenshot, bildirishnoma, SIM, jonli mikrofon va xavfsizlik signallari kabi Android'ga xos bo'limlar yashiriladi, ularga tegishli listenerlar ham ulanmaydi. iOS'da alohida ilovalarni tanlab bloklash Android'dagi kabi mavjud emas; ota-ona faqat umumiy yoqish/o'chirishni yuboradi.
+
+Android bola tanlanganda mavjud dashboard ko'rinishi va funksiyalar matritsasi o'zgarmaydi. Platforma metama'lumoti yo'q bo'lgan eski/nomalum yozuvlar uchun Android imkoniyatlari taxmin qilinmaydi.
