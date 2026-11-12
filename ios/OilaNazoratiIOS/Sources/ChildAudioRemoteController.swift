@@ -43,7 +43,7 @@ final class ChildAudioRemoteController: ObservableObject {
                     guard self.handledRequestID != requestID else { return }
                     self.handledRequestID = requestID
                     self.statusText = "Ota-ona so‘roviga ulanmoqda…"
-                    self.voiceSession.join(channel: channel, role: "publisher") { result in
+                    self.voiceSession.join(channel: channel, role: "publisher", familyCode: familyCode, childUid: childUid, requestID: requestID) { result in
                         switch result {
                         case .success:
                             self.isPublishing = true
