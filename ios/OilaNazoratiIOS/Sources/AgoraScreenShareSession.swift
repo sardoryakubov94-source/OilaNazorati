@@ -133,6 +133,17 @@ final class AgoraScreenShareSession: NSObject, ObservableObject, AgoraRtcEngineD
         }
     }
 
+
+    func rtcEngine(_ engine: AgoraRtcEngineKit, didOccurError errorCode: AgoraErrorCode) {
+        status = "Agora ekran xatosi: \(errorCode.rawValue)"
+        if let request {
+            Firestore.firestore().collection("families").document(request.familyCode)
+                .collection("children").document(request.childUid)
+                .collection("screen_requests").document("current")
+                .updateData(["status": "failed", "errorCode": Int(errorCode.rawValue)])
+        }
+    }
+
     func rtcEngine(_ engine: AgoraRtcEngineKit, didJoinChannel channel: String, withUid uid: UInt, elapsed: Int) {
         isJoined = true
         status = role == "screen_publisher" ? "Ekran kanaliga ulandi" : "Ekran kanaliga ulandi"
