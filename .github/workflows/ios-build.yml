@@ -7,11 +7,6 @@ on:
     paths:
       - "ios/**"
       - ".github/workflows/ios-build.yml"
-  pull_request:
-    paths:
-      - "ios/**"
-      - ".github/workflows/ios-build.yml"
-
 concurrency:
   group: ios-build-${{ (github.head_ref || github.ref_name) }}
   cancel-in-progress: true
