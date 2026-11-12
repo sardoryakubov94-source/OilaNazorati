@@ -51,6 +51,17 @@ final class LocationSync: NSObject, CLLocationManagerDelegate {
         childUid = nil
     }
 
+    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        guard familyCode != nil, childUid != nil else { return }
+        if manager.authorizationStatus == .authorizedAlways ||
+           manager.authorizationStatus == .authorizedWhenInUse {
+            manager.startUpdatingLocation()
+            if manager.authorizationStatus == .authorizedAlways {
+                manager.startMonitoringSignificantLocationChanges()
+            }
+        }
+    }
+
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let loc = locations.last, let code = familyCode, let uid = childUid else { return }
         let now = Date()
