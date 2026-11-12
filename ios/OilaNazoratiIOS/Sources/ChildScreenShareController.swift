@@ -21,6 +21,7 @@ final class ChildScreenShareController: NSObject, ObservableObject, AgoraRtcEngi
     private var childUid = ""
     private var requestId = ""
     private var channelName = ""
+    private var rtcUid: UInt = 0
     private var pendingJoin = false
 
     private let appGroup = "group.uz.oilanazorati.shared"
@@ -102,6 +103,7 @@ final class ChildScreenShareController: NSObject, ObservableObject, AgoraRtcEngi
             }
             self.requestId = rid
             self.channelName = channel
+            self.rtcUid = UInt.random(in: 1000...UInt(UInt32.max))
             user.getIDToken { token, error in
                 if let error { completion(.failure(error)); return }
                 guard let token else { completion(.failure(ScreenShareError.notSignedIn)); return }
@@ -139,7 +141,7 @@ final class ChildScreenShareController: NSObject, ObservableObject, AgoraRtcEngi
         request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
         request.httpBody = try? JSONSerialization.data(withJSONObject: [
             "familyCode": familyCode, "childUid": childUid, "requestId": requestId,
-            "channelName": channelName, "uid": UInt.random(in: 1000...UInt(UInt32.max)),
+            "channelName": channelName, "uid": rtcUid,
             "role": "publisher"
         ])
         URLSession.shared.dataTask(with: request) { data, response, error in
@@ -172,7 +174,7 @@ final class ChildScreenShareController: NSObject, ObservableObject, AgoraRtcEngi
         options.autoSubscribeVideo = false
         pendingJoin = true
         let result = rtc.joinChannel(byToken: token, channelId: channelName,
-                                     uid: UInt(UserDefaults(suiteName: appGroup)?.integer(forKey: "screenShareUID") ?? 0),
+                                     uid: rtcUid,
                                      mediaOptions: options, joinSuccess: nil)
         if result != 0 {
             pendingJoin = false
