@@ -222,42 +222,56 @@ class MainActivity : AppCompatActivity() {
             .addOnSuccessListener { result ->
                 val user = result.user ?: return@addOnSuccessListener
                 saveParentProfile(user.uid, user.displayName.orEmpty(), user.email.orEmpty())
-                val destination = when (pendingDestination) {
-                    PendingDestination.SUPPORT -> SupportActivity::class.java
-                    PendingDestination.PARENT_DASHBOARD -> ParentDashboardActivity::class.java
+                if (pendingDestination == PendingDestination.SUPPORT) {
+                    startActivity(Intent(this, SupportActivity::class.java))
+                    return@addOnSuccessListener
                 }
-                if (pendingDestination == PendingDestination.PARENT_DASHBOARD && FirebaseRepo.familyCode.isNullOrBlank()) {
-                    binding.loginStatusText.text = "Oila kodi tayyorlanmoqda..."
-                    var answered = false
-                    val timeoutHandler = android.os.Handler(android.os.Looper.getMainLooper())
-                    val timeoutRunnable = Runnable {
-                        if (!answered) {
-                            answered = true
-                            binding.loginStatusText.text = "❌ Internet aloqasi yo'q yoki juda sekin. Qayta urinib ko'ring."
-                        }
-                    }
-                    timeoutHandler.postDelayed(timeoutRunnable, 15_000L)
-                    FirebaseRepo.findOrCreateFamilyForCurrentUser { code ->
-                        if (answered) return@findOrCreateFamilyForCurrentUser
+
+                // Har bir Gmail kirishida oila kodi serverdan aniqlanadi.
+                // Bola oldin tanlangan bo'lsa, aynan shu Gmail + oila uchun saqlangan
+                // tanlov tiklanadi va tanlash oynasi qayta ko'rsatilmaydi.
+                binding.loginStatusText.text = "Oila ma'lumotlari tekshirilmoqda..."
+                var answered = false
+                val timeoutHandler = android.os.Handler(android.os.Looper.getMainLooper())
+                val timeoutRunnable = Runnable {
+                    if (!answered) {
                         answered = true
-                        timeoutHandler.removeCallbacks(timeoutRunnable)
-                        if (code != null) {
-                            FirebaseRepo.familyCode = code
-                            getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
-                                .putString("family_code", code).apply()
-                            if (pendingDestination == PendingDestination.PARENT_DASHBOARD) {
-                                startActivity(Intent(this, ParentFamilyLinkActivity::class.java).apply {
-                                    putExtra(ParentFamilyLinkActivity.EXTRA_FAMILY_CODE, code)
-                                })
-                            } else {
-                                startActivity(Intent(this, destination))
-                            }
-                        } else {
-                            binding.loginStatusText.text = "Oila kodini tayyorlashda xato, qayta urinib ko'ring"
-                        }
+                        binding.loginStatusText.text = "❌ Internet aloqasi yo'q yoki juda sekin. Qayta urinib ko'ring."
                     }
-                } else {
-                    startActivity(Intent(this, destination))
+                }
+                timeoutHandler.postDelayed(timeoutRunnable, 15_000L)
+                FirebaseRepo.findOrCreateFamilyForCurrentUser { code ->
+                    if (answered) return@findOrCreateFamilyForCurrentUser
+                    answered = true
+                    timeoutHandler.removeCallbacks(timeoutRunnable)
+                    if (code == null) {
+                        binding.loginStatusText.text = "Oila ma'lumotlarini olishda xato. Qayta urinib ko'ring."
+                        return@findOrCreateFamilyForCurrentUser
+                    }
+                    FirebaseRepo.familyCode = code
+                    val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+                    val selectedChild = prefs.getString("parent_selected_child_id", null)
+                    val sameParent = prefs.getString("parent_uid", null) == user.uid
+                    val sameFamily = prefs.getString("parent_family_code", null) == code
+                    val validSavedSelection = sameParent && sameFamily && !selectedChild.isNullOrBlank()
+
+                    prefs.edit()
+                        .putString("parent_uid", user.uid)
+                        .putString("parent_family_code", code)
+                        .putString("family_code", code)
+                        .apply()
+
+                    if (validSavedSelection) {
+                        FirebaseRepo.childId = selectedChild
+                        startActivity(Intent(this, ParentDashboardActivity::class.java).apply {
+                            putExtra("selected_child_id", selectedChild)
+                            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                        })
+                    } else {
+                        startActivity(Intent(this, ParentFamilyLinkActivity::class.java).apply {
+                            putExtra(ParentFamilyLinkActivity.EXTRA_FAMILY_CODE, code)
+                        })
+                    }
                 }
             }
             .addOnFailureListener {
