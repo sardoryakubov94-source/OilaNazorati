@@ -184,6 +184,7 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
     }
 
     func rtcEngine(_ engine: AgoraRtcEngineKit, didJoinChannel channel: String, withUid uid: UInt, elapsed: Int) {
+        guard activeChannel == channel else { return }
         isConnected = true
         isConnecting = false
         statusText = isPublisher ? "Ovoz uzatilmoqda" : "Ota-ona tinglamoqda"
