@@ -13,6 +13,7 @@ final class ChildAudioRemoteController: ObservableObject {
     private var requestRef: DocumentReference?
     private let voiceSession = AgoraVoiceSession()
     private var handledRequestID: String?
+    private var sessionTimeoutTask: Task<Void, Never>?
 
     func startListening(familyCode: String, childUid: String, consent: ChildAudioConsent) {
         let ref = Firestore.firestore().collection("families").document(familyCode)
@@ -55,6 +56,13 @@ final class ChildAudioRemoteController: ObservableObject {
                         case .success:
                             self.isPublishing = true
                             self.statusText = "Jonli ovoz uzatilmoqda"
+                            self.sessionTimeoutTask?.cancel()
+                            self.sessionTimeoutTask = Task { @MainActor in
+                                try? await Task.sleep(nanoseconds: 30 * 60 * 1_000_000_000)
+                                if !Task.isCancelled && self.isPublishing {
+                                    self.stopPublishing(status: "30 daqiqalik sessiya limiti tugadi")
+                                }
+                            }
                             Task {
                                 try? await ref.updateData([
                                     "status": "active",
@@ -74,7 +82,7 @@ final class ChildAudioRemoteController: ObservableObject {
                             }
                         }
                     }
-                } else if ["stopped", "cancelled", "expired"].contains(status) {
+                } else if ["stop_requested", "stopped", "cancelled", "expired"].contains(status) {
                     self.stopPublishing(status: "Ovoz uzatish to‘xtatildi", updateRemote: false)
                 }
             }
@@ -82,6 +90,8 @@ final class ChildAudioRemoteController: ObservableObject {
     }
 
     func stopPublishing(status: String = "Ovoz uzatish to‘xtatildi", updateRemote: Bool = true) {
+        sessionTimeoutTask?.cancel()
+        sessionTimeoutTask = nil
         voiceSession.leave()
         isPublishing = false
         statusText = status
