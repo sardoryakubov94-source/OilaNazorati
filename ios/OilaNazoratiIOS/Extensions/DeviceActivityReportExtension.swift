@@ -4,7 +4,8 @@ import FamilyControls
 
 /// Screen Time report extension. Apple runs this extension in a privacy sandbox:
 /// usage details are rendered locally and are deliberately NOT exported to Firebase.
-@main\nstruct OilaNazoratiReportExtension: DeviceActivityReportExtension {
+@main
+struct OilaNazoratiReportExtension: DeviceActivityReportExtension {
     var body: some DeviceActivityReportScene {
         DailyUsageReport { configuration in
             UsageSummaryView(title: "Kunlik ekran vaqti", configuration: configuration)
