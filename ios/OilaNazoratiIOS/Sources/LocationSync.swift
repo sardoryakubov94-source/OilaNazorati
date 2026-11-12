@@ -35,10 +35,20 @@ final class LocationSync: NSObject, CLLocationManagerDelegate {
         self.familyCode = familyCode
         self.childUid = childUid
         manager.requestAlwaysAuthorization()
+        guard manager.authorizationStatus == .authorizedAlways ||
+              manager.authorizationStatus == .authorizedWhenInUse else { return }
         manager.startUpdatingLocation()
-        // Ilova butunlay yopilgan bo'lsa ham qurilma sezilarli joy
-        // o'zgartirganda uyg'onib, qisqa vaqt yangilanish olishi uchun.
-        manager.startMonitoringSignificantLocationChanges()
+        // Background updates still depend on the user's system permission and iOS policy.
+        if manager.authorizationStatus == .authorizedAlways {
+            manager.startMonitoringSignificantLocationChanges()
+        }
+    }
+
+    func stop() {
+        manager.stopUpdatingLocation()
+        manager.stopMonitoringSignificantLocationChanges()
+        familyCode = nil
+        childUid = nil
     }
 
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
