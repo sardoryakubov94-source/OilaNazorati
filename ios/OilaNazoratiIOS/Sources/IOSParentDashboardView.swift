@@ -157,6 +157,7 @@ struct IOSParentDashboardView: View {
                         locationCard
                         if child.platform == .android {
                             androidMetrics
+                            androidControls(child)
                         } else if child.platform == .ios {
                             iosControls(child)
                         } else {
@@ -322,6 +323,28 @@ struct IOSParentDashboardView: View {
             Text("Ko‘rsatkichlar Firestore’da mavjud bo‘lgan Android yozuvlari asosida olinadi. Bu iOS ilovasiga Android qurilmasining barcha tizim ruxsatlarini bermaydi.")
                 .font(.caption2).foregroundStyle(ParentPalette.muted)
         }
+    }
+
+    private func androidControls(_ child: IOSChildDevice) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeading("Android boshqaruvi", detail: "Mavjud Android modullari")
+            if child.capabilities.contains(.focusMode) {
+                Toggle(isOn: $focusEnabled) {
+                    Label("Kontrol rejimi", systemImage: "hand.raised.fill")
+                }
+                .tint(ParentPalette.accent)
+                .onChange(of: focusEnabled) { value in
+                    saveFocusMode(value, child: child)
+                }
+                Text("Yoqilganda Android bolaning qurilmasida ruxsat etilgan asosiy tizim ilovalaridan tashqari ilovalar Accessibility xizmati orqali cheklanadi.")
+                    .font(.caption2).foregroundStyle(ParentPalette.muted)
+            } else {
+                Text("Bu Android qurilma Kontrol rejimini e'lon qilmagan.")
+                    .font(.caption).foregroundStyle(ParentPalette.muted)
+            }
+        }
+        .padding(16)
+        .background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 18))
     }
 
     private func iosControls(_ child: IOSChildDevice) -> some View {
@@ -601,12 +624,13 @@ struct IOSParentDashboardView: View {
                     }
                 }
         }
-        if child.isIOS {
+        if child.capabilities.contains(.focusMode) {
             focusListener = childRef.collection("focus_mode_settings").document("current")
                 .addSnapshotListener { snapshot, _ in
                     DispatchQueue.main.async { focusEnabled = snapshot?.data()?["enabled"] as? Bool ?? false }
                 }
-        } else if child.platform == .android {
+        }
+        if child.platform == .android {
             loadAndroidMetrics(childRef)
         }
     }
@@ -640,8 +664,8 @@ struct IOSParentDashboardView: View {
         }
     }
 
-    private func saveIOSFocusMode(_ enabled: Bool, child: IOSChildDevice) {
-        guard child.isIOS, child.capabilities.contains(.focusMode), let code = familyCode,
+    private func saveFocusMode(_ enabled: Bool, child: IOSChildDevice) {
+        guard child.capabilities.contains(.focusMode), let code = familyCode,
               let uid = Auth.auth().currentUser?.uid else {
             infoMessage = "Bu qurilmada ushbu boshqaruv mavjud emas."
             return
