@@ -51,6 +51,10 @@ exports.agoraVoiceToken = onRequest(
 
       const familyData = family.data() || {};
       const requestData = request.data() || {};
+      if (requestData.status === "requested" &&
+          Number(requestData.expiresAtMs || 0) < Date.now()) {
+        return res.status(410).json({ error: "voice_request_expired" });
+      }
       if (
         requestData.requestId !== requestId ||
         requestData.channelName !== channelName ||
@@ -65,7 +69,7 @@ exports.agoraVoiceToken = onRequest(
         return res.status(403).json({ error: "child_publisher_only" });
       }
       if (role === "subscriber") {
-        if (!isOwner) return res.status(403).json({ error: "family_owner_only" });
+        if (decoded.firebase?.sign_in_provider === "anonymous" || !isOwner) return res.status(403).json({ error: "family_owner_only" });
         const parent = await db.collection("parents").doc(decoded.uid).get();
         const premium = parent.exists && parent.data().premium === true;
         if (!premium) return res.status(403).json({ error: "premium_required" });
