@@ -20,7 +20,13 @@ child device, current Firestore microphone request, and Premium entitlement.
    firebase deploy --only functions:agoraVoiceToken --project oilanazorat-3c8de
    ```
 
-4. When prompted for `AGORA_APP_ID`, enter the same Agora App ID used by the Android
+4. Publish the Firestore rules that restrict the new child-owned consent document:
+
+   ```sh
+   firebase deploy --only firestore:rules --project oilanazorat-3c8de
+   ```
+
+5. When prompted for `AGORA_APP_ID`, enter the same Agora App ID used by the Android
    voice module. Do not put the App Certificate in the app, repository, or build secrets.
 
 The iOS app calls:
