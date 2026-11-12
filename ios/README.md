@@ -131,3 +131,12 @@ The repository's `firestore.rules` now contains dedicated rules for iOS Screen T
 - [ ] Ota-onaga server push xabari (FCM backend) — alohida server sozlamasi talab qiladi
 
 **Hech bir iOS funksiyasi Xcode build va haqiqiy qurilma sinovisiz 100% tayyor deb belgilanmaydi.**
+## iOS ReplayKit live screen (development branch)
+
+- Parent sends a `screen_requests/current` request; the iOS child must open the app and explicitly press **Ekran uzatishni boshlash**.
+- The child then confirms the iOS ReplayKit Broadcast system dialog. The red system broadcast indicator is visible; stopping in Control Center/system UI ends capture.
+- Screen video uses Agora RTC (separate channel/token purpose); the existing voice request and Android Agora voice services are not replaced.
+- The Broadcast Upload Extension target is `OilaNazoratiScreenBroadcast`; it requires the registered App Group `group.uz.oilanazorati.shared` on both app and extension targets.
+- Android parent live viewer currently supports an iOS child stream. iOS parent viewer supports iOS child stream. Android child live screen publication and Android→iOS live screen viewing remain a separate implementation/testing item; existing Android screenshot capture is unchanged.
+- Firebase Functions and Firestore rules must be deployed before live screen tokens/requests work. Never place the Agora App Certificate in the app or repository.
+- Required final verification: Xcode simulator build (extension target), Android Gradle build, deployed Function/rules, and physical iPhone↔Android/iPhone Broadcast tests. CI/real-device success has not been asserted from code changes alone.
