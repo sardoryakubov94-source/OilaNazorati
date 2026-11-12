@@ -2,9 +2,21 @@ import SwiftUI
 
 struct StatusView: View {
     @Environment(\.scenePhase) private var scenePhase
+    @ObservedObject private var locationSync = LocationSync.shared
     let familyCode: String
     let childUid: String
     @AppStorage("location_sharing_consent") private var locationSharingConsent = false
+
+    private var locationPermissionText: String {
+        switch locationSync.authorizationStatus {
+        case .notDetermined: return "So‘ralmagan"
+        case .restricted: return "Cheklangan"
+        case .denied: return "Rad etilgan"
+        case .authorizedWhenInUse: return "Ilova ishlaganda"
+        case .authorizedAlways: return "Doimiy ruxsat"
+        @unknown default: return "Noma’lum"
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -32,6 +44,12 @@ struct StatusView: View {
                         } else {
                             LocationSync.shared.stop()
                         }
+                    }
+                    HStack {
+                        Text("iOS ruxsati")
+                        Spacer()
+                        Text(locationPermissionText)
+                            .font(.caption).foregroundStyle(.secondary)
                     }
                     if #available(iOS 16.0, *) {
                         NavigationLink {
