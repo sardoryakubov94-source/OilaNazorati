@@ -36,7 +36,7 @@ Uchta asosiy kombinatsiya kodda alohida ajratilgan:
 
 - **iOS ota-ona → iOS bola:** ota-ona iOS panelidan kunlik limit, maktab/uyqu jadvali va sayt cheklov siyosatini yuboradi. Bola iPhone'ida Apple ruxsati va FamilyActivityPicker tanlovi asosida qo'llanadi. Joylashuv faqat bolaning roziligi bilan.
 - **Android ota-ona → iOS bola:** Android ilovasi bolaning `supportedCapabilities` ro'yxatini Firestore'dan o'qiydi. Ekran vaqti tugmasi iOS bola uchun maxsus siyosat oynasini ochadi va `screen_time_settings/current` ga limit, jadval va sayt cheklovlarini yuboradi. Batafsil ilova/toifa hisobotlari Android ota-onaga eksport qilinmaydi.
-- **iOS ota-ona → Android bola:** iOS ota-ona paneli Android bolaning mavjud faoliyat ko'rsatkichlarini va joylashuvini ko'rsatadi; umumiy Kontrol rejimini `focus_mode_settings/current` orqali yuboradi. Android'dagi SMS, qo'ng'iroq, screenshot va boshqa ma'lumotlar faqat bola Android ilovasida tegishli ruxsat/modul faol bo'lsa mavjud bo'ladi.
+- **iOS ota-ona → Android bola:** iOS ota-ona paneli Android bolaning mavjud faoliyat ko'rsatkichlari va joylashuvini ko'rsatadi; umumiy Kontrol rejimini `focus_mode_settings/current` orqali yuboradi hamda `screenshot_requests/current` orqali screenshot so'rashi va oxirgi rasmni ko'rishi mumkin. Android'dagi SMS, qo'ng'iroq, screenshot va boshqa ma'lumotlar faqat bola Android ilovasida tegishli ruxsat/modul faol bo'lsa mavjud bo'ladi.
 
 Noma'lum platforma yoki e'lon qilinmagan imkoniyatlar avtomatik yoqilmaydi. Android ota-ona paneli iOS uchun faqat iOS bola ilovasi e'lon qilgan Screen Time siyosat imkoniyatlarini ko'rsatadi.
 
