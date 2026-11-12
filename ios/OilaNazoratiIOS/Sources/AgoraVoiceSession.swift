@@ -7,6 +7,7 @@ import Foundation
 enum AgoraVoiceError: LocalizedError {
     case missingTokenEndpoint
     case invalidTokenResponse
+    case serverRejected(String)
     case notSignedIn
     case joinFailed(Int)
 
@@ -14,6 +15,13 @@ enum AgoraVoiceError: LocalizedError {
         switch self {
         case .missingTokenEndpoint: return "Xavfsiz Agora token serveri sozlanmagan."
         case .invalidTokenResponse: return "Token serveridan noto‘g‘ri javob olindi."
+        case .serverRejected(let code):
+            switch code {
+            case "premium_required": return "Jonli ovoz Premium obunasi bilan ishlaydi."
+            case "child_consent_required": return "Bola qurilmasida jonli ovozga rozilik yoqilmagan."
+            case "voice_request_expired": return "Ovoz so‘rovining muddati tugagan. Qayta urinib ko‘ring."
+            default: return "Xavfsiz ovoz serveri so‘rovni rad etdi."
+            }
         case .notSignedIn: return "Qurilma hisobi tasdiqlanmagan."
         case .joinFailed(let code): return "Ovoz kanaliga ulanib bo‘lmadi (\(code))."
         }
@@ -75,10 +83,18 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
                     Task { @MainActor in completion(.failure(requestError)) }
                     return
                 }
-                guard let http = response as? HTTPURLResponse,
-                      (200..<300).contains(http.statusCode),
-                      let data,
-                      let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                guard let http = response as? HTTPURLResponse, let data else {
+                    Task { @MainActor in completion(.failure(AgoraVoiceError.invalidTokenResponse)) }
+                    return
+                }
+                guard (200..<300).contains(http.statusCode) else {
+                    let errorCode = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
+                    Task { @MainActor in
+                        completion(.failure(errorCode.map(AgoraVoiceError.serverRejected) ?? AgoraVoiceError.invalidTokenResponse))
+                    }
+                    return
+                }
+                guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                       let token = json["token"] as? String,
                       let appID = json["appId"] as? String,
                       !token.isEmpty, !appID.isEmpty else {
