@@ -48,7 +48,9 @@ class ParentFamilyLinkActivity : AppCompatActivity() {
             Toast.makeText(this, "Oila kodi nusxalandi", Toast.LENGTH_SHORT).show()
         }
         binding.btnAddChild.setOnClickListener {
-            Toast.makeText(this, "Shu kodni bolaning telefonidagi OilaNazorati ilovasiga kiriting. Ulangach, ro'yxat avtomatik yangilanadi.", Toast.LENGTH_LONG).show()
+            val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(ClipData.newPlainText("OilaNazorati oila kodi", familyCode))
+            Toast.makeText(this, "Oila kodi nusxalandi. Uni boshqa farzandingiz telefoniga yuboring.", Toast.LENGTH_LONG).show()
         }
     }
 
