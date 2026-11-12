@@ -35,7 +35,7 @@ final class AgoraScreenShareSession: NSObject, ObservableObject, AgoraRtcEngineD
             req.httpMethod = "POST"
             req.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            let uid = role == "screen_publisher" ? 2 : 1
+            let uid = role == "screen_publisher" ? 0 : 1
             req.httpBody = try? JSONSerialization.data(withJSONObject: [
                 "purpose": "screen", "familyCode": familyCode, "childUid": childUid,
                 "requestId": requestId, "channelName": channel, "uid": uid, "role": role
