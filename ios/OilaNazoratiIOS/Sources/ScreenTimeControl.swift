@@ -33,7 +33,8 @@ final class ScreenTimeController: ObservableObject {
     private let settings = ManagedSettingsStore()
     private var policyListener: ListenerRegistration?
     private var familyCode: String?
-    private var childUid: String?\n    private var latestPolicy: [String: Any]?
+    private var childUid: String?
+    private var latestPolicy: [String: Any]?
 
     private init() {
         loadSelection()
