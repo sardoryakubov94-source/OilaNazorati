@@ -364,7 +364,7 @@ struct IOSParentDashboardView: View {
                     Spacer()
                     Toggle("Kontrol rejimi", isOn: $focusEnabled)
                         .labelsHidden().tint(ParentPalette.accent)
-                        .onChange(of: focusEnabled) { newValue in saveIOSFocusMode(newValue, child: child) }
+                        .onChange(of: focusEnabled) { newValue in saveFocusMode(newValue, child: child) }
                 }
                 .padding(14).background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 16))
             }
