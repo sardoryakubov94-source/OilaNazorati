@@ -19,6 +19,9 @@ enum class ParentFeature(val wireName: String) {
     SMS("sms"),
     CONTACTS("contacts"),
     APP_USAGE("app_usage"),
+    SCREEN_TIME_LIMITS("time_limits"),
+    SCREEN_TIME_SCHEDULES("schedules"),
+    WEBSITE_RESTRICTIONS("website_restrictions"),
     SCREENSHOTS("screenshots"),
     NOTIFICATIONS("notifications"),
     AMBIENT_AUDIO("ambient_audio"),
@@ -36,10 +39,19 @@ object ChildPlatformPolicy {
         ChildDevicePlatform.ANDROID -> ParentFeature.values().toSet()
         ChildDevicePlatform.IOS -> {
             // Eski iOS ilovalarida capability ro'yxati yo'q: faqat joylashuvni ko'rsatamiz.
-            // Yangi iOS qurilma o'z OS versiyasiga mos ro'yxatni Firestore'ga yozadi.
+            // Yangi iOS bola ilovasi Apple Screen Time orqali qo'llab-quvvatlanadigan
+            // siyosat imkoniyatlarini e'lon qiladi. Batafsil usage hisobotlari Apple
+            // maxfiylik chegarasi sabab Android ota-ona paneliga eksport qilinmaydi.
             val safeDefault = setOf(ParentFeature.LOCATION)
+            val iosParentFeatures = setOf(
+                ParentFeature.LOCATION,
+                ParentFeature.FOCUS_MODE,
+                ParentFeature.SCREEN_TIME_LIMITS,
+                ParentFeature.SCREEN_TIME_SCHEDULES,
+                ParentFeature.WEBSITE_RESTRICTIONS
+            )
             if (declaredCapabilities == null) safeDefault
-            else ParentFeature.values().filter { it in setOf(ParentFeature.LOCATION, ParentFeature.FOCUS_MODE) && it.wireName in declaredCapabilities }.toSet()
+            else ParentFeature.values().filter { it in iosParentFeatures && it.wireName in declaredCapabilities }.toSet()
         }
         ChildDevicePlatform.UNKNOWN -> emptySet()
     }
