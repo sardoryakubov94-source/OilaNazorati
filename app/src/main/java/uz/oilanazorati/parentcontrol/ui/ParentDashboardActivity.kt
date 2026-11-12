@@ -72,7 +72,7 @@ class ParentDashboardActivity : AppCompatActivity() {
             isPremiumUser = isPremium
             contactSummaryAdapter.setPremium(isPremium)
             smsAdapter.setPremium(isPremium)
-            binding.premiumBannerHome.visibility = if (isPremium) android.view.View.GONE else android.view.View.VISIBLE
+            binding.premiumBannerHome.visibility = if (isPremium || selectedChildPlatform == ChildDevicePlatform.IOS) android.view.View.GONE else android.view.View.VISIBLE
             // O'z-o'zini davolash: premium holati boshqa yo'l bilan (masalan
             // to'g'ridan-to'g'ri Firebase konsolidan) o'zgargan bo'lsa ham,
             // dashboard har ochilganda bola hujjatlariga aktual holat qayta
@@ -448,21 +448,12 @@ class ParentDashboardActivity : AppCompatActivity() {
 
         listOf(
             binding.premiumBannerHome,
-            binding.cardStatCalls,
-            binding.cardStatSms,
-            binding.cardStatContacts,
-            binding.cardStatScreenshot,
-            binding.btnCallHistory,
-            binding.timelineList,
-            binding.btnSmsHistory,
-            binding.smsTimelineList,
-            binding.smsSectionEmpty,
-            binding.btnSavedContacts,
-            binding.contactSummaryList,
+            binding.cardStatCalls.parent as View,
+            binding.btnCallHistory.parent.parent as View,
+            binding.smsTimelineList.parent as View,
+            binding.btnSavedContacts.parent.parent as View,
             binding.notificationsCardHome,
-            binding.btnNotificationsHome,
-            binding.btnTrends,
-            binding.appUsageList
+            binding.btnTrends.parent.parent as View
         ).forEach { it.visibility = View.GONE }
 
         binding.root.findViewWithTag<View>("sim_info_card")?.visibility = View.GONE
