@@ -133,7 +133,8 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
                 try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth, .defaultToSpeaker])
                 try audioSession.setActive(true)
             } catch {
-                isConnecting = false
+                leave()
+                statusText = error.localizedDescription
                 completion(.failure(error))
                 return
             }
@@ -143,7 +144,8 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
                 try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.allowBluetooth])
                 try AVAudioSession.sharedInstance().setActive(true)
             } catch {
-                isConnecting = false
+                leave()
+                statusText = error.localizedDescription
                 completion(.failure(error))
                 return
             }
@@ -164,7 +166,7 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
                                      mediaOptions: options, joinSuccess: nil)
         if result != 0 {
             pendingJoinCompletion = nil
-            isConnecting = false
+            leave()
             statusText = "Ulanish amalga oshmadi"
             completion(.failure(AgoraVoiceError.joinFailed(Int(result))))
         }
@@ -197,7 +199,8 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
     func rtcEngine(_ engine: AgoraRtcEngineKit, didOccurError errorCode: AgoraErrorCode) {
         guard let completion = pendingJoinCompletion else { return }
         pendingJoinCompletion = nil
-        isConnecting = false
+        leave()
+        statusText = "Agora xatosi: \(errorCode.rawValue)"
         completion(.failure(AgoraVoiceError.joinFailed(Int(errorCode.rawValue))))
     }
 
