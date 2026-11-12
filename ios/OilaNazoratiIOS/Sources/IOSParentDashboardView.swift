@@ -171,6 +171,9 @@ struct IOSParentDashboardView: View {
                                 androidMetrics
                             }
                             androidControls(child)
+                            if child.capabilities.contains(.ambientAudio) {
+                                voiceControls(child)
+                            }
                         } else if child.platform == .ios {
                             iosControls(child)
                         } else {
@@ -498,7 +501,8 @@ struct IOSParentDashboardView: View {
             "requestedByUid": uid,
             "requestedAtMs": Int64(Date().timeIntervalSince1970 * 1000),
             "expiresAtMs": Int64(Date().addingTimeInterval(90).timeIntervalSince1970 * 1000),
-            "platform": "ios"
+            "platform": child.platform.rawValue,
+            "transport": "agora"
         ]
         Firestore.firestore().collection("families").document(code)
             .collection("children").document(child.id)
@@ -529,7 +533,7 @@ struct IOSParentDashboardView: View {
             .collection("children").document(child.id)
             .collection("mic_requests").document("current")
             .updateData([
-                "status": "stopped",
+                "status": "stop_requested",
                 "stoppedAtMs": Int64(Date().timeIntervalSince1970 * 1000)
             ]) { error in
                 DispatchQueue.main.async {
@@ -816,6 +820,9 @@ struct IOSParentDashboardView: View {
                     DispatchQueue.main.async { focusEnabled = snapshot?.data()?["enabled"] as? Bool ?? false }
                 }
         }
+        if child.platform == .android, child.capabilities.contains(.ambientAudio) {
+            voiceConsentEnabled = true
+        }
         if child.platform == .ios, child.capabilities.contains(.ambientAudio) {
             micSettingsListener = childRef.collection("mic_settings").document("current")
                 .addSnapshotListener { snapshot, _ in
@@ -824,7 +831,7 @@ struct IOSParentDashboardView: View {
                     }
                 }
         }
-        if child.platform == .ios, child.capabilities.contains(.ambientAudio) {
+        if child.capabilities.contains(.ambientAudio) {
             voiceListener = childRef.collection("mic_requests").document("current")
                 .addSnapshotListener { snapshot, error in
                     DispatchQueue.main.async {
@@ -842,6 +849,7 @@ struct IOSParentDashboardView: View {
                         switch status {
                         case "requested": voiceStatus = "Bola qurilmasiga so‘rov yuborildi"
                         case "active": voiceStatus = "Jonli ovoz faol"
+                        case "stop_requested": voiceStatus = "Ovoz uzatish to‘xtatilmoqda…"
                         case "stopped": voiceStatus = "Ovoz uzatish to‘xtatildi"
                         case "consent_not_enabled": voiceStatus = "Bola qurilmasida oldindan rozilik yoqilmagan"
                         case "failed": voiceStatus = "Ovoz ulanishida xatolik"
@@ -859,7 +867,7 @@ struct IOSParentDashboardView: View {
                                     voiceStatus = "Jonli ovoz ulandi"
                                 }
                             }
-                        } else if ["stopped", "cancelled", "expired", "failed", "consent_not_enabled"].contains(status) {
+                        } else if ["stop_requested", "stopped", "cancelled", "expired", "failed", "consent_not_enabled"].contains(status) {
                             voiceSession.leave()
                             if status == "consent_not_enabled" {
                                 voiceStatus = "Bola qurilmasida ovoz roziligi yoqilmagan"
