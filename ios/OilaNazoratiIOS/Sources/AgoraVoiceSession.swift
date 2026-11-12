@@ -42,7 +42,7 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
             return
         }
 
-        let uid = UInt.random(in: 1000...UInt32.max)
+        let uid = UInt.random(in: 1000...UInt(UInt32.max))
         statusText = "Xavfsiz ulanish tayyorlanmoqda…"
         user.getIDToken { [weak self] idToken, error in
             guard let self else { return }
