@@ -88,6 +88,8 @@ final class AgoraScreenShareSession: NSObject, ObservableObject, AgoraRtcEngineD
         status = "iOS Broadcast oynasida uzatishni tasdiqlang"
     }
 
+    func setRemoteView(_ view: UIView) { renderView = view }
+
     func stopCapture() {
         engine?.stopScreenCapture()
         engine?.leaveChannel(nil)
@@ -142,9 +144,10 @@ struct AgoraRemoteScreenView: UIViewRepresentable {
     func makeUIView(context: Context) -> UIView {
         let view = UIView()
         view.backgroundColor = .black
+        session.setRemoteView(view)
         return view
     }
-    func updateUIView(_ uiView: UIView, context: Context) {}
+    func updateUIView(_ uiView: UIView, context: Context) { session.setRemoteView(uiView) }
 }
 
 struct IOSBroadcastPicker: UIViewRepresentable {
