@@ -18,7 +18,11 @@ enum DeviceRole: String, Codable {
 enum MonitoringCapability: String, CaseIterable, Codable, Hashable {
     case location
     case focusMode = "focus_mode"
-    case appUsage = "app_usage"\n    case usageReports = "usage_reports"\n    case timeLimits = "time_limits"\n    case schedules\n    case websiteRestrictions = "website_restrictions"
+    case appUsage = "app_usage"
+    case usageReports = "usage_reports"
+    case timeLimits = "time_limits"
+    case schedules
+    case websiteRestrictions = "website_restrictions"
     case calls
     case sms
     case contacts
