@@ -1,6 +1,7 @@
 import SwiftUI
 
-struct StatusView: View {\n    @Environment(\\.scenePhase) private var scenePhase
+struct StatusView: View {
+    @Environment(\.scenePhase) private var scenePhase
     let familyCode: String
     let childUid: String
     @AppStorage("location_sharing_consent") private var locationSharingConsent = false
@@ -64,7 +65,7 @@ struct StatusView: View {\n    @Environment(\\.scenePhase) private var scenePhas
             }
         }
         .onChange(of: scenePhase) { phase in
-            if phase == .active, #available(iOS 16.0, *) {
+            if #available(iOS 16.0, *), phase == .active {
                 ScreenTimeController.shared.syncQueuedEvents()
             }
         }
