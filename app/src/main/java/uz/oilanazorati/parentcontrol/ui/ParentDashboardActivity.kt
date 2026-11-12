@@ -527,6 +527,13 @@ class ParentDashboardActivity : AppCompatActivity() {
             setPadding(0, dp(4), 0, dp(8))
         }
         content.addView(authorizationLabel)
+        val locationPermissionLabel = TextView(this).apply {
+            text = "Joylashuv ruxsati: tekshirilmoqda…"
+            textSize = 12f
+            setTextColor(resources.getColor(R.color.color_text_secondary, theme))
+            setPadding(0, 0, 0, dp(8))
+        }
+        content.addView(locationPermissionLabel)
         val eventsLabel = TextView(this).apply {
             text = "Limit hodisalari: yuklanmoqda…"
             textSize = 12f
@@ -585,6 +592,21 @@ class ParentDashboardActivity : AppCompatActivity() {
                 else -> "Apple Screen Time ruxsati: noma'lum"
             }
             authorizationLabel.text = label
+            val locationStatus = childSnapshot.getString("locationAuthorizationStatus") ?: "unknown"
+            val sharingConsent = childSnapshot.getBoolean("locationSharingConsent") == true
+            val locationText = when (locationStatus) {
+                "authorizedAlways" -> "Doimiy ruxsat"
+                "authorizedWhenInUse" -> "Ilova ishlaganda"
+                "denied" -> "Rad etilgan"
+                "restricted" -> "Cheklangan"
+                "notDetermined" -> "So'ralmagan"
+                else -> "Noma'lum"
+            }
+            locationPermissionLabel.text = if (sharingConsent) {
+                "Joylashuv: $locationText"
+            } else {
+                "Joylashuv: bola rozilik bermagan"
+            }
         }
         eventsListener = childReference?.collection("screen_time_reports")
             ?.orderBy("timestampMs", com.google.firebase.firestore.Query.Direction.DESCENDING)
