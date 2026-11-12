@@ -639,11 +639,8 @@ struct IOSParentDashboardView: View {
                     } else {
                         locationListener?.remove()
                         focusListener?.remove()
-                        screenshotListener?.remove()
-                        latestScreenshotListener?.remove()
                         location = nil
                         metrics = []
-                        latestAndroidScreenshot = nil
                         boundChildID = nil
                         boundChildPlatform = nil
                         boundCapabilities = nil
