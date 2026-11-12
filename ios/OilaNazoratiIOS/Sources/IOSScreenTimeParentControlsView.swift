@@ -22,9 +22,6 @@ struct IOSScreenTimeParentControlsView: View {
     @State private var limitEvents: [[String: Any]] = []
     @State private var policyListener: ListenerRegistration?
     @State private var eventsListener: ListenerRegistration?
-    @State private var reportListener: ListenerRegistration?
-    @State private var dailySeconds: Double = 0
-    @State private var weeklySeconds: Double = 0
 
     private var policyRef: DocumentReference {
         Firestore.firestore().collection("families").document(familyCode)
@@ -97,11 +94,9 @@ struct IOSScreenTimeParentControlsView: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                heading("Ekran vaqti hisoboti", detail: "Firebase orqali kelgan")
-                HStack(spacing: 12) {
-                    reportMetric(title: "Bugun", seconds: dailySeconds)
-                    reportMetric(title: "Hafta", seconds: weeklySeconds)
-                }
+                heading("Kunlik va haftalik hisobot", detail: "Bola qurilmasida")
+                Text("Ilova va toifa statistikasi Apple maxfiylik talablari sabab bolaning iPhone qurilmasida ko‘rsatiladi. Ota-ona paneli cheklovlar va limit tugashi hodisalarini boshqaradi.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -134,7 +129,6 @@ struct IOSScreenTimeParentControlsView: View {
         .onDisappear {
             policyListener?.remove()
             eventsListener?.remove()
-            reportListener?.remove()
         }
     }
 
@@ -187,17 +181,7 @@ struct IOSScreenTimeParentControlsView: View {
                     limitEvents = snapshot?.documents.map { $0.data() } ?? []
                 }
             }
-        reportListener?.remove()
-        reportListener = Firestore.firestore().collection("families").document(familyCode)
-            .collection("children").document(childUid)
-            .collection("screen_time_reports").document("latest")
-            .addSnapshotListener { snapshot, _ in
-                let data = snapshot?.data() ?? [:]
-                DispatchQueue.main.async {
-                    dailySeconds = data["dailySeconds"] as? Double ?? 0
-                    weeklySeconds = data["weeklySeconds"] as? Double ?? 0
-                }
-            }
+
     }
 
     private func savePolicy() {
