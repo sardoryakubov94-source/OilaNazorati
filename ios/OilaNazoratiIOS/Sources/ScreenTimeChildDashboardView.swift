@@ -1,5 +1,5 @@
 import SwiftUI
-import FamilyControls
+import FamilyControls\nimport DeviceActivity
 
 @available(iOS 16.0, *)
 struct ScreenTimeChildDashboardView: View {
@@ -58,6 +58,32 @@ struct ScreenTimeChildDashboardView: View {
                         .buttonStyle(.borderedProminent)
                 }
                 .disabled(controller.authorizationStatus != .approved)
+            }
+
+            Section("Kunlik va haftalik hisobot") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Bugungi foydalanish").font(.subheadline.weight(.semibold))
+                    DeviceActivityReport(.init("OilaNazorati.Daily"), filter: DeviceActivityFilter(
+                        segment: .daily(during: DateInterval(
+                            start: Calendar.current.startOfDay(for: Date()),
+                            end: Date()
+                        ))
+                    ))
+                    .frame(minHeight: 90)
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Haftalik foydalanish").font(.subheadline.weight(.semibold))
+                    DeviceActivityReport(.init("OilaNazorati.Weekly"), filter: DeviceActivityFilter(
+                        segment: .weekly(during: Calendar.current.dateInterval(of: .weekOfYear, for: Date())
+                            ?? DateInterval(start: Date().addingTimeInterval(-604800), duration: 604800))
+                    ))
+                    .frame(minHeight: 90)
+                }
+                Button {
+                    controller.syncReportSummary()
+                } label: {
+                    Label("Hisobotni ota-onaga yuborish", systemImage: "icloud.and.arrow.up")
+                }
             }
 
             Section("Jadval va cheklovlar") {
