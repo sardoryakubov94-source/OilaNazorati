@@ -1,0 +1,101 @@
+name: OilaNazorati
+options:
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  bundleIdPrefix: uz.oilanazorati
+
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: 11.0.0
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: 8.0.0
+
+targets:
+  OilaNazoratiIOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: OilaNazoratiIOS/Sources
+    info:
+      path: OilaNazoratiIOS/Resources/Info.plist
+    entitlements:
+      path: OilaNazoratiIOS/Resources/OilaNazoratiIOS.entitlements
+    dependencies:
+      - package: Firebase
+        product: FirebaseCore
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseFirestore
+      - package: GoogleSignIn
+        product: GoogleSignIn
+      - target: OilaNazoratiActivityMonitor
+        embed: true
+      - target: OilaNazoratiActivityReport
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uz.oilanazorati.parentcontrol
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Resources/OilaNazoratiIOS.entitlements
+        INFOPLIST_FILE: OilaNazoratiIOS/Resources/Info.plist
+        ENABLE_PREVIEWS: YES
+
+  OilaNazoratiActivityMonitor:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: OilaNazoratiIOS/Extensions/DeviceActivityMonitorExtension.swift
+    info:
+      path: OilaNazoratiIOS/Extensions/DeviceActivityMonitor-Info.plist
+    entitlements:
+      path: OilaNazoratiIOS/Extensions/DeviceActivityMonitor.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uz.oilanazorati.parentcontrol.DeviceActivityMonitor
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        CODE_SIGN_STYLE: Automatic
+        APPLICATION_EXTENSION_API_ONLY: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: OilaNazoratiIOS/Extensions/DeviceActivityMonitor-Info.plist
+        CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Extensions/DeviceActivityMonitor.entitlements
+        SKIP_INSTALL: YES
+
+  OilaNazoratiActivityReport:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: OilaNazoratiIOS/Extensions/DeviceActivityReportExtension.swift
+    info:
+      path: OilaNazoratiIOS/Extensions/DeviceActivityReport-Info.plist
+    entitlements:
+      path: OilaNazoratiIOS/Extensions/DeviceActivityReport.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uz.oilanazorati.parentcontrol.DeviceActivityReport
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        CODE_SIGN_STYLE: Automatic
+        APPLICATION_EXTENSION_API_ONLY: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: OilaNazoratiIOS/Extensions/DeviceActivityReport-Info.plist
+        CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Extensions/DeviceActivityReport.entitlements
+        SKIP_INSTALL: YES
+
+schemes:
+  OilaNazoratiIOS:
+    build:
+      targets:
+        OilaNazoratiIOS: all
+        OilaNazoratiActivityMonitor: all
+        OilaNazoratiActivityReport: all
+    run:
+      config: Debug

@@ -27,9 +27,7 @@ struct ContentView: View {
                     StatusView(familyCode: familyCode, childUid: childUid)
                 }
             case .parent:
-                IOSParentModePlaceholderView {
-                    deviceRoleRaw = DeviceRole.unselected.rawValue
-                }
+                IOSParentDashboardView()
             }
         }
         .onAppear {

@@ -21,26 +21,15 @@ import ManagedSettings
 @available(iOS 16.0, *)
 final class FocusModeSync {
     static let shared = FocusModeSync()
-    private let store = ManagedSettingsStore()
+    private let store = ManagedSettingsStore(named: .init("legacyFocusMode"))
     private var listener: ListenerRegistration?
-
-    /// Ilova birinchi marta ishga tushganda, oila kodiga bog'langandan keyin
-    /// bir marta chaqiriladi. Foydalanuvchidan (yoki ota-onadan, shu
-    /// qurilmada) Screen Time ruxsatini so'raydi — bu SO'ROVNI faqat
-    /// qurilmaning o'zida, bir marta berish mumkin, masofadan emas.
-    func requestAuthorizationIfNeeded() {
-        Task {
-            do {
-                try await AuthorizationCenter.shared.requestAuthorization(for: .child)
-            } catch {
-                // Ruxsat berilmasa, bloklash funksiyasi shunchaki ishlamaydi —
-                // joylashuv kuzatuvi bunga bog'liq emas, u baribir ishlayveradi.
-            }
-        }
-    }
+    private var familyCode: String?
+    private var childUid: String?
 
     func start(familyCode: String, childUid: String) {
-        requestAuthorizationIfNeeded()
+        self.familyCode = familyCode
+        self.childUid = childUid
+        listener?.remove()
         let doc = Firestore.firestore()
             .collection("families").document(familyCode)
             .collection("children").document(childUid)
@@ -53,6 +42,11 @@ final class FocusModeSync {
     }
 
     private func apply(enabled: Bool) {
+        guard AuthorizationCenter.shared.authorizationStatus == .approved else {
+            store.shield.applicationCategories = nil
+            store.shield.webDomainCategories = nil
+            return
+        }
         if enabled {
             // Deyarli barcha ilova toifalarini bloklaydi. Telefon, SMS va
             // Sozlamalar kabi tizim ilovalarini Apple o'zi himoyalagan —
@@ -65,7 +59,23 @@ final class FocusModeSync {
         }
     }
 
+    func refreshAuthorization() {
+        guard let familyCode, let childUid else { return }
+        Firestore.firestore().collection("families").document(familyCode)
+            .collection("children").document(childUid)
+            .collection("focus_mode_settings").document("current")
+            .getDocument { [weak self] snapshot, _ in
+                let enabled = snapshot?.data()?["enabled"] as? Bool ?? false
+                self?.apply(enabled: enabled)
+            }
+    }
+
     func stop() {
         listener?.remove()
+        listener = nil
+        familyCode = nil
+        childUid = nil
+        store.shield.applicationCategories = nil
+        store.shield.webDomainCategories = nil
     }
 }

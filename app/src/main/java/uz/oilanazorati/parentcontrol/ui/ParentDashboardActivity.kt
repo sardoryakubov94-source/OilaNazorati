@@ -5,9 +5,11 @@ import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.widget.CheckBox
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Switch
@@ -17,6 +19,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import android.graphics.drawable.AnimatedImageDrawable
 import android.os.Build
 import uz.oilanazorati.parentcontrol.R
@@ -47,6 +51,7 @@ class ParentDashboardActivity : AppCompatActivity() {
     private var isPremiumUser = false
     private var selectedChildPlatform: ChildDevicePlatform = ChildDevicePlatform.UNKNOWN
     private var selectedChildCapabilities: Set<ParentFeature> = emptySet()
+    private var platformUiDefaults: Map<View, Int>? = null
     private var simInfoListener: com.google.firebase.firestore.ListenerRegistration? = null
     // MUHIM: bular ilgari saqlanmagani uchun har safar loadTodayStats() chaqirilganda
     // (masalan bola almashtirilganda) ESKI listenerlar o'chirilmay, ustiga yangisi
@@ -121,7 +126,7 @@ class ParentDashboardActivity : AppCompatActivity() {
             if (FirebaseRepo.familyCode.isNullOrBlank() || FirebaseRepo.childId.isNullOrBlank()) {
                 Toast.makeText(this, "Avval oila kodini yuklab, farzandni tanlang", Toast.LENGTH_SHORT).show()
             } else if (selectedChildPlatform == ChildDevicePlatform.IOS) {
-                showIosFocusModeDialog()
+                showIosScreenTimeDialog()
             } else if (selectedChildCapabilities.contains(ParentFeature.FOCUS_MODE)) {
                 showFocusModeDialog()
             } else {
@@ -438,26 +443,272 @@ class ParentDashboardActivity : AppCompatActivity() {
             .apply()
     }
 
-    /** iOS bola uchun faqat iOS kodida amalda qo'llab-quvvatlangan boshqaruvlar ko'rsatiladi. */
+    /** Tanlangan bola platformasiga mos ota-ona boshqaruvlarini ko'rsatadi. */
     private fun applyChildPlatformUi() {
         val isIos = selectedChildPlatform == ChildDevicePlatform.IOS
-        if (!isIos) return // Android→Android ko'rinishi aynan avvalgidek qoladi.
-
-        binding.btnFocusMode.visibility = if (selectedChildCapabilities.contains(ParentFeature.FOCUS_MODE)) View.VISIBLE else View.GONE
-        binding.btnLocationHistory.visibility = if (selectedChildCapabilities.contains(ParentFeature.LOCATION)) View.VISIBLE else View.GONE
-
-        listOf(
-            binding.premiumBannerHome,
+        val hiddenForIos = listOf(
             binding.cardStatCalls.parent as View,
             (binding.btnCallHistory.parent as View).parent as View,
             binding.smsTimelineList.parent as View,
             (binding.btnSavedContacts.parent as View).parent as View,
             binding.notificationsCardHome,
-            (binding.btnTrends.parent as View).parent as View
-        ).forEach { it.visibility = View.GONE }
+            (binding.btnTrends.parent as View).parent as View,
+            binding.cardStatScreenshot.parent as View
+        )
+        val platformViews = (hiddenForIos + listOfNotNull(
+            binding.root.findViewWithTag<View>("sim_info_card"),
+            binding.root.findViewWithTag<View>("ovoz_xavf_row")
+        )).distinct()
+        if (platformUiDefaults == null) {
+            platformUiDefaults = platformViews.associateWith { it.visibility }
+        }
 
-        binding.root.findViewWithTag<View>("sim_info_card")?.visibility = View.GONE
-        binding.root.findViewWithTag<View>("ovoz_xavf_row")?.visibility = View.GONE
+        if (!isIos) {
+            // Android tanlanganda XML'dagi asl ko'rinish holatlarini tiklaymiz.
+            platformUiDefaults?.forEach { (view, visibility) -> view.visibility = visibility }
+            binding.premiumBannerHome.visibility = if (isPremiumUser) View.GONE else View.VISIBLE
+            binding.btnFocusMode.contentDescription = "Kontrol rejimi"
+            binding.btnFocusModeIcon.contentDescription = "Kontrol rejimi"
+            binding.btnFocusModeIcon.setImageResource(R.drawable.ic_shield)
+            binding.btnFocusMode.visibility =
+                if (selectedChildCapabilities.contains(ParentFeature.FOCUS_MODE)) View.VISIBLE else View.GONE
+            binding.btnLocationHistory.visibility =
+                if (selectedChildCapabilities.contains(ParentFeature.LOCATION)) View.VISIBLE else View.GONE
+            return
+        }
+
+        binding.btnFocusMode.contentDescription = "Ekran vaqti"
+        binding.btnFocusModeIcon.contentDescription = "Ekran vaqti"
+        binding.btnFocusModeIcon.setImageResource(R.drawable.ic_clock)
+        val hasScreenTime = selectedChildCapabilities.any {
+            it == ParentFeature.FOCUS_MODE ||
+            it == ParentFeature.SCREEN_TIME_LIMITS ||
+            it == ParentFeature.SCREEN_TIME_SCHEDULES ||
+            it == ParentFeature.WEBSITE_RESTRICTIONS
+        }
+        binding.btnFocusMode.visibility = if (hasScreenTime) View.VISIBLE else View.GONE
+        binding.btnLocationHistory.visibility =
+            if (selectedChildCapabilities.contains(ParentFeature.LOCATION)) View.VISIBLE else View.GONE
+
+        platformViews.forEach { it.visibility = View.GONE }
+        binding.premiumBannerHome.visibility = View.GONE
+    }
+
+    /**
+     * Android ota-ona ilovasidan iPhone bolaning Screen Time siyosatini boshqarish.
+     * Ilova/site tanlovi iPhone'ning o'zida FamilyActivityPicker orqali qilinadi.
+     */
+    private fun showIosScreenTimeDialog() {
+        val code = FirebaseRepo.familyCode
+        val childId = FirebaseRepo.childId
+        val uid = FirebaseAuth.getInstance().currentUser?.uid
+        if (code.isNullOrBlank() || childId.isNullOrBlank() || uid.isNullOrBlank()) {
+            Toast.makeText(this, "Oila yoki farzand ma'lumoti topilmadi", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val reference = FirebaseFirestore.getInstance()
+            .collection("families").document(code)
+            .collection("children").document(childId)
+            .collection("screen_time_settings").document("current")
+
+        val childReference = reference.parent.parent
+        val content = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), dp(8))
+        }
+        val scroll = ScrollView(this).apply {
+            addView(content)
+        }
+        val authorizationLabel = TextView(this).apply {
+            text = "Apple Screen Time ruxsati: tekshirilmoqda…"
+            textSize = 12f
+            setTextColor(resources.getColor(R.color.color_text_secondary, theme))
+            setPadding(0, dp(4), 0, dp(8))
+        }
+        content.addView(authorizationLabel)
+        val locationPermissionLabel = TextView(this).apply {
+            text = "Joylashuv ruxsati: tekshirilmoqda…"
+            textSize = 12f
+            setTextColor(resources.getColor(R.color.color_text_secondary, theme))
+            setPadding(0, 0, 0, dp(8))
+        }
+        content.addView(locationPermissionLabel)
+        val eventsLabel = TextView(this).apply {
+            text = "Limit hodisalari: yuklanmoqda…"
+            textSize = 12f
+            setTextColor(resources.getColor(R.color.color_text_secondary, theme))
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        var eventsListener: com.google.firebase.firestore.ListenerRegistration? = null
+        var knownEventIds: Set<String>? = null
+        fun addHint(value: String) {
+            content.addView(TextView(this).apply {
+                text = value
+                textSize = 12f
+                setTextColor(resources.getColor(R.color.color_text_secondary, theme))
+                setPadding(0, dp(4), 0, dp(10))
+            })
+        }
+        fun addField(label: String, initial: String, numeric: Boolean = false): EditText {
+            content.addView(TextView(this).apply {
+                text = label
+                textSize = 13f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setPadding(0, dp(8), 0, dp(3))
+            })
+            return EditText(this).apply {
+                setSingleLine(true)
+                inputType = if (numeric) InputType.TYPE_CLASS_NUMBER else InputType.TYPE_CLASS_TEXT
+                hint = initial
+                setText(initial)
+                textSize = 16f
+                content.addView(this, LinearLayout.LayoutParams(-1, dp(48)))
+            }
+        }
+
+        val enabled = Switch(this).apply { text = "Ota-ona nazorati faol"; isChecked = true }
+        content.addView(enabled)
+        val dailyLimit = addField("Kunlik limit (daqiqada, 0–600; 0 = o'chirilgan)", "120", true)
+        val schoolEnabled = CheckBox(this).apply { text = "Maktab jadvalini yoqish" }
+        content.addView(schoolEnabled)
+        val schoolStart = addField("Maktab boshlanishi (HH:mm)", "08:00")
+        val schoolEnd = addField("Maktab tugashi (HH:mm)", "14:00")
+        val sleepEnabled = CheckBox(this).apply { text = "Uyqu jadvalini yoqish" }
+        content.addView(sleepEnabled)
+        val sleepStart = addField("Uyqu boshlanishi (HH:mm)", "21:30")
+        val sleepEnd = addField("Uyqu tugashi (HH:mm)", "07:00")
+        val websiteBlocking = CheckBox(this).apply { text = "Tanlangan saytlarni cheklash" }
+        content.addView(websiteBlocking)
+        addHint("Muhim: qaysi ilova, toifa va saytlar nazorat qilinishi bolaning iPhone qurilmasida Apple Family Controls ruxsati bilan tanlanadi. Bu oynada faqat vaqt siyosati yuboriladi.")
+        content.addView(eventsLabel)
+
+        childReference?.get()?.addOnSuccessListener { childSnapshot ->
+            val status = childSnapshot.getString("screenTimeAuthorizationStatus") ?: "notDetermined"
+            val label = when (status) {
+                "approved" -> "Apple Screen Time ruxsati: berilgan"
+                "denied" -> "Apple Screen Time ruxsati: rad etilgan"
+                "notDetermined" -> "Apple Screen Time ruxsati: hali so'ralmagan"
+                else -> "Apple Screen Time ruxsati: noma'lum"
+            }
+            authorizationLabel.text = label
+            val locationStatus = childSnapshot.getString("locationAuthorizationStatus") ?: "unknown"
+            val sharingConsent = childSnapshot.getBoolean("locationSharingConsent") == true
+            val locationText = when (locationStatus) {
+                "authorizedAlways" -> "Doimiy ruxsat"
+                "authorizedWhenInUse" -> "Ilova ishlaganda"
+                "denied" -> "Rad etilgan"
+                "restricted" -> "Cheklangan"
+                "notDetermined" -> "So'ralmagan"
+                else -> "Noma'lum"
+            }
+            locationPermissionLabel.text = if (sharingConsent) {
+                "Joylashuv: $locationText"
+            } else {
+                "Joylashuv: bola rozilik bermagan"
+            }
+        }
+        eventsListener = childReference?.collection("screen_time_reports")
+            ?.orderBy("timestampMs", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            ?.limit(5)?.addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    eventsLabel.text = "Limit hodisalari hozircha olinmadi"
+                    return@addSnapshotListener
+                }
+                val documents = snapshot?.documents.orEmpty()
+                val currentIds = documents.map { it.id }.toSet()
+                val previousIds = knownEventIds
+                if (previousIds != null && currentIds.any { it !in previousIds }) {
+                    runOnUiThread {
+                        Toast.makeText(this, "iPhone'da kunlik ekran vaqti limiti tugadi", Toast.LENGTH_LONG).show()
+                    }
+                }
+                knownEventIds = currentIds
+                eventsLabel.text = if (documents.isEmpty()) {
+                    "Limit hodisalari: hozircha yo'q"
+                } else {
+                    documents.joinToString("\n", prefix = "So'nggi limit hodisalari:\n") { doc ->
+                        val millis = doc.getLong("timestampMs") ?: 0L
+                        val time = java.text.SimpleDateFormat("dd.MM HH:mm", Locale.getDefault()).format(Date(millis))
+                        "• $time"
+                    }
+                }
+            }
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("iPhone — Ekran vaqti")
+            .setView(scroll)
+            .setPositiveButton("Saqlash", null)
+            .setNegativeButton("Bekor qilish", null)
+            .create()
+
+        dialog.setOnDismissListener { eventsListener?.remove() }
+
+        dialog.setOnShowListener {
+            reference.get().addOnSuccessListener { snapshot ->
+                enabled.isChecked = snapshot.getBoolean("enabled") ?: true
+                dailyLimit.setText((snapshot.getLong("dailyLimitMinutes") ?: 120L).toString())
+                schoolEnabled.isChecked = snapshot.getBoolean("schoolEnabled") ?: false
+                sleepEnabled.isChecked = snapshot.getBoolean("sleepEnabled") ?: false
+                websiteBlocking.isChecked = snapshot.getBoolean("websiteBlockingEnabled") ?: false
+                schoolStart.setText(snapshot.getString("schoolStart") ?: "08:00")
+                schoolEnd.setText(snapshot.getString("schoolEnd") ?: "14:00")
+                sleepStart.setText(snapshot.getString("sleepStart") ?: "21:30")
+                sleepEnd.setText(snapshot.getString("sleepEnd") ?: "07:00")
+            }.addOnFailureListener {
+                Toast.makeText(this, "Joriy sozlamalar olinmadi: ${it.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val minutes = dailyLimit.text.toString().trim().toIntOrNull()
+                val schoolStartValue = schoolStart.text.toString().trim()
+                val schoolEndValue = schoolEnd.text.toString().trim()
+                val sleepStartValue = sleepStart.text.toString().trim()
+                val sleepEndValue = sleepEnd.text.toString().trim()
+                if (minutes == null || minutes !in 0..600) {
+                    dailyLimit.error = "0 dan 600 gacha butun son kiriting"
+                    return@setOnClickListener
+                }
+                if ((schoolEnabled.isChecked && (!isValidClockTime(schoolStartValue) || !isValidClockTime(schoolEndValue))) ||
+                    (sleepEnabled.isChecked && (!isValidClockTime(sleepStartValue) || !isValidClockTime(sleepEndValue)))) {
+                    Toast.makeText(this, "Vaqtni HH:mm formatida kiriting (masalan 08:30)", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+                val policy = hashMapOf<String, Any>(
+                    "enabled" to enabled.isChecked,
+                    "dailyLimitMinutes" to minutes,
+                    "schoolEnabled" to schoolEnabled.isChecked,
+                    "schoolStart" to schoolStartValue,
+                    "schoolEnd" to schoolEndValue,
+                    "sleepEnabled" to sleepEnabled.isChecked,
+                    "sleepStart" to sleepStartValue,
+                    "sleepEnd" to sleepEndValue,
+                    "websiteBlockingEnabled" to websiteBlocking.isChecked,
+                    "updatedAtMs" to System.currentTimeMillis(),
+                    "updatedBy" to "android_parent",
+                    "schemaVersion" to 1
+                )
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+                reference.set(policy, SetOptions.merge())
+                    .addOnSuccessListener {
+                        Toast.makeText(this, "iPhone uchun Screen Time sozlamalari yuborildi", Toast.LENGTH_LONG).show()
+                        dialog.dismiss()
+                    }
+                    .addOnFailureListener { error ->
+                        dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = true
+                        Toast.makeText(this, "Saqlashda xato: ${error.localizedMessage}", Toast.LENGTH_LONG).show()
+                    }
+            }
+        }
+        dialog.show()
+    }
+
+    private fun isValidClockTime(value: String): Boolean {
+        val parts = value.split(":")
+        if (parts.size != 2) return false
+        val hour = parts[0].toIntOrNull() ?: return false
+        val minute = parts[1].toIntOrNull() ?: return false
+        return hour in 0..23 && minute in 0..59
     }
 
     private fun showIosFocusModeDialog() {
@@ -516,7 +767,25 @@ class ParentDashboardActivity : AppCompatActivity() {
                 val label = TextView(this).apply {
                     text = name; textSize = 17f
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
-                    setOnClickListener { setChildId(childId); loadTodayStats(); dialog?.dismiss() }
+                    setOnClickListener {
+                        FirebaseRepo.fetchLinkedChildren(code) { devices ->
+                            val selected = devices.firstOrNull { it.id == childId }
+                            if (selected == null) {
+                                Toast.makeText(this@ParentDashboardActivity, "Farzand qurilmasi topilmadi", Toast.LENGTH_SHORT).show()
+                            } else {
+                                val platform = ChildDevicePlatform.from(selected.platform)
+                                if (platform == ChildDevicePlatform.UNKNOWN) {
+                                    Toast.makeText(this@ParentDashboardActivity, "Qurilma platformasi aniqlanmadi", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    setChildId(selected.id)
+                                    setChildPlatform(platform, selected.supportedCapabilities)
+                                    applyChildPlatformUi()
+                                    loadTodayStats()
+                                }
+                            }
+                            dialog?.dismiss()
+                        }
+                    }
                 }
                 val deleteBtn = TextView(this).apply {
                     text = "🗑"; textSize = 20f; setPadding(dp(14), dp(6), dp(6), dp(6))

@@ -359,7 +359,8 @@ object FirebaseRepo {
                     LinkedChildDevice(
                         id = doc.id,
                         name = doc.getString("nomi")?.takeIf { it.isNotBlank() } ?: "Farzand (${doc.id.take(5)})",
-                        platform = (doc.getString("childPlatform") ?: doc.getString("platform") ?: "unknown").lowercase()
+                        platform = (doc.getString("childPlatform") ?: doc.getString("platform") ?: "unknown").lowercase(),
+                        supportedCapabilities = (doc.get("supportedCapabilities") as? List<*>)?.mapNotNull { it as? String }?.toSet()
                     )
                 }.sortedBy { it.name.lowercase() })
             }.addOnFailureListener { onResult(emptyList()) }
