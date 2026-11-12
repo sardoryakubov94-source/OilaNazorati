@@ -120,7 +120,13 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding.btnFocusMode.setOnClickListener {
             if (FirebaseRepo.familyCode.isNullOrBlank() || FirebaseRepo.childId.isNullOrBlank()) {
                 Toast.makeText(this, "Avval oila kodini yuklab, farzandni tanlang", Toast.LENGTH_SHORT).show()
-            } else showFocusModeDialog()
+            } else if (selectedChildPlatform == ChildDevicePlatform.IOS) {
+                showIosFocusModeDialog()
+            } else if (selectedChildCapabilities.contains(ParentFeature.FOCUS_MODE)) {
+                showFocusModeDialog()
+            } else {
+                Toast.makeText(this, "Bu qurilmada Kontrol rejimi mavjud emas", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -709,6 +715,7 @@ class ParentDashboardActivity : AppCompatActivity() {
             val time = timeFmt.format(Date(loc.vaqtMs)); val minutesAgo = ((System.currentTimeMillis() - loc.vaqtMs) / 60000).coerceAtLeast(0)
             binding.locationTimeAgo.text = "$time • $minutesAgo daqiqa oldin"; binding.locationCoords.text = "${"%.5f".format(Locale.US, loc.lat)}, ${"%.5f".format(Locale.US, loc.lng)}"; binding.headerStatus.text = if (minutesAgo <= 45) "● FAOL" else "● NOFAOL"
             binding.headerStatus.setTextColor(Color.parseColor(if (minutesAgo <= 45) "#2ECC71" else "#8B96A5"))
+            }
         }
     }
 
@@ -725,5 +732,10 @@ class ParentDashboardActivity : AppCompatActivity() {
         if (now - lastBackPressMs <= doubleBackWindowMs) { finishAndRemoveTask(); return }
         lastBackPressMs = now
         Toast.makeText(this, "Chiqish uchun yana bir marta 'Ortga' tugmasini bosing", Toast.LENGTH_SHORT).show()
+    }
+
+    companion object {
+        const val EXTRA_CHILD_ID = "selected_child_id"
+        const val EXTRA_CHILD_PLATFORM = "selected_child_platform"
     }
 }
