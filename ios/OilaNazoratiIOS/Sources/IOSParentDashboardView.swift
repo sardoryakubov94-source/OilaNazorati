@@ -58,6 +58,11 @@ struct IOSParentDashboardView: View {
     @State private var focusListener: ListenerRegistration?
     @State private var voiceListener: ListenerRegistration?
     @State private var micSettingsListener: ListenerRegistration?
+    @State private var screenListener: ListenerRegistration?
+    @State private var screenRequestState = ""
+    @State private var screenRequestID: String?
+    @State private var screenChannelName: String?
+    @StateObject private var screenSession = AgoraScreenShareSession()
     @State private var voiceConsentEnabled = false
     @State private var voiceStatus = "Ulanmagan"
     @State private var voiceRequestState = ""
@@ -409,6 +414,38 @@ struct IOSParentDashboardView: View {
                 Text("Bu iPhone Screen Time boshqaruvini e'lon qilmagan. Bola ilovasini yangilash va iOS 16 yoki yangiroq versiyani tekshirish kerak.")
                     .font(.caption).foregroundStyle(ParentPalette.muted)
             }
+
+            VStack(alignment: .leading, spacing: 12) {
+                sectionHeading("Jonli ekran", detail: "iOS ReplayKit + Agora")
+                if screenSession.remoteScreenUID != nil {
+                    AgoraRemoteScreenView(session: screenSession)
+                        .frame(height: 280)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .background(.black, in: RoundedRectangle(cornerRadius: 14))
+                } else {
+                    HStack {
+                        Image(systemName: "rectangle.on.rectangle").font(.title2).foregroundStyle(ParentPalette.accent)
+                        Text(screenSession.status).font(.subheadline)
+                    }
+                    .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 14))
+                }
+                if screenRequestState == "requested" || screenRequestState == "active" {
+                    Button(role: .destructive) { stopScreenRequest(child: child) } label: {
+                        Label("Ekran so‘rovini to‘xtatish", systemImage: "stop.circle")
+                    }
+                    .buttonStyle(.bordered)
+                } else {
+                    Button { requestScreenShare(child: child) } label: {
+                        Label("Bola ekranini ko‘rish so‘rovi", systemImage: "rectangle.inset.filled")
+                            .frame(maxWidth: .infinity).padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                Text("iPhone bola ekran uzatishni iOS Broadcast oynasida tasdiqlaydi. Ota-ona so‘rovni istalgan vaqtda bekor qiladi.")
+                    .font(.caption2).foregroundStyle(ParentPalette.muted)
+            }
+            .padding(16).background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 18))
 
             HStack {
                 Label("Apple Screen Time ruxsati", systemImage: child.screenTimeAuthorizationStatus == "approved" ? "checkmark.shield.fill" : "lock.shield")
@@ -824,6 +861,11 @@ struct IOSParentDashboardView: View {
         focusListener?.remove()
         voiceListener?.remove()
         micSettingsListener?.remove()
+        screenListener?.remove()
+        screenSession.stopCapture()
+        screenRequestState = ""
+        screenRequestID = nil
+        screenChannelName = nil
         voiceConsentEnabled = false
         voiceSession.leave()
         voiceStatus = "Ulanmagan"
@@ -864,6 +906,29 @@ struct IOSParentDashboardView: View {
                 .addSnapshotListener { snapshot, _ in
                     DispatchQueue.main.async {
                         voiceConsentEnabled = snapshot?.data()?["remoteAudioConsent"] as? Bool ?? false
+                    }
+                }
+        }
+        if child.platform == .ios {
+            screenListener = childRef.collection("screen_requests").document("current")
+                .addSnapshotListener { snapshot, error in
+                    DispatchQueue.main.async {
+                        guard let data = snapshot?.data(), let status = data["status"] as? String else {
+                            screenRequestState = ""
+                            return
+                        }
+                        screenRequestState = status
+                        screenRequestID = data["requestId"] as? String
+                        screenChannelName = data["channelName"] as? String
+                        if status == "active", let requestID = screenRequestID, let channel = screenChannelName,
+                           !screenSession.isJoined {
+                            screenSession.start(familyCode: code, childUid: child.id,
+                                requestId: requestID, channel: channel, role: "screen_subscriber") { result in
+                                if case .failure(let error) = result { screenSession.status = error.localizedDescription }
+                            }
+                        } else if ["stop_requested", "stopped", "cancelled", "expired", "failed"].contains(status) {
+                            screenSession.stopCapture()
+                        }
                     }
                 }
         }
@@ -915,6 +980,39 @@ struct IOSParentDashboardView: View {
         if child.platform == .android, child.capabilities.contains(.appUsage) {
             loadAndroidMetrics(childRef)
         }
+    }
+
+
+    private func requestScreenShare(child: IOSChildDevice) {
+        guard let code = familyCode, let owner = Auth.auth().currentUser?.uid else { return }
+        let requestID = "scr_\(UUID().uuidString)"
+        let channel = "sc_\(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(24))"
+        let ref = Firestore.firestore().collection("families").document(code)
+            .collection("children").document(child.id).collection("screen_requests").document("current")
+        ref.setData([
+            "requestId": requestID, "channelName": channel, "requestedByUid": owner,
+            "status": "requested", "transport": "agora", "platform": "ios",
+            "requestedAtMs": Int64(Date().timeIntervalSince1970 * 1000),
+            "expiresAtMs": Int64(Date().timeIntervalSince1970 * 1000) + 180_000
+        ]) { error in
+            DispatchQueue.main.async {
+                if let error { errorMessage = "Ekran so‘rovi yuborilmadi: \(error.localizedDescription)" }
+                else { infoMessage = "Bola ekran uzatish so‘rovini oldi." }
+            }
+        }
+    }
+
+    private func stopScreenRequest(child: IOSChildDevice) {
+        guard let code = familyCode else { return }
+        childRefScreen(code: code, childID: child.id).updateData([
+            "status": "stop_requested", "stoppedAtMs": Int64(Date().timeIntervalSince1970 * 1000)
+        ])
+        screenSession.stopCapture()
+    }
+
+    private func childRefScreen(code: String, childID: String) -> DocumentReference {
+        Firestore.firestore().collection("families").document(code)
+            .collection("children").document(childID).collection("screen_requests").document("current")
     }
 
     private func loadAndroidMetrics(_ childRef: DocumentReference) {
@@ -1007,6 +1105,8 @@ struct IOSParentDashboardView: View {
         focusListener?.remove()
         voiceListener?.remove()
         micSettingsListener?.remove()
+        screenListener?.remove()
+        screenSession.stopCapture()
         voiceSession.leave()
         boundChildID = nil
         boundChildPlatform = nil
