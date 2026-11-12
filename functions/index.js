@@ -147,6 +147,9 @@ exports.agoraScreenToken = onRequest(
         return res.status(403).json({ error: "child_screen_consent_required" });
       if (requestData.requestId !== requestId || requestData.channelName !== channelName ||
           requestData.requestedByUid !== familyData.ownerUid) return res.status(403).json({ error: "screen_request_mismatch" });
+      const screenRequestExpiry = Number(requestData.expiresAtMs || 0);
+      if (screenRequestExpiry > 0 && screenRequestExpiry < Date.now())
+        return res.status(410).json({ error: "screen_request_expired" });
       const owner = decoded.uid === familyData.ownerUid && decoded.firebase?.sign_in_provider !== "anonymous";
       const childSession = decoded.uid === childUid;
       if (!parent.exists || parent.data()?.premium !== true) return res.status(403).json({ error: "premium_required" });
