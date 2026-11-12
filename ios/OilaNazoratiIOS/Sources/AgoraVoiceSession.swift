@@ -40,6 +40,7 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
     private var activeChannel: String?
     private var isPublisher = false
     private var pendingJoinCompletion: ((Result<Void, Error>) -> Void)?
+    var onRemoteUserOffline: (() -> Void)?
 
     func join(channel: String, role: String, familyCode: String, childUid: String, requestID: String,
               completion: @escaping (Result<Void, Error>) -> Void) {
@@ -198,6 +199,16 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
         pendingJoinCompletion = nil
         isConnecting = false
         completion(.failure(AgoraVoiceError.joinFailed(Int(errorCode.rawValue))))
+    }
+
+    func rtcEngine(_ engine: AgoraRtcEngineKit, didOfflineOfUid uid: UInt, reason: AgoraUserOfflineReason) {
+        guard activeChannel != nil else { return }
+        if isPublisher {
+            onRemoteUserOffline?()
+        } else {
+            leave()
+            statusText = "Bola ovoz uzatishni to‘xtatdi"
+        }
     }
 
     func rtcEngine(_ engine: AgoraRtcEngineKit, didLeaveChannelWith stats: AgoraChannelStats) {
