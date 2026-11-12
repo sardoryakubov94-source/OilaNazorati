@@ -35,12 +35,10 @@ private struct IOSChildLocation {
     let timestamp: Date
 }
 
-private struct IOSMetric: Identifiable {
+private struct IOSAppUsage: Identifiable {
     let id: String
-    let title: String
-    let value: Int
-    let symbol: String
-    let tint: Color
+    let appName: String
+    let durationSeconds: Int
 }
 
 struct IOSParentDashboardView: View {
@@ -49,7 +47,7 @@ struct IOSParentDashboardView: View {
     @State private var children: [IOSChildDevice] = []
     @State private var selectedChildID: String?
     @State private var location: IOSChildLocation?
-    @State private var metrics: [IOSMetric] = []
+    @State private var androidAppUsage: [IOSAppUsage] = []
     @State private var focusEnabled = false
     @State private var loading = false
     @State private var signingIn = false
@@ -291,42 +289,39 @@ struct IOSParentDashboardView: View {
 
     private var androidMetrics: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeading("Android faoliyati", detail: "Bugungi ma’lumotlar")
-            if !metrics.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Faollik taqsimoti").font(.subheadline.weight(.semibold))
-                    Chart(metrics) { metric in
-                        BarMark(
-                            x: .value("Yozuvlar", metric.value),
-                            y: .value("Bo‘lim", metric.title)
-                        )
-                        .foregroundStyle(metric.tint.gradient)
-                        .cornerRadius(5)
-                    }
-                    .chartXAxis { AxisMarks(position: .bottom) }
-                    .chartYAxis { AxisMarks(position: .leading) }
-                    .frame(height: 190)
-                    .accessibilityLabel("Android faoliyati bo‘yicha kunlik ko‘rsatkichlar")
-                }
-                .padding(14)
-                .background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 17))
-            }
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                ForEach(metrics) { metric in
-                    HStack(spacing: 10) {
-                        Image(systemName: metric.symbol).font(.title3)
-                            .foregroundStyle(metric.tint).frame(width: 34, height: 34)
-                            .background(metric.tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(metric.value.formatted()).font(.title3.bold().monospacedDigit())
-                            Text(metric.title).font(.caption).foregroundStyle(ParentPalette.muted).lineLimit(1)
+            sectionHeading("Android ilovalari", detail: "Bugungi foydalanish vaqti")
+            if androidAppUsage.isEmpty {
+                Text("Bugun uchun ilova faolligi ma'lumoti topilmadi.")
+                    .font(.caption).foregroundStyle(ParentPalette.muted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                    .background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 15))
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(androidAppUsage) { item in
+                        HStack(spacing: 12) {
+                            Image(systemName: "app.fill")
+                                .foregroundStyle(ParentPalette.accent)
+                                .frame(width: 34, height: 34)
+                                .background(ParentPalette.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
+                            Text(item.appName)
+                                .font(.subheadline.weight(.medium))
+                                .lineLimit(1)
+                            Spacer(minLength: 8)
+                            Text(formatUsageDuration(item.durationSeconds))
+                                .font(.subheadline.monospacedDigit().weight(.semibold))
+                                .foregroundStyle(ParentPalette.ink)
                         }
-                        Spacer(minLength: 0)
+                        .padding(.vertical, 10)
+                        if item.id != androidAppUsage.last?.id {
+                            Divider()
+                        }
                     }
-                    .padding(12).background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 15))
                 }
+                .padding(.horizontal, 14)
+                .background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 15))
             }
-            Text("Ko‘rsatkichlar Firestore’da mavjud bo‘lgan Android yozuvlari asosida olinadi. Bu iOS ilovasiga Android qurilmasining barcha tizim ruxsatlarini bermaydi.")
+            Text("Faqat Android bolaning ilova faolligi ma'lumotlari ko'rsatiladi. SMS, qo‘ng‘iroq, kontakt va screenshot modullari iOS ota-ona interfeysida ochilmaydi.")
                 .font(.caption2).foregroundStyle(ParentPalette.muted)
         }
     }
@@ -640,7 +635,7 @@ struct IOSParentDashboardView: View {
                         locationListener?.remove()
                         focusListener?.remove()
                         location = nil
-                        metrics = []
+                        androidAppUsage = []
                         boundChildID = nil
                         boundChildPlatform = nil
                         boundCapabilities = nil
@@ -694,24 +689,38 @@ struct IOSParentDashboardView: View {
     }
 
     private func loadAndroidMetrics(_ childRef: DocumentReference) {
-        let startOfDay = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970 * 1000
+        let calendar = Calendar.current
+        let startOfDay = calendar.startOfDay(for: Date()).timeIntervalSince1970 * 1000
+        let endOfDay = startOfDay + 24 * 60 * 60 * 1000
         childRef.collection("app_usage")
             .whereField("boshlanishMs", isGreaterThanOrEqualTo: startOfDay)
+            .whereField("boshlanishMs", isLessThan: endOfDay)
+            .order(by: "boshlanishMs", descending: true)
             .getDocuments { snapshot, _ in
-                let count = snapshot?.documents.count ?? 0
+                let grouped = Dictionary(grouping: snapshot?.documents ?? [], by: {
+                    $0.data()["ilovaNomi"] as? String ?? "Noma'lum ilova"
+                })
+                let usage = grouped.map { name, documents in
+                    IOSAppUsage(
+                        id: name,
+                        appName: name,
+                        durationSeconds: documents.reduce(0) {
+                            $0 + Int($1.data()["davomiylikSoniya"] as? Int64 ?? 0)
+                        }
+                    )
+                }.sorted { $0.durationSeconds > $1.durationSeconds }
                 DispatchQueue.main.async {
                     guard selectedChildID == childRef.documentID else { return }
-                    metrics = [
-                        IOSMetric(
-                            id: "app_usage",
-                            title: "Ilova faolligi",
-                            value: count,
-                            symbol: "app.badge",
-                            tint: ParentPalette.orange
-                        )
-                    ]
+                    androidAppUsage = usage
                 }
             }
+    }
+
+    private func formatUsageDuration(_ seconds: Int) -> String {
+        let safeSeconds = max(0, seconds)
+        let hours = safeSeconds / 3600
+        let minutes = (safeSeconds % 3600) / 60
+        return hours > 0 ? "\(hours) soat \(minutes) daq" : "\(minutes) daq"
     }
 
     private func locationPermissionLabel(_ child: IOSChildDevice) -> String {
