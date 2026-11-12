@@ -326,6 +326,8 @@ struct IOSParentDashboardView: View {
     private func iosControls(_ child: IOSChildDevice) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             sectionHeading("iOS nazorati", detail: "Apple Screen Time")
+            Text("Quyidagi imkoniyatlar iOS’da qo‘llab-quvvatlanadi. Ishlashi uchun bola iPhone’ida Apple Family Controls ruxsati va kerakli tanlovlar bo‘lishi shart.")
+                .font(.caption2).foregroundStyle(ParentPalette.muted)
             if child.capabilities.contains(.focusMode) {
                 HStack(spacing: 12) {
                     Image(systemName: "hourglass").font(.title2).foregroundStyle(ParentPalette.accent)
@@ -448,7 +450,7 @@ struct IOSParentDashboardView: View {
                 .foregroundStyle(available ? ParentPalette.teal : ParentPalette.muted)
             Text(title).font(.subheadline)
             Spacer()
-            Text(available ? "Mavjud" : "Mavjud emas")
+            Text(available ? "Qo‘llab-quvvatlanadi" : "Mavjud emas")
                 .font(.caption).foregroundStyle(ParentPalette.muted)
         }
     }
