@@ -111,9 +111,11 @@ final class AgoraScreenShareSession: NSObject, ObservableObject, AgoraRtcEngineD
                    reason: AgoraLocalVideoStreamReason,
                    sourceType: AgoraVideoSourceType) {
         if sourceType == .screen && state == .stopped {
-            mediaOptions?.publishScreenCaptureVideo = false
-            mediaOptions?.publishScreenCaptureAudio = false
-            engine.updateChannel(with: mediaOptions!)
+            if let mediaOptions {
+                mediaOptions.publishScreenCaptureVideo = false
+                mediaOptions.publishScreenCaptureAudio = false
+                engine.updateChannel(with: mediaOptions)
+            }
             isBroadcasting = false
             status = "Ekran uzatish to‘xtadi"
             if let request {
