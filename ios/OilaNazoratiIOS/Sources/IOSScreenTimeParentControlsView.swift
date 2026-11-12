@@ -70,6 +70,8 @@ struct IOSScreenTimeParentControlsView: View {
                 Label("Tanlangan saytlarni cheklash", systemImage: "globe")
             }
             .tint(.blue)
+            Text("Nazorat qilinadigan ilova, toifa va saytlar bolaning iPhone qurilmasidagi Apple oynasida tanlanadi. Ota-ona bu yerda vaqt limiti va jadvalni boshqaradi.")
+                .font(.caption2).foregroundStyle(.secondary)
 
             Button(action: savePolicy) {
                 HStack {
