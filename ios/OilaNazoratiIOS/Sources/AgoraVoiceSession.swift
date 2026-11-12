@@ -33,6 +33,7 @@ enum AgoraVoiceError: LocalizedError {
 @MainActor
 final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegate {
     @Published private(set) var isConnected = false
+    @Published private(set) var isConnecting = false
     @Published private(set) var statusText = "Ulanmagan"
 
     private var engine: AgoraRtcEngineKit?
@@ -42,12 +43,16 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
 
     func join(channel: String, role: String, familyCode: String, childUid: String, requestID: String,
               completion: @escaping (Result<Void, Error>) -> Void) {
+        guard !isConnected, !isConnecting else { return }
+        isConnecting = true
         guard let endpointString = Bundle.main.object(forInfoDictionaryKey: "AGORA_TOKEN_ENDPOINT") as? String,
               let endpoint = URL(string: endpointString), endpoint.scheme == "https" else {
+            isConnecting = false
             completion(.failure(AgoraVoiceError.missingTokenEndpoint))
             return
         }
         guard let user = Auth.auth().currentUser else {
+            isConnecting = false
             completion(.failure(AgoraVoiceError.notSignedIn))
             return
         }
@@ -57,11 +62,11 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
         user.getIDToken { [weak self] idToken, error in
             guard let self else { return }
             if let error {
-                Task { @MainActor in completion(.failure(error)) }
+                Task { @MainActor in self.isConnecting = false; completion(.failure(error)) }
                 return
             }
             guard let idToken else {
-                Task { @MainActor in completion(.failure(AgoraVoiceError.notSignedIn)) }
+                Task { @MainActor in self.isConnecting = false; completion(.failure(AgoraVoiceError.notSignedIn)) }
                 return
             }
 
@@ -80,16 +85,17 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
 
             URLSession.shared.dataTask(with: request) { data, response, requestError in
                 if let requestError {
-                    Task { @MainActor in completion(.failure(requestError)) }
+                    Task { @MainActor in self.isConnecting = false; completion(.failure(requestError)) }
                     return
                 }
                 guard let http = response as? HTTPURLResponse, let data else {
-                    Task { @MainActor in completion(.failure(AgoraVoiceError.invalidTokenResponse)) }
+                    Task { @MainActor in self.isConnecting = false; completion(.failure(AgoraVoiceError.invalidTokenResponse)) }
                     return
                 }
                 guard (200..<300).contains(http.statusCode) else {
                     let errorCode = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
                     Task { @MainActor in
+                        self.isConnecting = false
                         completion(.failure(errorCode.map(AgoraVoiceError.serverRejected) ?? AgoraVoiceError.invalidTokenResponse))
                     }
                     return
@@ -98,7 +104,7 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
                       let token = json["token"] as? String,
                       let appID = json["appId"] as? String,
                       !token.isEmpty, !appID.isEmpty else {
-                    Task { @MainActor in completion(.failure(AgoraVoiceError.invalidTokenResponse)) }
+                    Task { @MainActor in self.isConnecting = false; completion(.failure(AgoraVoiceError.invalidTokenResponse)) }
                     return
                 }
                 Task { @MainActor in
@@ -126,6 +132,7 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
                 try audioSession.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetooth, .defaultToSpeaker])
                 try audioSession.setActive(true)
             } catch {
+                isConnecting = false
                 completion(.failure(error))
                 return
             }
@@ -135,6 +142,7 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
                 try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.allowBluetooth])
                 try AVAudioSession.sharedInstance().setActive(true)
             } catch {
+                isConnecting = false
                 completion(.failure(error))
                 return
             }
@@ -155,6 +163,7 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
                                      mediaOptions: options, joinSuccess: nil)
         if result != 0 {
             pendingJoinCompletion = nil
+            isConnecting = false
             statusText = "Ulanish amalga oshmadi"
             completion(.failure(AgoraVoiceError.joinFailed(Int(result))))
         }
@@ -168,6 +177,7 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
         engine = nil
         activeChannel = nil
         isConnected = false
+        isConnecting = false
         statusText = "Ulanmagan"
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         isPublisher = false
@@ -175,6 +185,7 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
 
     func rtcEngine(_ engine: AgoraRtcEngineKit, didJoinChannel channel: String, withUid uid: UInt, elapsed: Int) {
         isConnected = true
+        isConnecting = false
         statusText = isPublisher ? "Ovoz uzatilmoqda" : "Ota-ona tinglamoqda"
         let completion = pendingJoinCompletion
         pendingJoinCompletion = nil
@@ -184,11 +195,13 @@ final class AgoraVoiceSession: NSObject, ObservableObject, AgoraRtcEngineDelegat
     func rtcEngine(_ engine: AgoraRtcEngineKit, didOccurError errorCode: AgoraErrorCode) {
         guard let completion = pendingJoinCompletion else { return }
         pendingJoinCompletion = nil
+        isConnecting = false
         completion(.failure(AgoraVoiceError.joinFailed(Int(errorCode.rawValue))))
     }
 
     func rtcEngine(_ engine: AgoraRtcEngineKit, didLeaveChannelWith stats: AgoraChannelStats) {
         isConnected = false
+        isConnecting = false
         statusText = "Ulanish tugadi"
     }
 
