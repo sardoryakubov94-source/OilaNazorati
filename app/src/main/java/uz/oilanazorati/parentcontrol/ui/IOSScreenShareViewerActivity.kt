@@ -94,6 +94,14 @@ class IOSScreenShareViewerActivity : AppCompatActivity() {
         if (familyCode.isBlank() || childUid.isBlank()) {
             status.text = "Avval farzand qurilmasini tanlang"; start.isEnabled = false; return
         }
+        db.collection("families").document(familyCode).collection("children").document(childUid)
+            .get().addOnSuccessListener { child ->
+                val platform = child.getString("childPlatform") ?: child.getString("platform") ?: "unknown"
+                if (platform != "ios") runOnUiThread {
+                    status.text = "Bu jonli ekran ulashish iOS bola qurilmasi uchun. Android bolaning ekran suratlari mavjud Screenshot bo‘limida."
+                    start.isEnabled = false
+                }
+            }
         FirebaseRepo.checkIsPremium { premium ->
             runOnUiThread {
                 if (!premium) {
