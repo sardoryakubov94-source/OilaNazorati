@@ -9,7 +9,8 @@ struct ScreenTimeChildDashboardView: View {
 
     @StateObject private var controller = ScreenTimeController.shared
     @State private var showingPicker = false
-    @State private var authorizationBusy = false\n    @Environment(\\.scenePhase) private var scenePhase
+    @State private var authorizationBusy = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         List {
