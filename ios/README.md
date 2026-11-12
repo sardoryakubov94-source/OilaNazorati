@@ -20,7 +20,7 @@ iOS ilovasi SwiftUI asosida tayyorlanadi. Ushbu branch iOS bola va ota-ona panel
 
 - Google Sign-In va Firebase Auth.
 - ownerUid bo'yicha faqat joriy hisob egasining oilasini topish.
-- Bolalar ro'yxati, qurilma platformasi va joylashuv.
+- Bolalar ro'yxati, qurilma platformasi, joylashuv va bola iPhone'idan sinxronlangan Apple Screen Time ruxsat holati.
 - iOS bola uchun kunlik limitni belgilash.
 - Maktab va uyqu vaqtlarini belgilash.
 - Tanlangan saytlarni cheklashni yoqish/o'chirish.
