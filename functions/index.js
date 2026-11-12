@@ -39,22 +39,27 @@ exports.agoraVoiceToken = onRequest(
 
       const db = getFirestore();
       const familyRef = db.collection("families").doc(familyCode);
-      const [family, child, request, micSettings] = await Promise.all([
+      const [family, child, request] = await Promise.all([
         familyRef.get(),
         familyRef.collection("children").doc(childUid).get(),
-        familyRef.collection("children").doc(childUid).collection("mic_requests").doc("current").get(),
-        familyRef.collection("children").doc(childUid).collection("mic_settings").doc("current").get()
+        familyRef.collection("children").doc(childUid).collection("mic_requests").doc("current").get()
       ]);
 
-      if (!family.exists || !child.exists || !request.exists || !micSettings.exists) {
+      if (!family.exists || !child.exists || !request.exists) {
         return res.status(404).json({ error: "voice_session_not_found" });
       }
 
       const familyData = family.data() || {};
+      const childData = child.data() || {};
+      const childPlatform = childData.childPlatform || childData.platform || "unknown";
       const requestData = request.data() || {};
-      const consentData = micSettings.data() || {};
-      if (consentData.remoteAudioConsent !== true || consentData.consentVersion !== 1) {
-        return res.status(403).json({ error: "child_consent_required" });
+      if (childPlatform === "ios") {
+        const micSettings = await familyRef.collection("children").doc(childUid)
+          .collection("mic_settings").doc("current").get();
+        const consentData = micSettings.data() || {};
+        if (!micSettings.exists || consentData.remoteAudioConsent !== true || consentData.consentVersion !== 1) {
+          return res.status(403).json({ error: "child_consent_required" });
+        }
       }
       if (requestData.status === "requested" &&
           Number(requestData.expiresAtMs || 0) < Date.now()) {
@@ -74,12 +79,16 @@ exports.agoraVoiceToken = onRequest(
       const parent = await db.collection("parents").doc(familyData.ownerUid).get();
       const premium = parent.exists && parent.data().premium === true;
       if (!premium) return res.status(403).json({ error: "premium_required" });
-      if (role === "publisher" && !isChild) {
+      if (role === "publisher" && (!isChild || childPlatform !== "ios")) {
         return res.status(403).json({ error: "child_publisher_only" });
       }
       if (role === "subscriber") {
-        if (decoded.firebase?.sign_in_provider === "anonymous" || !isOwner) return res.status(403).json({ error: "family_owner_only" });
-
+        if (decoded.firebase?.sign_in_provider === "anonymous" || !isOwner) {
+          return res.status(403).json({ error: "family_owner_only" });
+        }
+        if (requestData.status !== "active") {
+          return res.status(409).json({ error: "child_audio_not_active" });
+        }
       }
 
       const appId = AGORA_APP_ID.value();
