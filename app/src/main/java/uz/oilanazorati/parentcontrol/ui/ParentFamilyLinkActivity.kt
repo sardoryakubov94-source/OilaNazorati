@@ -29,6 +29,7 @@ class ParentFamilyLinkActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityParentFamilyLinkBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        binding.btnBack.setOnClickListener { finish() }
 
         familyCode = intent.getStringExtra(EXTRA_FAMILY_CODE)
             ?: getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).getString("parent_family_code", null).orEmpty()
