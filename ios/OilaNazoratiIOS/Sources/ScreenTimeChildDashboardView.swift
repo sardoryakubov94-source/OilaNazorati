@@ -1,5 +1,6 @@
 import SwiftUI
-import FamilyControls\nimport DeviceActivity
+import FamilyControls
+import DeviceActivity
 
 @available(iOS 16.0, *)
 struct ScreenTimeChildDashboardView: View {
