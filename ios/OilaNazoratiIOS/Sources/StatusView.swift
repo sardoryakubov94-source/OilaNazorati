@@ -1,4 +1,5 @@
 import SwiftUI
+import FirebaseFirestore
 
 struct StatusView: View {
     @Environment(\.scenePhase) private var scenePhase
@@ -8,6 +9,12 @@ struct StatusView: View {
     @AppStorage("location_sharing_consent") private var locationSharingConsent = false
     @StateObject private var audioConsent = ChildAudioConsent()
     @StateObject private var audioRemote = ChildAudioRemoteController()
+    @StateObject private var screenShare = AgoraScreenShareSession()
+    @State private var screenRequestListener: ListenerRegistration?
+    @State private var screenRequestID: String?
+    @State private var screenChannel: String?
+    @State private var screenRequested = false
+    @State private var showBroadcastPicker = false
 
 
     private func saveRemoteAudioConsent(_ enabled: Bool) {
@@ -79,6 +86,49 @@ struct StatusView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                Section("Jonli ekran") {
+                    Label(screenShare.status, systemImage: screenShare.isJoined ? "rectangle.on.rectangle" : "rectangle")
+                        .font(.footnote).foregroundStyle(screenShare.isJoined ? .green : .secondary)
+                    if screenRequested, let requestID = screenRequestID, let channel = screenChannel {
+                        Button {
+                            screenShare.start(familyCode: familyCode, childUid: childUid,
+                                requestId: requestID, channel: channel, role: "screen_publisher") { result in
+                                switch result {
+                                case .success:
+                                    screenShare.beginCapture()
+                                    showBroadcastPicker = true
+                                    Firestore.firestore().collection("families").document(familyCode)
+                                        .collection("children").document(childUid)
+                                        .collection("screen_requests").document("current")
+                                        .updateData(["status": "active", "childStartedAtMs": Int64(Date().timeIntervalSince1970 * 1000)])
+                                case .failure(let error):
+                                    screenShare.status = error.localizedDescription
+                                }
+                            }
+                        } label: {
+                            Label("Ekran uzatishni boshlash", systemImage: "record.circle")
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    if showBroadcastPicker {
+                        IOSBroadcastPicker(preferredExtension: "uz.oilanazorati.parentcontrol.ScreenBroadcast")
+                            .frame(width: 64, height: 64)
+                        Text("ReplayKit tugmasini bosing va iOS oynasida «Broadcast»ni boshlang. Qizil indikator ekran uzatilayotganini bildiradi.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    if screenShare.isJoined {
+                        Button(role: .destructive) {
+                            screenShare.stopCapture()
+                            showBroadcastPicker = false
+                            Firestore.firestore().collection("families").document(familyCode)
+                                .collection("children").document(childUid)
+                                .collection("screen_requests").document("current")
+                                .updateData(["status": "stopped", "stoppedAtMs": Int64(Date().timeIntervalSince1970 * 1000)])
+                        } label: { Label("Ekran uzatishni to‘xtatish", systemImage: "stop.circle") }
+                    }
+                    Text("Ekran faqat ota-ona so‘rovi va bolaning iOS Broadcast tasdig‘i bilan uzatiladi. Bola iOS tizimidagi indikator orqali uzatishni istalgan vaqtda to‘xtatishi mumkin.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 Section("Jonli ovoz") {
                     Label("Mikrofon: \(audioConsent.permissionText)", systemImage: audioConsent.hasSystemPermission ? "mic.fill" : "mic.slash")
                         .font(.footnote)
@@ -130,10 +180,13 @@ struct StatusView: View {
         }
         .onDisappear {
             audioRemote.stopListening()
+            screenRequestListener?.remove()
+            screenShare.stopCapture()
         }
         .onAppear {
             saveRemoteAudioConsent(audioConsent.isEnabled)
             audioRemote.startListening(familyCode: familyCode, childUid: childUid, consent: audioConsent)
+            startScreenRequestListener()
             if locationSharingConsent {
                 LocationSync.shared.start(familyCode: familyCode, childUid: childUid)
             }
@@ -148,12 +201,36 @@ struct StatusView: View {
                 audioConsent.refreshPermission()
                 if hadAudioConsent && !audioConsent.isEnabled { saveRemoteAudioConsent(false) }
                 audioRemote.startListening(familyCode: familyCode, childUid: childUid, consent: audioConsent)
+                startScreenRequestListener()
                 if #available(iOS 16.0, *) {
                     ScreenTimeController.shared.syncQueuedEvents()
                 }
             } else {
                 audioRemote.stopListening()
+                screenRequestListener?.remove()
             }
         }
     }
+    
+    private func startScreenRequestListener() {
+        screenRequestListener?.remove()
+        screenRequestListener = Firestore.firestore().collection("families").document(familyCode)
+            .collection("children").document(childUid)
+            .collection("screen_requests").document("current")
+            .addSnapshotListener { snapshot, _ in
+                guard let data = snapshot?.data(), let status = data["status"] as? String else {
+                    screenRequested = false
+                    return
+                }
+                screenRequestID = data["requestId"] as? String
+                screenChannel = data["channelName"] as? String
+                screenRequested = status == "requested"
+                if status == "stop_requested" || status == "cancelled" || status == "expired" {
+                    screenShare.stopCapture()
+                    showBroadcastPicker = false
+                    snapshot?.reference.updateData(["status": "stopped", "stoppedAtMs": Int64(Date().timeIntervalSince1970 * 1000)])
+                }
+            }
+    }
+
 }
