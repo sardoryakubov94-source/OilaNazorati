@@ -42,7 +42,11 @@ final class FocusModeSync {
     }
 
     private func apply(enabled: Bool) {
-        guard AuthorizationCenter.shared.authorizationStatus == .approved else { return }
+        guard AuthorizationCenter.shared.authorizationStatus == .approved else {
+            store.shield.applicationCategories = nil
+            store.shield.webDomainCategories = nil
+            return
+        }
         if enabled {
             // Deyarli barcha ilova toifalarini bloklaydi. Telefon, SMS va
             // Sozlamalar kabi tizim ilovalarini Apple o'zi himoyalagan —
@@ -71,5 +75,7 @@ final class FocusModeSync {
         listener = nil
         familyCode = nil
         childUid = nil
+        store.shield.applicationCategories = nil
+        store.shield.webDomainCategories = nil
     }
 }
