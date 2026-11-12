@@ -1,4 +1,5 @@
 import ReplayKit
+import AgoraReplayKitExtension
 
 /// Apple's ReplayKit process plus Agora's supported ReplayKit bridge.
 /// The OS broadcast picker is the only entry point; no hidden capture.
