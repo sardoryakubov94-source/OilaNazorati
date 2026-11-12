@@ -735,13 +735,19 @@ struct IOSParentDashboardView: View {
                         let declared = (data["supportedCapabilities"] as? [String]).flatMap { values in
                             Set(values.compactMap(MonitoringCapability.init(rawValue:)))
                         }
+                        // Android child already ships the Agora microphone service.
+                        // Older Android metadata may omit this capability, so retain
+                        // the known existing voice support without widening other features.
+                        let effectiveDeclared = platform == .android
+                            ? (declared ?? DeviceCapabilityMatrix.capabilities(for: .android)).union([.ambientAudio])
+                            : declared
                         // Child iOS versiyasi ota-ona iPhone versiyasidan mustaqil.
                         // Eski iOS bola ilovasi capability yubormasa, faqat xavfsiz
                         // joylashuv imkoniyatini ko'rsatamiz; Screen Time'ni taxmin qilmaymiz.
                         let capabilities = CrossPlatformConfiguration.resolve(
                             parentPlatform: .ios,
                             childPlatform: platform,
-                            declaredCapabilities: declared
+                            declaredCapabilities: effectiveDeclared
                         ).capabilities
                         return IOSChildDevice(
                             id: doc.documentID,
