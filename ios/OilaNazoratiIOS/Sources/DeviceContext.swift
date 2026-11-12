@@ -18,7 +18,7 @@ enum DeviceRole: String, Codable {
 enum MonitoringCapability: String, CaseIterable, Codable, Hashable {
     case location
     case focusMode = "focus_mode"
-    case appUsage = "app_usage"
+    case appUsage = "app_usage"\n    case usageReports = "usage_reports"\n    case timeLimits = "time_limits"\n    case schedules\n    case websiteRestrictions = "website_restrictions"
     case calls
     case sms
     case contacts
@@ -69,7 +69,7 @@ enum DeviceCapabilityMatrix {
         switch platform {
         case .ios:
             // iOS: Apple ruxsat bergan va ilovada qisman amalga oshirilgan imkoniyatlar.
-            return iosMajorVersion >= 16 ? [.location, .focusMode] : [.location]
+            return iosMajorVersion >= 16 ? [.location, .focusMode, .appUsage, .usageReports, .timeLimits, .schedules, .websiteRestrictions] : [.location]
         case .android:
             // Android: mavjud Android nazorat modullari. Amaliy foydalanish
             // ota-ona autentifikatsiyasi, ruxsatlar va modul holatiga ham bog'liq.
