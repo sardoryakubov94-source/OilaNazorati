@@ -33,7 +33,8 @@ exports.agoraVoiceToken = onRequest(
         typeof childUid !== "string" || childUid.length < 5 ||
         typeof requestId !== "string" || requestId.length < 8 ||
         typeof channelName !== "string" || !/^[A-Za-z0-9_]{4,64}$/.test(channelName) ||
-        !Number.isInteger(uid) || uid < 1 || uid > 4294967295 ||
+        !Number.isInteger(uid) || uid < 0 || uid > 4294967295 ||
+        (uid === 0 && role !== "screen_publisher") ||
         !(isScreen ? ["screen_publisher", "screen_subscriber"].includes(role) : ["publisher", "subscriber"].includes(role))
       ) {
         return res.status(400).json({ error: "invalid_request" });
