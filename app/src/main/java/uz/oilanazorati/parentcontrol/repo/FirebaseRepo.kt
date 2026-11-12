@@ -261,6 +261,7 @@ object FirebaseRepo {
                             put("fields", JSONObject().apply {
                                 put("nomi", JSONObject().put("stringValue", childName))
                                 put("childUid", JSONObject().put("stringValue", uid))
+                                put("childPlatform", JSONObject().put("stringValue", "android"))
                                 put("yaratilganMs", JSONObject().put("integerValue", System.currentTimeMillis().toString()))
                             })
                         }.toString()
@@ -330,6 +331,25 @@ object FirebaseRepo {
     fun logAppUsage(event: AppUsageEvent) { childCollection("app_usage")?.add(event) }
     fun logLocation(event: LocationEvent) { childCollection("locations")?.add(event) }
 
+    data class LinkedChildDevice(val id: String, val name: String, val platform: String)
+
+    /** Ota-ona oynasida ulangan bolalar ro'yxatini real vaqt rejimida kuzatadi. */
+    fun listenChildren(code: String, onChange: (List<LinkedChildDevice>) -> Unit): com.google.firebase.firestore.ListenerRegistration {
+        return db.collection("families").document(code).collection("children")
+            .addSnapshotListener { snap, error ->
+                if (error != null || snap == null) {
+                    onChange(emptyList())
+                    return@addSnapshotListener
+                }
+                onChange(snap.documents.map { doc ->
+                    LinkedChildDevice(
+                        id = doc.id,
+                        name = doc.getString("nomi")?.takeIf { it.isNotBlank() } ?: "Farzand (${doc.id.take(5)})",
+                        platform = (doc.getString("childPlatform") ?: doc.getString("platform") ?: "android").lowercase()
+                    )
+                }.sortedBy { it.name.lowercase() })
+            }
+    }
     fun fetchChildren(code: String, onResult: (List<Pair<String, String>>) -> Unit) {
         db.collection("families").document(code).collection("children").get()
             .addOnSuccessListener { snap ->

@@ -79,8 +79,20 @@ class ParentDashboardActivity : AppCompatActivity() {
                 FirebaseRepo.syncPremiumFlagToChildren(uid, isPremium) { }
             }
         }
-        val savedCode = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).getString("family_code", null)
-        if (savedCode != null) { binding.headerFamilyCode.text = savedCode; loadFamily(savedCode) }
+        val parentPrefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        val savedCode = parentPrefs.getString("parent_family_code", null)
+            ?: parentPrefs.getString("family_code", null)
+        val savedChild = parentPrefs.getString("parent_selected_child_id", null)
+            ?: parentPrefs.getString("child_id", null)
+        if (savedCode != null) {
+            FirebaseRepo.familyCode = savedCode
+            FirebaseRepo.childId = savedChild
+            binding.headerFamilyCode.text = savedCode
+            loadFamily(savedCode)
+        } else {
+            startActivity(Intent(this, ParentFamilyLinkActivity::class.java))
+            finish()
+        }
     }
 
     private fun setupLists() {
@@ -93,8 +105,14 @@ class ParentDashboardActivity : AppCompatActivity() {
     private fun setupHeader() {
         binding.btnChooseChild.setOnClickListener {
             val code = FirebaseRepo.familyCode
-            if (code.isNullOrBlank()) { Toast.makeText(this, "Avval oila kodini kiriting yoki yarating", Toast.LENGTH_SHORT).show(); return@setOnClickListener }
-            showChildPickerDialog(code)
+                ?: getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).getString("parent_family_code", null)
+            if (code.isNullOrBlank()) {
+                Toast.makeText(this, "Oila kodi topilmadi. Qayta kiring.", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            startActivity(Intent(this, ParentFamilyLinkActivity::class.java).apply {
+                putExtra(ParentFamilyLinkActivity.EXTRA_FAMILY_CODE, code)
+            })
         }
         binding.btnSettings.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
         binding.btnFocusMode.setOnClickListener {
@@ -354,29 +372,35 @@ class ParentDashboardActivity : AppCompatActivity() {
     }
 
     private fun loadFamily(code: String) {
-        FirebaseRepo.familyCode = code; binding.headerFamilyCode.text = code
-        getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit().putString("family_code", code).apply()
+        FirebaseRepo.familyCode = code
+        binding.headerFamilyCode.text = code
+        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        val selectedId = prefs.getString("parent_selected_child_id", null)
+            ?: prefs.getString("child_id", null)
+
         FirebaseRepo.fetchChildren(code) { children ->
-            // MUHIM: oldin allaqachon farzand tanlangan bo'lsa (child_id saqlangan
-            // va u hali shu oilada mavjud), "Qaysi farzand?" oynasi HAR safar bosh
-            // sahifaga qaytilganda avtomatik ochilmasligi kerak — faqat shu
-            // saqlangan farzand yuklanadi. Tanlov oynasi endi faqat: (1) hali
-            // birorta ham farzand tanlanmagan bo'lsa, yoki (2) tanlangan farzand
-            // oiladan chiqarib yuborilgan bo'lsa, yoki (3) foydalanuvchi
-            // sarlavhadagi "farzand tanlash" tugmasini bossa ochiladi.
-            val savedChildId = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).getString("child_id", null)
-            when {
-                children.isEmpty() -> Toast.makeText(this, "Bu kodga hali birorta farzand ulanmagan", Toast.LENGTH_SHORT).show()
-                children.size == 1 -> { setChildId(children.first().first); loadTodayStats() }
-                savedChildId != null && children.any { it.first == savedChildId } -> { setChildId(savedChildId); loadTodayStats() }
-                else -> showChildPickerDialog(code, children)
+            val selectedExists = !selectedId.isNullOrBlank() && children.any { it.first == selectedId }
+            if (selectedExists) {
+                setChildId(selectedId!!)
+                loadTodayStats()
+            } else {
+                // Tanlov yo'qolgan yoki bola oiladan chiqarilgan bo'lsa,
+                // dashboard o'rniga umumiy bolalar oynasiga qaytamiz.
+                FirebaseRepo.childId = null
+                startActivity(Intent(this, ParentFamilyLinkActivity::class.java).apply {
+                    putExtra(ParentFamilyLinkActivity.EXTRA_FAMILY_CODE, code)
+                })
+                finish()
             }
         }
     }
 
     private fun setChildId(id: String) {
         FirebaseRepo.childId = id
-        getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit().putString("child_id", id).apply()
+        getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
+            .putString("child_id", id)
+            .putString("parent_selected_child_id", id)
+            .apply()
     }
 
     private fun showChildPickerDialog(code: String, preloaded: List<Pair<String, String>>? = null) {

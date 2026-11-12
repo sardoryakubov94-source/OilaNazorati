@@ -10,11 +10,17 @@
     android:padding="20dp">
 
     <Button android:id="@+id/btnInstallationWizard" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="OilaNazorati o‘rnatish yordamchisi" android:layout_marginBottom="16dp"/>
+    <LinearLayout
+        android:id="@+id/pairingSection"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1) Ota-ona kodini kiriting" android:textStyle="bold" android:layout_marginBottom="8dp"/>
     <EditText android:id="@+id/inputChildName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Farzand ismi (masalan: Anvar) — ixtiyoriy" android:layout_marginBottom="8dp"/>
     <EditText android:id="@+id/inputFamilyCode" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="Masalan: 4F9K21" android:maxLength="6" android:inputType="textCapCharacters"/>
     <Button android:id="@+id/btnPair" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Bog'lash"/>
-    <TextView android:id="@+id/pairStatusText" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginBottom="24dp"/>
+    </LinearLayout>
+    <TextView android:id="@+id/pairStatusText" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="24dp"/>
 
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="2) Kerakli ruxsatlarni bering" android:textStyle="bold" android:layout_marginBottom="8dp"/>
     <Button android:id="@+id/btnGrantPermissions" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Asosiy ruxsatlarni berish" android:layout_marginBottom="8dp"/>
