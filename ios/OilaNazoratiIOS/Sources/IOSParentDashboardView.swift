@@ -752,8 +752,11 @@ struct IOSParentDashboardView: View {
                         locationListener?.remove()
                         focusListener?.remove()
                         voiceListener?.remove()
+                        micSettingsListener?.remove()
+                        voiceConsentEnabled = false
                         voiceSession.leave()
                         voiceStatus = "Ulanmagan"
+                        voiceRequestState = ""
                         voiceRequestID = nil
                         voiceChannelName = nil
                         location = nil
