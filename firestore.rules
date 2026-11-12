@@ -296,7 +296,7 @@ service cloud.firestore {
               && subcollection != 'screenshot_requests'
               && subcollection != 'screenshots'
               && subcollection != 'screenshot_data'
-              && subcollection != 'mic_requests'
+              && subcollection != 'screen_share_settings'\n              && subcollection != 'screen_share_requests'\n              && subcollection != 'mic_requests'
               && subcollection != 'mic_settings'
               && subcollection != 'mic_audio'
               && subcollection != 'voice_recordings';
