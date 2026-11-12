@@ -55,13 +55,28 @@ struct CrossPlatformConfiguration {
         declaredCapabilities: Set<MonitoringCapability>? = nil
     ) -> CrossPlatformConfiguration {
         let style: ParentInterfaceStyle = parentPlatform == .android ? .android : .ios
-        // Parent qurilmasining iOS versiyasi bola iPhone versiyasini anglatmaydi.
-        // Bola metadata yubormasa, iOS uchun faqat xavfsiz joylashuv fallback'i.
-        let capabilities = declaredCapabilities ?? (
+        // Har bir yo'nalishda ota-ona interfeysi va bola OS imkoniyatlari kesishmasi ishlaydi.
+        // Bola iOS metadata yubormasa, parent iPhone versiyasidan taxmin qilmaymiz.
+        let childCapabilities = declaredCapabilities ?? (
             childPlatform == .ios
                 ? Set<MonitoringCapability>([.location])
                 : DeviceCapabilityMatrix.capabilities(for: childPlatform)
         )
+        let parentAllowed: Set<MonitoringCapability>
+        switch (parentPlatform, childPlatform) {
+        case (.ios, .ios):
+            parentAllowed = [.location, .focusMode, .appUsage, .usageReports, .timeLimits, .schedules, .websiteRestrictions]
+        case (.ios, .android):
+            parentAllowed = [.location, .focusMode, .appUsage]
+        case (.android, .ios):
+            // iOS'ning batafsil usage hisoboti faqat bolaning o'z qurilmasida ko'rsatiladi.
+            parentAllowed = [.location, .focusMode, .timeLimits, .schedules, .websiteRestrictions]
+        case (.android, .android):
+            parentAllowed = Set(MonitoringCapability.allCases)
+        default:
+            parentAllowed = []
+        }
+        let capabilities = childCapabilities.intersection(parentAllowed)
         return CrossPlatformConfiguration(
             parentPlatform: parentPlatform,
             childPlatform: childPlatform,
