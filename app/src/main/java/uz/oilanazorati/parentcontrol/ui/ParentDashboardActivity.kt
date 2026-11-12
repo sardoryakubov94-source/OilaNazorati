@@ -240,6 +240,37 @@ class ParentDashboardActivity : AppCompatActivity() {
         val simCard = content.findViewWithTag<View>("sim_info_card")
         val idx = content.indexOfChild(simCard)
         content.addView(row, if (idx >= 0) idx + 1 else content.childCount)
+
+        if (content.findViewWithTag<View>("ios_screen_share_card") == null) {
+            val screenCard = TextView(this).apply {
+                tag = "ios_screen_share_card"
+                text = "📺  Jonli ekran ulash\n      iPhone farzand ekranini ko‘rish"
+                textSize = 14f
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, R.color.color_text_primary))
+                setPadding(dp(18), dp(16), dp(18), dp(16))
+                background = GradientDrawable().apply {
+                    cornerRadius = dp(18).toFloat()
+                    setColor(androidx.core.content.ContextCompat.getColor(this@ParentDashboardActivity, R.color.color_surface))
+                }
+                layoutParams = LinearLayout.LayoutParams(-1, -2).apply {
+                    topMargin = dp(2); bottomMargin = dp(12)
+                }
+                setOnClickListener {
+                    if (FirebaseRepo.familyCode.isNullOrBlank() || FirebaseRepo.childId.isNullOrBlank()) {
+                        Toast.makeText(this@ParentDashboardActivity, "Avval farzandni tanlang", Toast.LENGTH_SHORT).show()
+                    } else FirebaseRepo.checkIsPremium { premium ->
+                        if (!premium) AlertDialog.Builder(this@ParentDashboardActivity)
+                            .setTitle("⭐ Premium kerak")
+                            .setMessage("Jonli ekran ko‘rish Premium uchun.")
+                            .setPositiveButton("Premiumni ochish") { _, _ -> startActivity(Intent(this@ParentDashboardActivity, PremiumActivity::class.java)) }
+                            .setNegativeButton("Bekor qilish", null).show()
+                        else startActivity(Intent(this@ParentDashboardActivity, ScreenShareListenActivity::class.java))
+                    }
+                }
+            }
+            content.addView(screenCard, content.indexOfChild(row) + 1)
+        }
     }
 
     /** Yonma-yon joylashadigan ikkita bo'lakdan biri: markazlashtirilgan ikonka, sarlavha va kichik izoh. */
