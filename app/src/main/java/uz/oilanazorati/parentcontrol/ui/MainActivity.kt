@@ -245,16 +245,13 @@ class MainActivity : AppCompatActivity() {
                             FirebaseRepo.familyCode = code
                             getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
                                 .putString("family_code", code).apply()
-                            // Kodni "pro" kod yaratishdagi kabi aniq, katta dialogda
-                            // ko'rsatamiz — shunda foydalanuvchi uni bola qurilmasiga
-                            // xatosiz (adashtirmasdan) ko'chirib kiritadi. Avvalroq bu
-                            // kod faqat panel sarlavhasidagi kichik matnda ko'rinardi.
-                            AlertDialog.Builder(this)
-                                .setTitle("Oila kodingiz tayyor ⭐")
-                                .setMessage("$code\n\nBu kodni bolangiz qurilmasidagi ilovaga kiriting. Kodni diqqat bilan ko'chiring — bir xarf xato bo'lsa ham ulanmaydi.")
-                                .setPositiveButton("Tushunarli") { _, _ -> startActivity(Intent(this, destination)) }
-                                .setCancelable(false)
-                                .show()
+                            if (pendingDestination == PendingDestination.PARENT_DASHBOARD) {
+                                startActivity(Intent(this, ParentFamilyLinkActivity::class.java).apply {
+                                    putExtra(ParentFamilyLinkActivity.EXTRA_FAMILY_CODE, code)
+                                })
+                            } else {
+                                startActivity(Intent(this, destination))
+                            }
                         } else {
                             binding.loginStatusText.text = "Oila kodini tayyorlashda xato, qayta urinib ko'ring"
                         }
