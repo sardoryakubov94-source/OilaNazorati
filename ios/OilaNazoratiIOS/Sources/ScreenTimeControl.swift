@@ -283,6 +283,7 @@ final class ScreenTimeController: ObservableObject {
         defaults.set(events, forKey: "screenTimePendingEvents")
         let database = Firestore.firestore()
         let batch = database.batch()
+        let uploadedEventIDs = Set(events.compactMap { $0["eventId"] as? String })
         for event in events {
             guard let eventId = event["eventId"] as? String else { continue }
             let reference = database.collection("families").document(code)
@@ -294,7 +295,14 @@ final class ScreenTimeController: ObservableObject {
             if let error {
                 Task { @MainActor in self?.lastError = "Limit event Firebase sync error: " + error.localizedDescription }
             } else {
-                defaults.removeObject(forKey: "screenTimePendingEvents")
+                // Extension upload paytida yangi hodisa qo'shgan bo'lishi mumkin.
+                // Butun queue'ni tozalamasdan, faqat shu batch yuborgan ID'larni olib tashlaymiz.
+                let current = defaults.array(forKey: "screenTimePendingEvents") as? [[String: Any]] ?? []
+                let remaining = current.filter { event in
+                    guard let eventId = event["eventId"] as? String else { return true }
+                    return !uploadedEventIDs.contains(eventId)
+                }
+                defaults.set(remaining, forKey: "screenTimePendingEvents")
             }
         }
     }
