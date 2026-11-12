@@ -39,18 +39,23 @@ exports.agoraVoiceToken = onRequest(
 
       const db = getFirestore();
       const familyRef = db.collection("families").doc(familyCode);
-      const [family, child, request] = await Promise.all([
+      const [family, child, request, micSettings] = await Promise.all([
         familyRef.get(),
         familyRef.collection("children").doc(childUid).get(),
-        familyRef.collection("children").doc(childUid).collection("mic_requests").doc("current").get()
+        familyRef.collection("children").doc(childUid).collection("mic_requests").doc("current").get(),
+        familyRef.collection("children").doc(childUid).collection("mic_settings").doc("current").get()
       ]);
 
-      if (!family.exists || !child.exists || !request.exists) {
+      if (!family.exists || !child.exists || !request.exists || !micSettings.exists) {
         return res.status(404).json({ error: "voice_session_not_found" });
       }
 
       const familyData = family.data() || {};
       const requestData = request.data() || {};
+      const consentData = micSettings.data() || {};
+      if (consentData.remoteAudioConsent !== true || consentData.consentVersion !== 1) {
+        return res.status(403).json({ error: "child_consent_required" });
+      }
       if (requestData.status === "requested" &&
           Number(requestData.expiresAtMs || 0) < Date.now()) {
         return res.status(410).json({ error: "voice_request_expired" });
