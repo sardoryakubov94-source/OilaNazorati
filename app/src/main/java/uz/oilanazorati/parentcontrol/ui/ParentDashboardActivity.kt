@@ -468,6 +468,7 @@ class ParentDashboardActivity : AppCompatActivity() {
             platformUiDefaults?.forEach { (view, visibility) -> view.visibility = visibility }
             binding.premiumBannerHome.visibility = if (isPremiumUser) View.GONE else View.VISIBLE
             binding.btnFocusMode.contentDescription = "Kontrol rejimi"
+            binding.btnFocusModeIcon.setImageResource(R.drawable.ic_shield)
             binding.btnFocusMode.visibility =
                 if (selectedChildCapabilities.contains(ParentFeature.FOCUS_MODE)) View.VISIBLE else View.GONE
             binding.btnLocationHistory.visibility =
@@ -476,6 +477,7 @@ class ParentDashboardActivity : AppCompatActivity() {
         }
 
         binding.btnFocusMode.contentDescription = "Ekran vaqti"
+        binding.btnFocusModeIcon.setImageResource(R.drawable.ic_clock)
         val hasScreenTime = selectedChildCapabilities.any {
             it == ParentFeature.FOCUS_MODE ||
             it == ParentFeature.SCREEN_TIME_LIMITS ||
