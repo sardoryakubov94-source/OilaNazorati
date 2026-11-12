@@ -28,7 +28,7 @@ jobs:
       - name: Build iOS app and Screen Time extensions
         run: |
           xcodebuild \
-            -project ios/OilaNazorati.xcodeproj \
+            -project ios/OilaNazoratiIOS.xcodeproj \
             -scheme OilaNazoratiIOS \
             -sdk iphonesimulator \
             -configuration Debug \
