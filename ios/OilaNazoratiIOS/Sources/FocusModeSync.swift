@@ -23,8 +23,13 @@ final class FocusModeSync {
     static let shared = FocusModeSync()
     private let store = ManagedSettingsStore(named: .init("legacyFocusMode"))
     private var listener: ListenerRegistration?
+    private var familyCode: String?
+    private var childUid: String?
 
     func start(familyCode: String, childUid: String) {
+        self.familyCode = familyCode
+        self.childUid = childUid
+        listener?.remove()
         let doc = Firestore.firestore()
             .collection("families").document(familyCode)
             .collection("children").document(childUid)
@@ -50,7 +55,21 @@ final class FocusModeSync {
         }
     }
 
+    func refreshAuthorization() {
+        guard let familyCode, let childUid else { return }
+        Firestore.firestore().collection("families").document(familyCode)
+            .collection("children").document(childUid)
+            .collection("focus_mode_settings").document("current")
+            .getDocument { [weak self] snapshot, _ in
+                let enabled = snapshot?.data()?["enabled"] as? Bool ?? false
+                self?.apply(enabled: enabled)
+            }
+    }
+
     func stop() {
         listener?.remove()
+        listener = nil
+        familyCode = nil
+        childUid = nil
     }
 }
