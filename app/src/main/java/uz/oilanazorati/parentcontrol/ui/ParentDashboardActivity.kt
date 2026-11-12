@@ -130,11 +130,11 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding.btnLocationHistory.setOnClickListener { openIfChildSelected(ParentFeature.LOCATION) { LocationHistoryActivity::class.java } }
         binding.btnCallHistory.setOnClickListener { openIfChildSelected(ParentFeature.CALLS) { CallHistoryActivity::class.java } }
         binding.btnSmsHistory.setOnClickListener { openIfChildSelected(ParentFeature.SMS) { SmsHistoryActivity::class.java } }
-        binding.btnSavedContacts.setOnClickListener { startActivity(Intent(this, SavedContactsActivity::class.java)) }
-        binding.btnTrends.setOnClickListener { startActivity(Intent(this, TrendsActivity::class.java)) }
+        binding.btnSavedContacts.setOnClickListener { openIfChildSelected(ParentFeature.CONTACTS) { SavedContactsActivity::class.java } }
+        binding.btnTrends.setOnClickListener { openIfChildSelected(ParentFeature.TRENDS) { TrendsActivity::class.java } }
         binding.cardStatCalls.setOnClickListener { openIfChildSelected(ParentFeature.CALLS) { CallHistoryActivity::class.java } }
         binding.cardStatSms.setOnClickListener { openIfChildSelected(ParentFeature.SMS) { SmsHistoryActivity::class.java } }
-        binding.cardStatContacts.setOnClickListener { startActivity(Intent(this, SavedContactsActivity::class.java)) }
+        binding.cardStatContacts.setOnClickListener { openIfChildSelected(ParentFeature.CONTACTS) { SavedContactsActivity::class.java } }
         binding.premiumBannerHome.setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
         binding.btnPremiumCtaHome.setOnClickListener { startActivity(Intent(this, PremiumActivity::class.java)) }
         binding.cardStatScreenshot.setOnClickListener { openIfChildSelected(ParentFeature.SCREENSHOTS) { ScreenshotHistoryActivity::class.java } }
@@ -459,10 +459,8 @@ class ParentDashboardActivity : AppCompatActivity() {
             binding.appUsageList
         ).forEach { it.visibility = View.GONE }
 
-        findViewById<View?>(R.id.btnPremiumCtaHome)?.visibility = View.GONE
-        findViewById<View?>(R.id.sim_info_card)?.visibility = View.GONE
-        findViewById<View?>(R.id.ozvoz_xavf_row)?.visibility = View.GONE
-        findViewById<View?>(R.id.ovo z_xavf_row)?.visibility = View.GONE
+        binding.root.findViewWithTag<View>("sim_info_card")?.visibility = View.GONE
+        binding.root.findViewWithTag<View>("ovoz_xavf_row")?.visibility = View.GONE
     }
 
     private fun showIosFocusModeDialog() {
@@ -677,28 +675,36 @@ class ParentDashboardActivity : AppCompatActivity() {
     }
 
     private fun loadTodayStats() {
-        refreshSimInfo()
-        // Bola almashtirilganda shu funksiya qayta chaqiriladi — eski
-        // listenerlarni o'chirmasdan turib yangisini ulasak, ikkalasi ham
-        // ishlab qolib, har o'zgarishda 2x, 3x... o'qish sarflanardi.
+        // Bola almashtirilganda avvalgi listenerlar albatta yopiladi.
         contactsListener?.remove(); callsListener?.remove(); smsListener?.remove()
         appUsageListener?.remove(); locationListener?.remove()
+        simInfoListener?.remove()
+        if (selectedChildCapabilities.contains(ParentFeature.SIM_INFO)) refreshSimInfo()
 
         val cal = Calendar.getInstance(); cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0)
         val dayStart = cal.timeInMillis; val dayEnd = dayStart + 24 * 60 * 60 * 1000
-        contactsListener = FirebaseRepo.listenSavedContacts { contacts -> val names = contacts.associate { it.kontaktHash to it.nomi }; contactSummaryAdapter.setNames(names); smsAdapter.setNames(names) }
-        callsListener = FirebaseRepo.listenCallsForDay(dayStart, dayEnd) { calls ->
-            val incoming = calls.count { it.turi == "kiruvchi" }; val outgoing = calls.count { it.turi == "chiquvchi" }
-            binding.statCallCount.text = "${calls.size} ta"; binding.statCallDetail.text = "$incoming kiruvchi\n$outgoing chiquvchi"; timelineAdapter.setCalls(calls, timeFmt)
-            val stats = buildContactStats(calls); binding.statContactCount.text = "${stats.count { it.kontaktHash != "noma_lum" }} ta"; contactSummaryAdapter.setStats(stats)
+        if (selectedChildCapabilities.contains(ParentFeature.CONTACTS)) {
+            contactsListener = FirebaseRepo.listenSavedContacts { contacts -> val names = contacts.associate { it.kontaktHash to it.nomi }; contactSummaryAdapter.setNames(names); smsAdapter.setNames(names) }
         }
-        smsListener = FirebaseRepo.listenSmsForDay(dayStart, dayEnd) { sms ->
-            val sent = sms.count { it.turi == "yuborilgan" }; val received = sms.count { it.turi == "qabul_qilingan" }
-            binding.statSmsCount.text = "${sms.size} ta"; binding.statSmsDetail.text = "$sent yuborilgan\n$received qabul"; smsAdapter.setData(sms)
-            binding.smsTimelineList.visibility = if (sms.isEmpty()) View.GONE else View.VISIBLE; binding.smsSectionEmpty.visibility = if (sms.isEmpty()) View.VISIBLE else View.GONE
+        if (selectedChildCapabilities.contains(ParentFeature.CALLS)) {
+            callsListener = FirebaseRepo.listenCallsForDay(dayStart, dayEnd) { calls ->
+                val incoming = calls.count { it.turi == "kiruvchi" }; val outgoing = calls.count { it.turi == "chiquvchi" }
+                binding.statCallCount.text = "${calls.size} ta"; binding.statCallDetail.text = "$incoming kiruvchi\n$outgoing chiquvchi"; timelineAdapter.setCalls(calls, timeFmt)
+                val stats = buildContactStats(calls); binding.statContactCount.text = "${stats.count { it.kontaktHash != "noma_lum" }} ta"; contactSummaryAdapter.setStats(stats)
+            }
         }
-        appUsageListener = FirebaseRepo.listenAppUsageForDay(dayStart, dayEnd) { usage -> appUsageAdapter.setData(usage.groupBy { it.ilovaNomi }.mapValues { (_, list) -> list.sumOf { it.davomiylikSoniya } }.toList().sortedByDescending { it.second }) }
-        locationListener = FirebaseRepo.listenLatestLocation { loc ->
+        if (selectedChildCapabilities.contains(ParentFeature.SMS)) {
+            smsListener = FirebaseRepo.listenSmsForDay(dayStart, dayEnd) { sms ->
+                val sent = sms.count { it.turi == "yuborilgan" }; val received = sms.count { it.turi == "qabul_qilingan" }
+                binding.statSmsCount.text = "${sms.size} ta"; binding.statSmsDetail.text = "$sent yuborilgan\n$received qabul"; smsAdapter.setData(sms)
+                binding.smsTimelineList.visibility = if (sms.isEmpty()) View.GONE else View.VISIBLE; binding.smsSectionEmpty.visibility = if (sms.isEmpty()) View.GONE else View.VISIBLE
+            }
+        }
+        if (selectedChildCapabilities.contains(ParentFeature.APP_USAGE)) {
+            appUsageListener = FirebaseRepo.listenAppUsageForDay(dayStart, dayEnd) { usage -> appUsageAdapter.setData(usage.groupBy { it.ilovaNomi }.mapValues { (_, list) -> list.sumOf { it.davomiylikSoniya } }.toList().sortedByDescending { it.second }) }
+        }
+        if (selectedChildCapabilities.contains(ParentFeature.LOCATION)) {
+            locationListener = FirebaseRepo.listenLatestLocation { loc ->
             if (loc == null) return@listenLatestLocation
             val time = timeFmt.format(Date(loc.vaqtMs)); val minutesAgo = ((System.currentTimeMillis() - loc.vaqtMs) / 60000).coerceAtLeast(0)
             binding.locationTimeAgo.text = "$time • $minutesAgo daqiqa oldin"; binding.locationCoords.text = "${"%.5f".format(Locale.US, loc.lat)}, ${"%.5f".format(Locale.US, loc.lng)}"; binding.headerStatus.text = if (minutesAgo <= 45) "● FAOL" else "● NOFAOL"
