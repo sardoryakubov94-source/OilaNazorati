@@ -9,8 +9,7 @@ struct ContentView: View {
         if let role = DeviceRole(rawValue: deviceRoleRaw), role != .unselected {
             return role
         }
-        // Old iOS installations already linked as a child must keep working
-        // without showing the new role chooser again.
+        // Old iOS installations already linked as a child must keep working.
         return (!familyCode.isEmpty && !childUid.isEmpty) ? .child : .unselected
     }
 
@@ -28,11 +27,13 @@ struct ContentView: View {
                     StatusView(familyCode: familyCode, childUid: childUid)
                 }
             case .parent:
-                IOSParentModePlaceholderView(onChangeRole: {\n                    deviceRoleRaw = DeviceRole.unselected.rawValue\n                })
+                IOSParentModePlaceholderView {
+                    deviceRoleRaw = DeviceRole.unselected.rawValue
+                }
             }
         }
         .onAppear {
-            // Migration for existing paired child devices.
+            // Migrate already-paired installations without interrupting child mode.
             if deviceRoleRaw == DeviceRole.unselected.rawValue,
                !familyCode.isEmpty, !childUid.isEmpty {
                 deviceRoleRaw = DeviceRole.child.rawValue
@@ -73,7 +74,7 @@ private struct DeviceRoleSelectionView: View {
                 }
                 .buttonStyle(.bordered)
 
-                Text("Rol keyinchalik ilova sozlamalarida almashtirilishi mumkin.")
+                Text("Qurilma roli keyingi bosqichlarda sozlamalardan almashtirilishi mumkin.")
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -88,6 +89,8 @@ private struct DeviceRoleSelectionView: View {
 }
 
 private struct IOSParentModePlaceholderView: View {
+    let onChangeRole: () -> Void
+
     var body: some View {
         VStack(spacing: 16) {
             Image(systemName: "person.crop.rectangle")
@@ -100,6 +103,8 @@ private struct IOSParentModePlaceholderView: View {
                 .multilineTextAlignment(.center)
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 28)
+            Button("Rolni qayta tanlash", action: onChangeRole)
+                .buttonStyle(.bordered)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
