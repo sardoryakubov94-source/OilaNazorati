@@ -22,6 +22,8 @@ private struct IOSChildDevice: Identifiable, Hashable {
     let platform: DevicePlatform
     let capabilities: Set<MonitoringCapability>
     let screenTimeAuthorizationStatus: String
+    let locationAuthorizationStatus: String
+    let locationSharingConsent: Bool
 
     var isIOS: Bool { platform == .ios }
     var platformTitle: String { platform == .ios ? "iPhone / iPad" : platform == .android ? "Android" : "Aniqlanmagan" }
@@ -383,6 +385,14 @@ struct IOSParentDashboardView: View {
             sectionHeading("iOS nazorati", detail: "Apple Screen Time")
             Text("Quyidagi imkoniyatlar iOS’da qo‘llab-quvvatlanadi. Ishlashi uchun bola iPhone’ida Apple Family Controls ruxsati va kerakli tanlovlar bo‘lishi shart.")
                 .font(.caption2).foregroundStyle(ParentPalette.muted)
+            HStack {
+                Label("Joylashuv ruxsati", systemImage: "location")
+                Spacer()
+                Text(locationPermissionLabel(child))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(child.locationSharingConsent && child.locationAuthorizationStatus.hasPrefix("authorized") ? ParentPalette.teal : ParentPalette.muted)
+            }
+            .font(.caption)
             if child.capabilities.contains(.focusMode) {
                 HStack(spacing: 12) {
                     Image(systemName: "hourglass").font(.title2).foregroundStyle(ParentPalette.accent)
@@ -632,7 +642,9 @@ struct IOSParentDashboardView: View {
                             name: (data["nomi"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "Farzand",
                             platform: platform,
                             capabilities: capabilities,
-                            screenTimeAuthorizationStatus: data["screenTimeAuthorizationStatus"] as? String ?? "notDetermined"
+                            screenTimeAuthorizationStatus: data["screenTimeAuthorizationStatus"] as? String ?? "notDetermined",
+                            locationAuthorizationStatus: data["locationAuthorizationStatus"] as? String ?? "unknown",
+                            locationSharingConsent: data["locationSharingConsent"] as? Bool ?? false
                         )
                     }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
                     children = loaded
@@ -747,6 +759,18 @@ struct IOSParentDashboardView: View {
                     metrics.sort { $0.id < $1.id }
                 }
             }
+        }
+    }
+
+    private func locationPermissionLabel(_ child: IOSChildDevice) -> String {
+        guard child.locationSharingConsent else { return "Rozilik berilmagan" }
+        switch child.locationAuthorizationStatus {
+        case "authorizedAlways": return "Doimiy ruxsat"
+        case "authorizedWhenInUse": return "Ilova ishlaganda"
+        case "denied": return "Rad etilgan"
+        case "restricted": return "Cheklangan"
+        case "notDetermined": return "So'ralmagan"
+        default: return "Noma'lum"
         }
     }
 
