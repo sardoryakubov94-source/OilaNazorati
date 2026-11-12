@@ -369,8 +369,15 @@ struct IOSParentDashboardView: View {
                 .padding(14).background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 16))
             }
 
-            if let familyCode {
-                IOSScreenTimeParentControlsView(familyCode: familyCode, childUid: child.id)
+            if child.capabilities.contains(.timeLimits) ||
+                child.capabilities.contains(.schedules) ||
+                child.capabilities.contains(.websiteRestrictions) {
+                if let familyCode {
+                    IOSScreenTimeParentControlsView(familyCode: familyCode, childUid: child.id)
+                }
+            } else {
+                Text("Bu iPhone Screen Time boshqaruvini e'lon qilmagan. Bola ilovasini yangilash va iOS 16 yoki yangiroq versiyani tekshirish kerak.")
+                    .font(.caption).foregroundStyle(ParentPalette.muted)
             }
 
             HStack {
@@ -578,7 +585,12 @@ struct IOSParentDashboardView: View {
                         let declared = (data["supportedCapabilities"] as? [String]).flatMap { values in
                             Set(values.compactMap(MonitoringCapability.init(rawValue:)))
                         }
-                        let capabilities = declared ?? DeviceCapabilityMatrix.capabilities(for: platform)
+                        // Child iOS versiyasi ota-ona iPhone versiyasidan mustaqil.
+                        // Eski iOS bola ilovasi capability yubormasa, faqat xavfsiz
+                        // joylashuv imkoniyatini ko'rsatamiz; Screen Time'ni taxmin qilmaymiz.
+                        let capabilities = declared ?? (platform == .ios
+                            ? Set<MonitoringCapability>([.location])
+                            : DeviceCapabilityMatrix.capabilities(for: platform))
                         return IOSChildDevice(
                             id: doc.documentID,
                             name: (data["nomi"] as? String).flatMap { $0.isEmpty ? nil : $0 } ?? "Farzand",
