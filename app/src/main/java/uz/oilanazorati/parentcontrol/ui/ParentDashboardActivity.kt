@@ -449,11 +449,11 @@ class ParentDashboardActivity : AppCompatActivity() {
         listOf(
             binding.premiumBannerHome,
             binding.cardStatCalls.parent as View,
-            binding.btnCallHistory.parent.parent as View,
+            (binding.btnCallHistory.parent as View).parent as View,
             binding.smsTimelineList.parent as View,
-            binding.btnSavedContacts.parent.parent as View,
+            (binding.btnSavedContacts.parent as View).parent as View,
             binding.notificationsCardHome,
-            binding.btnTrends.parent.parent as View
+            (binding.btnTrends.parent as View).parent as View
         ).forEach { it.visibility = View.GONE }
 
         binding.root.findViewWithTag<View>("sim_info_card")?.visibility = View.GONE
