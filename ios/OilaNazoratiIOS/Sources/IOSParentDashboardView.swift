@@ -471,12 +471,19 @@ struct IOSParentDashboardView: View {
                 Label(screenConsentEnabled ? "Bola oldindan rozilik bergan" : "Bola qurilmasida ekran roziligi kerak",
                       systemImage: screenConsentEnabled ? "checkmark.shield.fill" : "lock.shield")
                     .font(.caption).foregroundStyle(screenConsentEnabled ? ParentPalette.teal : ParentPalette.orange)
-                Button(action: { requestRemoteScreenShare(child) }) {
-                    Label("Ekranni jonli ko‘rish", systemImage: "rectangle.on.rectangle")
-                        .frame(maxWidth: .infinity)
+                if ["requested", "broadcast_ready", "active"].contains(screenShareRequestState) {
+                    Button(role: .destructive, action: stopRemoteScreenShare) {
+                        Label("Ekran so‘rovini / uzatishni to‘xtatish", systemImage: "stop.fill")
+                            .frame(maxWidth: .infinity)
+                    }.buttonStyle(.bordered)
+                } else {
+                    Button(action: { requestRemoteScreenShare(child) }) {
+                        Label("Ekranni jonli ko‘rish", systemImage: "rectangle.on.rectangle")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent).tint(ParentPalette.accent)
+                    .disabled(!screenConsentEnabled)
                 }
-                .buttonStyle(.borderedProminent).tint(ParentPalette.accent)
-                .disabled(!screenConsentEnabled || ["requested", "broadcast_ready", "active"].contains(screenShareRequestState))
             }
             Text("iOS’da ota-ona so‘rovi uzatishni yashirin boshlamaydi. Bola ilovasida so‘rovni ko‘rib, Broadcast’ni o‘zi tasdiqlaydi; qizil iOS indikatori ko‘rinadi.")
                 .font(.caption2).foregroundStyle(ParentPalette.muted)
