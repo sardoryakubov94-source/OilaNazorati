@@ -485,6 +485,10 @@ struct IOSParentDashboardView: View {
     }
 
     private func requestRemoteScreenShare(_ child: IOSChildDevice) {
+        // Agora iOS engine is shared: stop any voice session before opening screen video.
+        if voiceSession.isConnected || voiceRequestState == "requested" || voiceRequestState == "active" {
+            stopRemoteVoice()
+        }
         guard let code = familyCode, let ownerUID = Auth.auth().currentUser?.uid else {
             errorMessage = "Ota-ona hisobi aniqlanmadi."; return
         }
