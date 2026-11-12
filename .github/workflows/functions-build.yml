@@ -1,0 +1,30 @@
+name: Firebase Functions Check
+
+on:
+  push:
+    branches:
+      - feature/ios-*
+    paths:
+      - "functions/**"
+      - "firebase.json"
+      - ".github/workflows/functions-build.yml"
+  pull_request:
+    paths:
+      - "functions/**"
+      - "firebase.json"
+      - ".github/workflows/functions-build.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        working-directory: functions
+        run: npm install --ignore-scripts
+      - name: Validate function syntax
+        working-directory: functions
+        run: node --check index.js
