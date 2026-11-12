@@ -95,6 +95,7 @@ struct StatusView: View {
                                 requestId: requestID, channel: channel, role: "screen_publisher") { result in
                                 switch result {
                                 case .success:
+                                    audioRemote.stopPublishing()
                                     screenShare.beginCapture()
                                     showBroadcastPicker = true
                                     Firestore.firestore().collection("families").document(familyCode)
