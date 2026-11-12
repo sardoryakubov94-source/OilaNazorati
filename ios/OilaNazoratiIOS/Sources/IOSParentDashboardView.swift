@@ -57,6 +57,8 @@ struct IOSParentDashboardView: View {
     @State private var locationListener: ListenerRegistration?
     @State private var focusListener: ListenerRegistration?
     @State private var voiceListener: ListenerRegistration?
+    @State private var micSettingsListener: ListenerRegistration?
+    @State private var voiceConsentEnabled = false
     @State private var voiceStatus = "Ulanmagan"
     @State private var voiceRequestState = ""
     @State private var voiceRequestID: String?
@@ -452,6 +454,10 @@ struct IOSParentDashboardView: View {
                     Circle().fill(ParentPalette.teal).frame(width: 9, height: 9)
                 }
             }
+            Label(voiceConsentEnabled ? "Bola jonli ovozga rozilik bergan" : "Bola qurilmasida bir martalik rozilik kerak",
+                  systemImage: voiceConsentEnabled ? "checkmark.shield.fill" : "lock.shield")
+                .font(.caption)
+                .foregroundStyle(voiceConsentEnabled ? ParentPalette.teal : ParentPalette.orange)
             if voiceRequestState == "requested" || voiceRequestState == "active" || voiceSession.isConnected {
                 Button(role: .destructive, action: stopRemoteVoice) {
                     Label("Ovoz ulanishini to‘xtatish", systemImage: "stop.fill")
@@ -465,6 +471,7 @@ struct IOSParentDashboardView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(ParentPalette.accent)
+                .disabled(!voiceConsentEnabled)
             }
             Text("Bola qurilmasida masofaviy ovozga oldindan rozilik yoqilgan bo‘lishi kerak. Ovoz faqat bola ilovasi faol va ochiq turganida uzatiladi; mikrofon indikatori ko‘rinadi.")
                 .font(.caption2).foregroundStyle(ParentPalette.muted)
@@ -773,6 +780,8 @@ struct IOSParentDashboardView: View {
         locationListener?.remove()
         focusListener?.remove()
         voiceListener?.remove()
+        micSettingsListener?.remove()
+        voiceConsentEnabled = false
         voiceSession.leave()
         voiceStatus = "Ulanmagan"
         voiceRequestState = ""
@@ -802,6 +811,14 @@ struct IOSParentDashboardView: View {
             focusListener = childRef.collection("focus_mode_settings").document("current")
                 .addSnapshotListener { snapshot, _ in
                     DispatchQueue.main.async { focusEnabled = snapshot?.data()?["enabled"] as? Bool ?? false }
+                }
+        }
+        if child.platform == .ios, child.capabilities.contains(.ambientAudio) {
+            micSettingsListener = childRef.collection("mic_settings").document("current")
+                .addSnapshotListener { snapshot, _ in
+                    DispatchQueue.main.async {
+                        voiceConsentEnabled = snapshot?.data()?["remoteAudioConsent"] as? Bool ?? false
+                    }
                 }
         }
         if child.platform == .ios, child.capabilities.contains(.ambientAudio) {
@@ -938,6 +955,7 @@ struct IOSParentDashboardView: View {
         locationListener?.remove()
         focusListener?.remove()
         voiceListener?.remove()
+        micSettingsListener?.remove()
         voiceSession.leave()
         boundChildID = nil
         boundChildPlatform = nil
