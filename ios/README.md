@@ -47,23 +47,23 @@ iOS ota-ona paneli `IOSParentDashboardView.swift` ichida:
    da **xuddi shu loyihaga** (Android ilova turgan loyiha — `oilanazorat-3c8de`)
    yangi **iOS ilova** qo'shing. U sizga `GoogleService-Info.plist` fayl
    beradi — shuni yuklab, Xcode loyihangizga qo'shing.
-4. **Swift Package**: File > Add Package Dependencies >
-   `https://github.com/firebase/firebase-ios-sdk` — `FirebaseAuth` va
-   `FirebaseFirestore` kutubxonalarini belgilang.
-5. `Resources/Info-additions.plist` dagi kalitlarni loyihangizning asosiy
-   Info.plist'iga qo'lda qo'shing (joylashuv ruxsat matnlari + fon rejimi).
-6. `Resources/OilaNazoratiIOS.entitlements` faylini loyihaga qo'shing va
+4. **Swift Package**: File > Add Package Dependencies orqali:
+   - `https://github.com/firebase/firebase-ios-sdk` — `FirebaseAuth`, `FirebaseFirestore`, `FirebaseCore`.
+   - `https://github.com/google/GoogleSignIn-iOS` — `GoogleSignIn`.
+5. **Google Sign-In URL scheme**: `GoogleService-Info.plist` ichidagi
+   `REVERSED_CLIENT_ID` qiymatini Target > Info > URL Types bo‘limida URL Scheme sifatida qo‘shing.
+6. `Resources/Info-additions.plist` dagi kalitlarni loyihangizning asosiy Info.plist'iga qo‘lda qo‘shing.
+7. `Resources/OilaNazoratiIOS.entitlements` faylini loyihaga qo‘shing va
    target > Signing & Capabilities > "+ Capability" > **Family Controls**
    ni yoqing.
-7. **MUHIM — Apple'dan alohida ruxsat**: Family Controls entitlement'i
-   oddiy Developer akkauntga avtomatik berilmaydi. Apple'ga so'rov
-   yuborish kerak:
+8. **MUHIM — Apple'dan alohida ruxsat**: Family Controls entitlement'i
+   tarqatish uchun Apple tomonidan tasdiqlanishi kerak:
    https://developer.apple.com/contact/request/family-controls-distribution
-   Apple buni ko'rib chiqadi (bir necha kun/hafta), faqat shundan keyin
-   TestFlight/App Store'ga chiqarish mumkin bo'ladi (Xcode'da simulyator/
-   o'z qurilmangizda sinab ko'rish uchun shart emas, lekin tarqatish uchun
-   kerak).
-8. Build qiling, o'z iPhone'ingizga (Developer akkaunt bilan) o'rnating.
+9. Build qiling, o'z iPhone'ingizga (Developer akkaunt bilan) o'rnating.
+
+**Minimal iOS versiyasi:** 16.0 (SwiftUI NavigationStack va Charts ishlatiladi).
+
+, o'z iPhone'ingizga (Developer akkaunt bilan) o'rnating.
 
 ## Build qilib ko'rmaganman
 
