@@ -12,7 +12,8 @@ final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
         if activity.rawValue.contains("school") || activity.rawValue.contains("sleep") {
-            applySelectedShields()
+            addActiveReason(activity.rawValue)
+            applyCurrentShields()
             notify(title: "Nazorat jadvali boshlandi", body: "Belgilangan vaqt cheklovlari faollashtirildi.")
         }
     }
@@ -20,8 +21,13 @@ final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
         if activity.rawValue.contains("school") || activity.rawValue.contains("sleep") {
-            clearSelectedShields()
+            removeActiveReason(activity.rawValue)
+            applyCurrentShields()
             notify(title: "Nazorat jadvali tugadi", body: "Vaqt cheklovi yakunlandi.")
+        }
+        if activity.rawValue == "uz.oilanazorati.daily" {
+            removeActiveReason("daily_limit")
+            applyCurrentShields()
         }
     }
 
@@ -31,7 +37,8 @@ final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
     ) {
         super.eventDidReachThreshold(event, activity: activity)
         guard event == DeviceActivityEvent.Name("daily_limit") else { return }
-        applySelectedShields()
+        addActiveReason("daily_limit")
+        applyCurrentShields()
         let payload: [String: Any] = [
             "type": "daily_limit_reached",
             "activity": activity.rawValue,
@@ -46,19 +53,29 @@ final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
         notify(title: "Kunlik limit tugadi", body: "Tanlangan ilova va saytlar uchun vaqt limiti yakunlandi.")
     }
 
-    private func applySelectedShields() {
+    private func applyCurrentShields() {
         let defaults = UserDefaults(suiteName: "group.uz.oilanazorati.shared") ?? .standard
         guard let data = defaults.data(forKey: "familyActivitySelection"),
               let selection = try? PropertyListDecoder().decode(FamilyActivitySelection.self, from: data) else { return }
-        store.shield.applications = selection.applicationTokens.isEmpty ? nil : selection.applicationTokens
-        store.shield.applicationCategories = selection.categoryTokens.isEmpty ? nil : .specific(selection.categoryTokens)
-        store.webContent.blockedByFilter = selection.webDomainTokens.isEmpty ? nil : .specific(selection.webDomainTokens)
+        let reasons = defaults.stringArray(forKey: "activeScreenTimeReasons") ?? []
+        let shouldShieldApps = !reasons.isEmpty
+        store.shield.applications = shouldShieldApps && !selection.applicationTokens.isEmpty ? selection.applicationTokens : nil
+        store.shield.applicationCategories = shouldShieldApps && !selection.categoryTokens.isEmpty ? .specific(selection.categoryTokens) : nil
+        let blockWeb = defaults.bool(forKey: "websiteBlockingEnabled")
+        store.webContent.blockedByFilter = blockWeb && !selection.webDomainTokens.isEmpty ? .specific(selection.webDomainTokens) : nil
     }
 
-    private func clearSelectedShields() {
-        store.shield.applications = nil
-        store.shield.applicationCategories = nil
-        store.webContent.blockedByFilter = nil
+    private func addActiveReason(_ reason: String) {
+        let defaults = UserDefaults(suiteName: "group.uz.oilanazorati.shared") ?? .standard
+        var reasons = defaults.stringArray(forKey: "activeScreenTimeReasons") ?? []
+        if !reasons.contains(reason) { reasons.append(reason) }
+        defaults.set(reasons, forKey: "activeScreenTimeReasons")
+    }
+
+    private func removeActiveReason(_ reason: String) {
+        let defaults = UserDefaults(suiteName: "group.uz.oilanazorati.shared") ?? .standard
+        let reasons = (defaults.stringArray(forKey: "activeScreenTimeReasons") ?? []).filter { $0 != reason }
+        defaults.set(reasons, forKey: "activeScreenTimeReasons")
     }
 
     private func notify(title: String, body: String) {
