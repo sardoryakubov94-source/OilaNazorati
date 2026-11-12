@@ -42,7 +42,6 @@ private struct IOSMetric: Identifiable {
 
 struct IOSParentDashboardView: View {
     @AppStorage("device_role") private var deviceRoleRaw = DeviceRole.unselected.rawValue
-    @State private var userName = ""
     @State private var familyCode: String?
     @State private var children: [IOSChildDevice] = []
     @State private var selectedChildID: String?
@@ -191,7 +190,7 @@ struct IOSParentDashboardView: View {
             Spacer()
             HStack(spacing: 6) {
                 Circle().fill(ParentPalette.teal).frame(width: 7, height: 7)
-                Text("Himoyalangan").font(.caption.weight(.medium))
+                Text("Oila ulangan").font(.caption.weight(.medium))
             }
             .padding(.horizontal, 11).padding(.vertical, 8)
             .background(ParentPalette.teal.opacity(0.10), in: Capsule())
@@ -455,7 +454,6 @@ struct IOSParentDashboardView: View {
 
     private func restoreSession() {
         guard let user = Auth.auth().currentUser, !user.isAnonymous else { return }
-        userName = user.displayName ?? ""
         loadFamilyForCurrentUser()
     }
 
@@ -496,7 +494,6 @@ struct IOSParentDashboardView: View {
                     } else if authResult?.user.isAnonymous == true {
                         errorMessage = "Ota-ona uchun Google hisobi talab qilinadi."
                     } else {
-                        userName = authResult?.user.displayName ?? ""
                         loadFamilyForCurrentUser()
                     }
                 }
