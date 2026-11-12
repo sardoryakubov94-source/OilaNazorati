@@ -22,7 +22,8 @@ final class ChildScreenShareController: NSObject, ObservableObject, AgoraRtcEngi
     private var requestId = ""
     private var channelName = ""
     private var rtcUid: UInt = 0
-    private var pendingJoin = false\n    private var maxSessionTimer: Timer?
+    private var pendingJoin = false
+    private var maxSessionTimer: Timer?
 
     private let appGroup = "group.uz.oilanazorati.shared"
 
