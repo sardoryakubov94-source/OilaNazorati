@@ -22,6 +22,8 @@
     <string>1</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    <key>AGORA_TOKEN_ENDPOINT</key>
+    <string>https://us-central1-oilanazorat-3c8de.cloudfunctions.net/agoraVoiceToken</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Jonli ovoz funksiyasi faqat bolaning roziligi va ko‘rinadigan faol sessiyasi davomida oilaviy xavfsizlik uchun ishlatiladi.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
