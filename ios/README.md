@@ -73,11 +73,12 @@ project.yml quyidagi uchta targetni yaratadi:
 3. App ID va uchala target uchun App Groups capability'ni yoqing va group.uz.oilanazorati.shared guruhini yarating.
 4. Xcode'da asosiy ilova, Device Activity Monitor va Device Activity Report targetlarining har biriga Family Controls capability qo'shing.
 5. Apple'ga Family Controls distribution entitlement so'rovini yuboring. Asosiy ilova bilan birga Screen Time ishlatadigan ikkala extension uchun ham so'rov talab qilinadi. Tasdiq avtomatik berilmaydi.
-6. Firebase Console'da oilanazorat-3c8de loyihasiga iOS app qo'shing. Bundle ID aynan Xcode targetdagi ID bilan bir xil bo'lsin. GoogleService-Info.plist ni yuklab, asosiy app targetiga qo'shing.
-7. GoogleService-Info.plist ichidagi REVERSED_CLIENT_ID ni Xcode > Target > Info > URL Types > URL Schemes bo'limiga qo'shing.
-8. Signing & Capabilities bo'limida Apple Team va Automatic Signing'ni sozlang; entitlement tasdiqlangach provisioning profile'larni yangilang.
-9. Avval bola iPhone'ida ilovani ishga tushiring, Family Controls ruxsatini bering, so'ng FamilyActivityPicker'da nazorat qilinadigan ilova/toifa/saytlarni tanlang.
-10. Ota-ona iPhone'ida Google hisob bilan kiring va limit/jadvallarni sinang.
+6. Firebase Console > Authentication > Sign-in method bo'limida Google va Anonymous provider'larini yoqing. Google provider ota-ona kirishi, Anonymous provider esa bola qurilmasining oilaga ulanishi uchun kerak.
+7. Firebase Console'da oilanazorat-3c8de loyihasiga iOS app qo'shing. Bundle ID aynan Xcode targetdagi ID bilan bir xil bo'lsin. GoogleService-Info.plist ni yuklab, asosiy app targetiga qo'shing.
+8. GoogleService-Info.plist ichidagi REVERSED_CLIENT_ID ni Xcode > Target > Info > URL Types > URL Schemes bo'limiga qo'shing.
+9. Signing & Capabilities bo'limida Apple Team va Automatic Signing'ni sozlang; entitlement tasdiqlangach provisioning profile'larni yangilang.
+10. Avval bola iPhone'ida ilovani ishga tushiring, Family Controls ruxsatini bering, so'ng FamilyActivityPicker'da nazorat qilinadigan ilova/toifa/saytlarni tanlang.
+11. Ota-ona iPhone'ida Google hisob bilan kiring va limit/jadvallarni sinang.
 
 ## 6. Firebase ma'lumotlar sxemasi
 
