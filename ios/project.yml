@@ -12,6 +12,9 @@ packages:
   GoogleSignIn:
     url: https://github.com/google/GoogleSignIn-iOS
     from: 8.0.0
+  AgoraRtcEngine_iOS:
+    url: https://github.com/AgoraIO/AgoraRtcEngine_iOS
+    from: 4.5.3
 
 targets:
   OilaNazoratiIOS:
@@ -32,6 +35,8 @@ targets:
         product: FirebaseFirestore
       - package: GoogleSignIn
         product: GoogleSignIn
+      - package: AgoraRtcEngine_iOS
+        product: RtcBasic
       - target: OilaNazoratiActivityMonitor
         embed: true
       - target: OilaNazoratiActivityReport
@@ -46,6 +51,8 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Resources/OilaNazoratiIOS.entitlements
         INFOPLIST_FILE: OilaNazoratiIOS/Resources/Info.plist
+        AGORA_APP_ID: $(AGORA_APP_ID)
+        AGORA_TOKEN_ENDPOINT: $(AGORA_TOKEN_ENDPOINT)
         ENABLE_PREVIEWS: YES
 
   OilaNazoratiActivityMonitor:
