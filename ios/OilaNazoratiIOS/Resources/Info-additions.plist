@@ -6,11 +6,11 @@
 <plist version="1.0">
 <dict>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>Farzandingiz xavfsizligi uchun joylashuvni kuzatish talab qilinadi.</string>
+    <string>Oilangiz xavfsizligi uchun joylashuvni kuzatish talab qilinadi.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Farzandingiz xavfsizligi uchun joylashuvni kuzatish talab qilinadi.</string>
+    <string>Oilangiz xavfsizligi uchun joylashuvni kuzatish talab qilinadi.</string>
     <key>NSLocationAlwaysUsageDescription</key>
-    <string>Farzandingiz xavfsizligi uchun joylashuvni kuzatish talab qilinadi.</string>
+    <string>Oilangiz xavfsizligi uchun joylashuvni kuzatish talab qilinadi.</string>
     <key>UIBackgroundModes</key>
     <array>
         <string>location</string>
