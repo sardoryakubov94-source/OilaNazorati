@@ -641,7 +641,7 @@ struct IOSParentDashboardView: View {
         ref.setData([
             "enabled": enabled,
             "allowedPackages": [],
-            "updatedAt": FieldValue.serverTimestamp(),
+            "updatedAt": Int64(Date().timeIntervalSince1970 * 1000),
             "updatedByUid": uid
         ], merge: true) { error in
             DispatchQueue.main.async {
