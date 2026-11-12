@@ -62,7 +62,8 @@ struct CrossPlatformConfiguration {
 /// Bola qurilmasining operatsion tizimi imkoniyatlari.
 /// Noma'lum platformada hech qanday nazorat funksiyasi avtomatik ochilmaydi.
 enum DeviceCapabilityMatrix {
-    static func capabilities(\n        for platform: DevicePlatform,\n        iosMajorVersion: Int = ProcessInfo.processInfo.operatingSystemVersion.majorVersion\n    ) -> Set<MonitoringCapability> {
+    static func capabilities(
+        for platform: DevicePlatform,\n        iosMajorVersion: Int = ProcessInfo.processInfo.operatingSystemVersion.majorVersion\n    ) -> Set<MonitoringCapability> {
         switch platform {
         case .ios:
             // iOS: Apple ruxsat bergan va ilovada qisman amalga oshirilgan imkoniyatlar.
