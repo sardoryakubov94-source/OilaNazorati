@@ -88,6 +88,10 @@ struct LinkView: View {
                 "nomi": childName,
                 "childUid": uid,
                 "platform": "ios",
+                "childPlatform": "ios",
+                "deviceRole": "child",
+                "capabilitySchemaVersion": 1,
+                "supportedCapabilities": ["location", "focus_mode"],
                 "yaratilganMs": Int64(Date().timeIntervalSince1970 * 1000)
             ], merge: true) { error in
                 isLinking = false
@@ -97,6 +101,7 @@ struct LinkView: View {
                 }
                 savedFamilyCode = normalizedCode
                 savedChildUid = uid
+                UserDefaults.standard.set(DeviceRole.child.rawValue, forKey: "device_role")
             }
         }
     }
