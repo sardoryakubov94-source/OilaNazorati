@@ -992,6 +992,8 @@ struct IOSParentDashboardView: View {
     }
 
     private func requestScreenShare(child: IOSChildDevice) {
+        if voiceRequestState == "requested" || voiceRequestState == "active" { sendVoiceStopRequest(to: child.id) }
+        voiceSession.leave()
         guard let code = familyCode, let owner = Auth.auth().currentUser?.uid else { return }
         let requestID = "scr_\(UUID().uuidString)"
         let channel = "sc_\(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(24))"
