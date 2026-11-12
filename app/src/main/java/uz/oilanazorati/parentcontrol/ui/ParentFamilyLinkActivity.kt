@@ -105,7 +105,11 @@ class ParentFamilyLinkActivity : AppCompatActivity() {
                 setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentFamilyLinkActivity, R.color.color_text_primary))
             })
             labels.addView(TextView(this).apply {
-                text = when (ChildDevicePlatform.from(child.platform)) {\n                    ChildDevicePlatform.IOS -> "iPhone / iOS qurilmasi"\n                    ChildDevicePlatform.ANDROID -> "Android qurilmasi"\n                    ChildDevicePlatform.UNKNOWN -> "Qurilma turi aniqlanmadi"\n                }
+                text = when (ChildDevicePlatform.from(child.platform)) {
+                    ChildDevicePlatform.IOS -> "iPhone / iOS qurilmasi"
+                    ChildDevicePlatform.ANDROID -> "Android qurilmasi"
+                    ChildDevicePlatform.UNKNOWN -> "Qurilma turi aniqlanmadi"
+                }
                 textSize = 12f
                 setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentFamilyLinkActivity, R.color.color_text_secondary))
                 setPadding(0, dp(3), 0, 0)
