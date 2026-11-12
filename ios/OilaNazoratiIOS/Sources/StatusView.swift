@@ -133,7 +133,8 @@ struct StatusView: View {
                         .font(.footnote).foregroundStyle(screenShare.isPublishing ? .green : .secondary)
                     if screenShare.requestPending && screenShare.consentEnabled {
                         Button {
-                            audioRemote.stopPublishing() // Agora engine is shared; screen and mic publishers cannot run concurrently.\n                            screenShare.prepareBroadcast { result in
+                            audioRemote.stopPublishing() // Agora engine is shared; screen and mic publishers cannot run concurrently.
+                            screenShare.prepareBroadcast { result in
                                 DispatchQueue.main.async {
                                     switch result {
                                     case .success: showScreenBroadcastPicker = true
