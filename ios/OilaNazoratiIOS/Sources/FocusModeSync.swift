@@ -21,7 +21,7 @@ import ManagedSettings
 @available(iOS 16.0, *)
 final class FocusModeSync {
     static let shared = FocusModeSync()
-    private let store = ManagedSettingsStore()
+    private let store = ManagedSettingsStore(named: .init("legacyFocusMode"))
     private var listener: ListenerRegistration?
 
     func start(familyCode: String, childUid: String) {
