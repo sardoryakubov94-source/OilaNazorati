@@ -21,7 +21,10 @@ struct IOSScreenTimeParentControlsView: View {
     @State private var error: String?
     @State private var limitEvents: [[String: Any]] = []
     @State private var policyListener: ListenerRegistration?
-    @State private var eventsListener: ListenerRegistration?\n    @State private var reportListener: ListenerRegistration?\n    @State private var dailySeconds: Double = 0\n    @State private var weeklySeconds: Double = 0
+    @State private var eventsListener: ListenerRegistration?
+    @State private var reportListener: ListenerRegistration?
+    @State private var dailySeconds: Double = 0
+    @State private var weeklySeconds: Double = 0
 
     private var policyRef: DocumentReference {
         Firestore.firestore().collection("families").document(familyCode)
