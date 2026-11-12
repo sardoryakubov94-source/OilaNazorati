@@ -93,6 +93,14 @@ struct StatusView: View {
                     Label(audioRemote.statusText, systemImage: audioRemote.isPublishing ? "waveform" : "mic.badge.xmark")
                         .font(.footnote)
                         .foregroundStyle(audioRemote.isPublishing ? .green : .secondary)
+                    if audioRemote.isPublishing {
+                        Button(role: .destructive) {
+                            audioRemote.stopPublishing()
+                        } label: {
+                            Label("Hozirgi ovoz uzatishni to‘xtatish", systemImage: "stop.circle")
+                        }
+                        .font(.footnote)
+                    }
                     Text("Rozilik bir marta yoqiladi. Keyin ota-ona so‘rov yuborganda, ilova ochiq va faol bo‘lsa, ovoz avtomatik uzatiladi — boladan har safar alohida tasdiq so‘ralmaydi. Mikrofon ishlayotganida iOS indikatori ko‘rinadi. Ilova faol bo‘lmaganida uzatish to‘xtaydi.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -117,6 +125,7 @@ struct StatusView: View {
         }
         .onChange(of: scenePhase) { phase in
             if phase == .active {
+                audioConsent.refreshPermission()
                 audioRemote.startListening(familyCode: familyCode, childUid: childUid, consent: audioConsent)
                 if #available(iOS 16.0, *) {
                     ScreenTimeController.shared.syncQueuedEvents()
