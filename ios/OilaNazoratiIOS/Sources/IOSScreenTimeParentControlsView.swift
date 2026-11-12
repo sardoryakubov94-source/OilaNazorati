@@ -20,6 +20,10 @@ struct IOSScreenTimeParentControlsView: View {
     @State private var message: String?
     @State private var error: String?
     @State private var limitEvents: [[String: Any]] = []
+    @State private var knownEventIds: Set<String> = []
+    @State private var hasLoadedInitialEvents = false
+    @State private var showLimitAlert = false
+    @State private var limitAlertMessage = ""
     @State private var policyListener: ListenerRegistration?
     @State private var eventsListener: ListenerRegistration?
 
@@ -127,6 +131,11 @@ struct IOSScreenTimeParentControlsView: View {
         }
         .padding(16)
         .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 18))
+        .alert("Kunlik limit tugadi", isPresented: $showLimitAlert) {
+            Button("Tushunarli", role: .cancel) { }
+        } message: {
+            Text(limitAlertMessage)
+        }
         .onAppear(perform: startListeners)
         .onDisappear {
             policyListener?.remove()
@@ -179,8 +188,21 @@ struct IOSScreenTimeParentControlsView: View {
             .order(by: "timestampMs", descending: true)
             .limit(to: 5)
             .addSnapshotListener { snapshot, _ in
+                let documents = snapshot?.documents ?? []
+                let currentIds = Set(documents.map(\.documentID))
+                let newestEvent = hasLoadedInitialEvents
+                    ? documents.first(where: { !knownEventIds.contains($0.documentID) })
+                    : nil
                 DispatchQueue.main.async {
-                    limitEvents = snapshot?.documents.map { $0.data() } ?? []
+                    limitEvents = documents.map { $0.data() }
+                    if let newestEvent {
+                        let millis = newestEvent.data()["timestampMs"] as? Int64 ?? 0
+                        let date = Date(timeIntervalSince1970: Double(millis) / 1000)
+                        limitAlertMessage = "Bola iPhone qurilmasida kunlik ekran vaqti limitiga yetdi. Vaqt: " + date.formatted(date: .abbreviated, time: .shortened)
+                        showLimitAlert = true
+                    }
+                    knownEventIds = currentIds
+                    hasLoadedInitialEvents = true
                 }
             }
 
