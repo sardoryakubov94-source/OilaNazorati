@@ -98,6 +98,8 @@ final class ScreenTimeController: ObservableObject {
         let sleepEnabled = policy["sleepEnabled"] as? Bool ?? false
         let websiteBlocking = policy["websiteBlockingEnabled"] as? Bool ?? false
         policyActive = enabled
+        let sharedDefaults = UserDefaults(suiteName: ScreenTimeContract.appGroup)
+        sharedDefaults?.set(websiteBlocking, forKey: "websiteBlockingEnabled")
 
         if enabled {
             applySelectionIfNeeded()
@@ -131,7 +133,8 @@ final class ScreenTimeController: ObservableObject {
     }
 
     private func configureDailyLimit(minutes: Int) {
-        guard minutes > 0 else {
+        guard minutes > 0,
+              !selection.applicationTokens.isEmpty || !selection.categoryTokens.isEmpty || !selection.webDomainTokens.isEmpty else {
             center.stopMonitoring([ScreenTimeContract.activityName])
             return
         }
@@ -187,6 +190,8 @@ final class ScreenTimeController: ObservableObject {
         settings.shield.applications = nil
         settings.shield.applicationCategories = nil
         settings.webContent.blockedByFilter = nil
+        UserDefaults(suiteName: ScreenTimeContract.appGroup)?.removeObject(forKey: "activeScreenTimeReasons")
+        UserDefaults(suiteName: ScreenTimeContract.appGroup)?.set(false, forKey: "websiteBlockingEnabled")
         center.stopMonitoring()
     }
 
