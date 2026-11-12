@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 import AgoraRtcKit
 import FirebaseAuth
+import FirebaseFirestore
 import ReplayKit
 
 /// Separate Agora video session: voice sessions remain untouched.
