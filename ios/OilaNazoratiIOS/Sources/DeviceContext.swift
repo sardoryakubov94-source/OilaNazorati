@@ -65,12 +65,12 @@ struct CrossPlatformConfiguration {
         let parentAllowed: Set<MonitoringCapability>
         switch (parentPlatform, childPlatform) {
         case (.ios, .ios):
-            parentAllowed = [.location, .focusMode, .appUsage, .usageReports, .timeLimits, .schedules, .websiteRestrictions]
+            parentAllowed = [.location, .focusMode, .appUsage, .usageReports, .timeLimits, .schedules, .websiteRestrictions, .ambientAudio]
         case (.ios, .android):
             parentAllowed = [.location, .focusMode, .appUsage]
         case (.android, .ios):
             // iOS'ning batafsil usage hisoboti faqat bolaning o'z qurilmasida ko'rsatiladi.
-            parentAllowed = [.location, .focusMode, .timeLimits, .schedules, .websiteRestrictions]
+            parentAllowed = [.location, .focusMode, .timeLimits, .schedules, .websiteRestrictions, .ambientAudio]
         case (.android, .android):
             parentAllowed = Set(MonitoringCapability.allCases)
         default:
@@ -96,7 +96,7 @@ enum DeviceCapabilityMatrix {
         switch platform {
         case .ios:
             // iOS: Apple ruxsat bergan va ilovada qisman amalga oshirilgan imkoniyatlar.
-            return iosMajorVersion >= 16 ? [.location, .focusMode, .appUsage, .usageReports, .timeLimits, .schedules, .websiteRestrictions] : [.location]
+            return iosMajorVersion >= 16 ? [.location, .focusMode, .appUsage, .usageReports, .timeLimits, .schedules, .websiteRestrictions, .ambientAudio] : [.location]
         case .android:
             // Android: mavjud Android nazorat modullari. Amaliy foydalanish
             // ota-ona autentifikatsiyasi, ruxsatlar va modul holatiga ham bog'liq.
