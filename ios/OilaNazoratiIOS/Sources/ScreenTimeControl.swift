@@ -46,6 +46,9 @@ final class ScreenTimeController: ObservableObject {
             authorizationStatus = AuthorizationCenter.shared.authorizationStatus
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
             lastError = nil
+            if authorizationStatus == .approved, let latestPolicy {
+                apply(policy: latestPolicy)
+            }
         } catch {
             authorizationStatus = AuthorizationCenter.shared.authorizationStatus
             lastError = "Screen Time ruxsati berilmadi: \(error.localizedDescription)"
@@ -233,7 +236,7 @@ final class ScreenTimeController: ObservableObject {
                 "source": "apple_device_activity_report"
             ], merge: true) { [weak self] error in
                 Task { @MainActor in
-                    if let error { self?.lastError = "Hisobot Firebase'ga yuborilmadi: \\(error.localizedDescription)" }
+                    if let error { self?.lastError = "Hisobot Firebase'ga yuborilmadi: \(error.localizedDescription)" }
                     else { self?.lastError = nil }
                 }
             }
