@@ -1,7 +1,7 @@
 import Foundation
 
 /// Qurilma platformasi. "unknown" — metadata aniqlanmaganda xavfsiz, cheklangan holat.
-enum DevicePlatform: String, Codable {
+enum DevicePlatform: String, Codable, Hashable {
     case android
     case ios
     case unknown
@@ -15,7 +15,7 @@ enum DeviceRole: String, Codable {
 }
 
 /// Platformalararo nazorat funksiyalari.
-enum MonitoringCapability: String, CaseIterable, Codable {
+enum MonitoringCapability: String, CaseIterable, Codable, Hashable {
     case location
     case focusMode = "focus_mode"
     case appUsage = "app_usage"
