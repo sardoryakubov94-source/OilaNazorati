@@ -32,6 +32,12 @@ final class ChildAudioRemoteController: ObservableObject {
                 let channel = data["channelName"] as? String ?? ""
 
                 if status == "requested", !requestID.isEmpty, !channel.isEmpty {
+                    let expiresAtMs = (data["expiresAtMs"] as? NSNumber)?.int64Value ?? 0
+                    if expiresAtMs > 0 && expiresAtMs < Int64(Date().timeIntervalSince1970 * 1000) {
+                        self.statusText = "Ovoz so‘rovining muddati tugagan"
+                        try? await ref.updateData(["status": "expired"])
+                        return
+                    }
                     guard consent.isEnabled, consent.hasSystemPermission else {
                         self.statusText = "Masofaviy ovoz uchun bola qurilmasida rozilik yoqilmagan"
                         try? await ref.updateData([
