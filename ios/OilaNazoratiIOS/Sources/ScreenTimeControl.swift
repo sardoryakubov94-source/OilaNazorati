@@ -247,9 +247,10 @@ final class ScreenTimeController: ObservableObject {
         let database = Firestore.firestore()
         let batch = database.batch()
         for event in events {
+            let eventId = event["eventId"] as? String ?? UUID().uuidString
             let reference = database.collection("families").document(code)
                 .collection("children").document(uid)
-                .collection(ScreenTimeContract.reportCollection).document()
+                .collection(ScreenTimeContract.reportCollection).document(eventId)
             batch.setData(event, forDocument: reference)
         }
         batch.commit { [weak self] error in
