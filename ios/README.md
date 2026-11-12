@@ -87,6 +87,18 @@ families/{code}/children/{uid}/screen_time_reports/{eventId}
 
 Firestore Security Rules ushbu yo'llarda faqat oila egasi siyosat yozishi va tegishli bola qurilmasi o'z hodisasini yozishi mumkinligini tekshirishi shart. Ochiq allow read, write: if true qoidasini ishlatmang.
 
+
+### Firestore Security Rules
+
+The repository's `firestore.rules` now contains dedicated rules for iOS Screen Time:
+- only the real family owner can create/update `screen_time_settings/current`;
+- the paired child session can read its policy;
+- the child session can append only validated `daily_limit_reached` events;
+- the family owner can read event history;
+- the general child-subcollection wildcard explicitly excludes both Screen Time collections.
+
+**This file is not automatically deployed by a GitHub commit.** Before testing the parent/child sync, copy the current root `firestore.rules` to Firebase Console → Firestore Database → Rules and publish it. Do not loosen the existing rules to public read/write.
+
 ## 7. Build va sinov holati
 
 - [x] iOS bola va ota-ona UI modullari
