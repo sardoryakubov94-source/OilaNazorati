@@ -116,6 +116,13 @@ class ScreenshotHistoryActivity : AppCompatActivity() {
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(4), dp(2), 0, dp(8))
         }
+        header.addView(iconButton("‹", android.R.drawable.ic_media_previous) {
+            finish()
+        }.apply {
+            textSize = 25f
+            layoutParams = LinearLayout.LayoutParams(dp(42), dp(44)).apply { marginEnd = dp(5) }
+            contentDescription = "Orqaga qaytish"
+        })
         header.addView(ImageView(this).apply {
             setImageResource(android.R.drawable.ic_menu_gallery)
             setColorFilter(color(uz.oilanazorati.parentcontrol.R.color.color_text_primary))
