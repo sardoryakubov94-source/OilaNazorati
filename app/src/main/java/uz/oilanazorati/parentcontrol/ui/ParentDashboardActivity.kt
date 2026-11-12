@@ -467,7 +467,7 @@ class ParentDashboardActivity : AppCompatActivity() {
             // Android tanlanganda XML'dagi asl ko'rinish holatlarini tiklaymiz.
             platformUiDefaults?.forEach { (view, visibility) -> view.visibility = visibility }
             binding.premiumBannerHome.visibility = if (isPremiumUser) View.GONE else View.VISIBLE
-            binding.btnFocusMode.text = "Kontrol rejimi"
+            binding.btnFocusMode.contentDescription = "Kontrol rejimi"
             binding.btnFocusMode.visibility =
                 if (selectedChildCapabilities.contains(ParentFeature.FOCUS_MODE)) View.VISIBLE else View.GONE
             binding.btnLocationHistory.visibility =
@@ -475,7 +475,7 @@ class ParentDashboardActivity : AppCompatActivity() {
             return
         }
 
-        binding.btnFocusMode.text = "Ekran vaqti"
+        binding.btnFocusMode.contentDescription = "Ekran vaqti"
         val hasScreenTime = selectedChildCapabilities.any {
             it == ParentFeature.FOCUS_MODE ||
             it == ParentFeature.SCREEN_TIME_LIMITS ||
