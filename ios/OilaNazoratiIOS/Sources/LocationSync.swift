@@ -27,6 +27,7 @@ final class LocationSync: NSObject, CLLocationManagerDelegate, ObservableObject 
     private override init() {
         super.init()
         manager.delegate = self
+        authorizationStatus = manager.authorizationStatus
         manager.desiredAccuracy = kCLLocationAccuracyHundredMeters
         manager.distanceFilter = 100 // metr
         manager.allowsBackgroundLocationUpdates = true
