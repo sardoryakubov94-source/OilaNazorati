@@ -6,6 +6,7 @@ struct StatusView: View {
     let familyCode: String
     let childUid: String
     @AppStorage("location_sharing_consent") private var locationSharingConsent = false
+    @StateObject private var audioConsent = ChildAudioConsent()
 
     private var locationPermissionText: String {
         switch locationSync.authorizationStatus {
@@ -64,6 +65,29 @@ struct StatusView: View {
                         Label("Screen Time uchun iOS 16 yoki yangiroq versiya kerak", systemImage: "info.circle")
                             .foregroundStyle(.secondary)
                     }
+                }
+                Section("Jonli ovoz") {
+                    Label("Mikrofon: \(audioConsent.permissionText)", systemImage: audioConsent.hasSystemPermission ? "mic.fill" : "mic.slash")
+                        .font(.footnote)
+                        .foregroundStyle(audioConsent.hasSystemPermission ? .green : .secondary)
+                    Toggle("Jonli ovoz funksiyasiga rozilik", isOn: Binding(
+                        get: { audioConsent.isEnabled },
+                        set: { enabled in
+                            if enabled {
+                                audioConsent.enable { granted in
+                                    if !granted {
+                                        audioConsent.disable()
+                                    }
+                                }
+                            } else {
+                                audioConsent.disable()
+                            }
+                        }
+                    ))
+                    .tint(.blue)
+                    Text("Bu rozilik mikrofonni avtomatik yoqmaydi. Ovoz faqat bola boshlagan va indikator ko‘rinib turgan faol sessiyada uzatiladi. Ruxsat bir marta berilgach, iOS uni saqlaydi; ruxsat bekor qilinsa, iPhone sozlamalaridan qayta yoqish kerak.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
                 Section {
                     Text("Apple Screen Time funksiyalari bolaning qurilmasidagi Family Controls ruxsati va ilova tanlovidan keyin ishlaydi. Android'dagi SMS, qo‘ng‘iroq tarixi, bildirishnoma matni, ekran surati va fon mikrofoni iOS’da mavjud emas.")
