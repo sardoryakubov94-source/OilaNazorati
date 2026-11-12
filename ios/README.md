@@ -45,7 +45,7 @@ Noma'lum platforma yoki e'lon qilinmagan imkoniyatlar avtomatik yoqilmaydi. Andr
 - SMS mazmuni, qo'ng'iroqlar tarixi, kontaktlar, boshqa ilovalarning bildirishnoma matni, yashirin mikrofon va screenshot monitoringi iOS'da uchinchi tomon ota-ona ilovasiga Android'dagi kabi ochiq API bilan berilmaydi.
 - Screen Time ilova/toifa hisobotlari DeviceActivityReport extension ichida maxfiylik sandboxida chiziladi. Shu sabab batafsil ilova/toifa hisobotlari hozircha bolaning iPhone'ida ko'rsatiladi; ularni Firebase orqali ota-onaga yuborish yoqilmagan.
 - Apple'ning FamilyActivityData orqali batafsil usage ma'lumotini ilovadan eksport qilish API'si Family Controls App and Website Usage entitlementini va approvedWithDataAccess ruxsatini talab qiladi. Apple hujjatlariga ko'ra, mijozlar uchun bu data-access API faqat EU hududidagi Apple Account bilan ishlaydi. O'zbekistondagi foydalanuvchi uchun bu yo'lni hozir ishlaydi deb hisoblash mumkin emas.
-- Limit tugaganidagi hodisa bola qurilmasida navbatga qo'yiladi. Hozircha ota-onaga real-time push xabari emas, bola ilovasi qayta ochilib Firebase'ga sinxronlangandan keyin ota-ona panelidagi hodisalar ro'yxati ishlaydi.
+- Limit tugaganidagi hodisa bola qurilmasida navbatga qo'yiladi. Bola ilovasi qayta ochilib Firebase'ga sinxronlangach, ota-ona paneli ochiq bo'lsa iOS'da in-app ogohlantirish, Android'da esa Screen Time oynasida jonli hodisa/toast ko'rsatiladi. Ilova yopiq paytda keladigan server push (FCM/APNs) hali ulanmagan.
 - iOS fon joylashuvi faqat bolaning roziligi va iOS ruxsat darajasiga bog'liq; yangilanish chastotasini iOS boshqaradi.
 
 
