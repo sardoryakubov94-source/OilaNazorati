@@ -12,6 +12,10 @@ on:
       - "ios/**"
       - ".github/workflows/ios-build.yml"
 
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: macos-15
