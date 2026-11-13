@@ -61,6 +61,7 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
             linksClickable = true
             text = "Foydalanish shartnomasi: https://oilanazorati.uz/terms.html\nMaxfiylik siyosati: https://oilanazorati.uz/privacy.html"
             textSize = 13f
+            setTextColor(Color.BLACK)
             setPadding(0, dp(8), 0, dp(8))
         }
         content.addView(legalLinks)
@@ -68,7 +69,7 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
         val guardian = CheckBox(activity).apply {
             text = "Men bolaning ota-onasi yoki qonuniy vakiliman va ushbu ma’lumotlarga ishlov berishga rozilik beraman."
             textSize = 13f
-            setTextColor(Color.WHITE)
+            setTextColor(Color.BLACK)
         }
         val childInformed = CheckBox(activity).apply {
             text = "Nazorat maqsadi va funksiyalari bolaga yoshiga mos tarzda tushuntirildi."
