@@ -13,7 +13,7 @@ args = parser.parse_args()
 
 output = Path(args.output)
 output.parent.mkdir(parents=True, exist_ok=True)
-encoded = os.environ.get("GOOGLE_SERVICE_INFO_PLIST_BASE64", "").strip()
+encoded = "".join(os.environ.get("GOOGLE_SERVICE_INFO_PLIST_BASE64", "").split())
 
 if encoded:
     try:
