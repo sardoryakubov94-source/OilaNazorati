@@ -1,39 +1,50 @@
 import SwiftUI
 import FirebaseFirestore
 
-/// Android bilan bir xil Firestore yo'li: families/{family}/children/{child}/risk_events
+/// Android risk_events and Apple-approved Screen Time reports shown in one parent feed.
 struct IOSRiskAlertsView: View {
     let familyCode: String
     let childID: String
 
     @State private var events: [RiskAlertItem] = []
-    @State private var listener: ListenerRegistration?
+    @State private var screenTimeEvents: [RiskAlertItem] = []
+    @State private var riskListener: ListenerRegistration?
+    @State private var screenTimeListener: ListenerRegistration?
     @State private var loadError: String?
+
+    private var allEvents: [RiskAlertItem] {
+        (events + screenTimeEvents).sorted { $0.capturedAt > $1.capturedAt }
+    }
 
     var body: some View {
         List {
             Section {
-                Label("Android qurilmasida ekran matni va media tahlili; iOS'da esa Apple ruxsat bergan cheklangan kuzatuv ishlaydi.",
-                      systemImage: "info.circle")
-                    .font(.footnote).foregroundStyle(.secondary)
+                Label(
+                    "Android'da mavjud xavf tahlili signallari, iOS'da esa Apple Screen Time orqali qayd etilishi mumkin bo'lgan limit hodisalari ko'rsatiladi. iOS boshqa ilovalardagi barcha yozishma yoki media mazmunini o'qimaydi.",
+                    systemImage: "info.circle"
+                )
+                .font(.footnote).foregroundStyle(.secondary)
             }
             if let loadError {
                 Section { Text(loadError).foregroundStyle(.red).font(.footnote) }
             }
-            if events.isEmpty {
-                ContentUnavailableView("Hozircha signal yo'q",
+            if allEvents.isEmpty {
+                ContentUnavailableView(
+                    "Hozircha signal yo'q",
                     systemImage: "checkmark.shield",
-                    description: Text("Xavf signallari aniqlansa shu yerda ko'rinadi."))
+                    description: Text("Qo'llab-quvvatlanadigan xavf yoki nazorat hodisasi qayd etilsa shu yerda ko'rinadi.")
+                )
             } else {
-                ForEach(events) { event in
+                ForEach(allEvents) { event in
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
                             Text(event.categoryTitle).font(.headline)
                             Spacer()
-                            Text(event.severity)
+                            Text(event.severityTitle)
                                 .font(.caption.bold())
                                 .padding(.horizontal, 8).padding(.vertical, 4)
-                                .background(event.severity == "HIGH" ? Color.red.opacity(0.14) : Color.orange.opacity(0.14), in: Capsule())
+                                .background(event.severityColor.opacity(0.14), in: Capsule())
+                                .foregroundStyle(event.severityColor)
                         }
                         Text(event.summary.isEmpty ? "Xavf signali qayd etildi" : event.summary)
                             .font(.subheadline)
@@ -42,41 +53,95 @@ struct IOSRiskAlertsView: View {
                             Spacer()
                             Text(Date(timeIntervalSince1970: Double(event.capturedAt) / 1000)
                                 .formatted(date: .abbreviated, time: .shortened))
-                        }.font(.caption).foregroundStyle(.secondary)
+                        }
+                        .font(.caption).foregroundStyle(.secondary)
+                        if event.confidence > 0 {
+                            Text("Tahlil ishonchliligi: \(event.confidence)%")
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
                         if event.reviewed {
                             Label("Ko'rib chiqilgan", systemImage: "checkmark.circle.fill")
                                 .font(.caption).foregroundStyle(.green)
                         }
-                    }.padding(.vertical, 5)
+                    }
+                    .padding(.vertical, 5)
                 }
             }
         }
         .navigationTitle("Xavfsizlik signallari")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear(perform: subscribe)
-        .onDisappear { listener?.remove(); listener = nil }
+        .onDisappear {
+            riskListener?.remove()
+            riskListener = nil
+            screenTimeListener?.remove()
+            screenTimeListener = nil
+        }
     }
 
     private func subscribe() {
-        listener?.remove()
-        listener = Firestore.firestore()
+        riskListener?.remove()
+        screenTimeListener?.remove()
+        let child = Firestore.firestore()
             .collection("families").document(familyCode)
             .collection("children").document(childID)
-            .collection("risk_events")
+
+        riskListener = child.collection("risk_events")
             .order(by: "capturedAt", descending: true).limit(to: 100)
             .addSnapshotListener { snapshot, error in
-                if let error { loadError = "Signallar yuklanmadi: \(error.localizedDescription)"; return }
+                if let error {
+                    loadError = "Xavf signallari yuklanmadi: \(error.localizedDescription)"
+                    return
+                }
                 events = snapshot?.documents.compactMap { doc in
                     let d = doc.data()
-                    return RiskAlertItem(id: doc.documentID, category: d["category"] as? String ?? "",
+                    return RiskAlertItem(
+                        id: "risk-\(doc.documentID)",
+                        category: d["category"] as? String ?? "",
                         severity: d["severity"] as? String ?? "LOW",
                         summary: d["summary"] as? String ?? "",
                         appName: d["appName"] as? String ?? "",
                         source: d["source"] as? String ?? "",
-                        capturedAt: d["capturedAt"] as? Int64 ?? (d["capturedAt"] as? Int ?? 0),
-                        reviewed: d["reviewed"] as? Bool ?? false)
+                        capturedAt: Self.integer(d["capturedAt"]),
+                        confidence: Self.integer(d["confidence"]),
+                        reviewed: d["reviewed"] as? Bool ?? false
+                    )
                 } ?? []
             }
+
+        // DeviceActivityMonitor extension records only the supported daily-limit event.
+        // Apple does not expose arbitrary app/chat/search content through this feed.
+        screenTimeListener = child.collection("screen_time_reports")
+            .order(by: "timestampMs", descending: true).limit(to: 50)
+            .addSnapshotListener { snapshot, error in
+                if let error {
+                    loadError = "iOS Screen Time hodisalari yuklanmadi: \(error.localizedDescription)"
+                    return
+                }
+                screenTimeEvents = snapshot?.documents.compactMap { doc in
+                    let d = doc.data()
+                    guard (d["type"] as? String) == "daily_limit_reached" else { return nil }
+                    let timestamp = Self.integer(d["timestampMs"])
+                    return RiskAlertItem(
+                        id: "screen-time-\(doc.documentID)",
+                        category: "SCREEN_TIME_LIMIT",
+                        severity: "MEDIUM",
+                        summary: "Ota-ona tanlagan ilovalar, kategoriyalar yoki saytlar uchun belgilangan kunlik foydalanish limiti tugadi.",
+                        appName: "Tanlangan ilovalar / saytlar",
+                        source: "Apple Screen Time",
+                        capturedAt: timestamp,
+                        confidence: 0,
+                        reviewed: false
+                    )
+                } ?? []
+            }
+    }
+
+    private static func integer(_ value: Any?) -> Int64 {
+        if let value = value as? Int64 { return value }
+        if let value = value as? Int { return Int64(value) }
+        if let value = value as? NSNumber { return value.int64Value }
+        return 0
     }
 }
 
@@ -88,19 +153,38 @@ private struct RiskAlertItem: Identifiable {
     let appName: String
     let source: String
     let capturedAt: Int64
+    let confidence: Int64
     let reviewed: Bool
 
     var categoryTitle: String {
         switch category {
-        case "ADULT_SEXUAL": return "18+ kontent"
+        case "ADULT_SEXUAL", "ADULT_MEDIA": return "18+ kontent"
+        case "SUGGESTIVE_MEDIA": return "Ochiq / intim tasvir"
         case "SEXUAL_IMAGE_REQUEST": return "Intim rasm so'rovi"
         case "GROOMING_OR_COERCION": return "Shantaj / xavfli aloqa"
         case "GAMBLING": return "Qimor"
         case "DRUGS": return "Giyohvand moddalar"
         case "SELF_HARM": return "O'ziga zarar"
         case "VIOLENCE": return "Zo'ravonlik"
-        case "DANGEROUS_CHALLENGE": return "Xavfli challenge"
+        case "DANGEROUS_CHALLENGE": return "Xavfli chaqiriq"
+        case "SCREEN_TIME_LIMIT": return "Ekran vaqti limiti"
         default: return category.isEmpty ? "Xavfsizlik signali" : category
+        }
+    }
+
+    var severityTitle: String {
+        switch severity.uppercased() {
+        case "HIGH": return "YUQORI"
+        case "MEDIUM": return "O'RTA"
+        default: return "PAST"
+        }
+    }
+
+    var severityColor: Color {
+        switch severity.uppercased() {
+        case "HIGH": return .red
+        case "MEDIUM": return .orange
+        default: return .blue
         }
     }
 }
