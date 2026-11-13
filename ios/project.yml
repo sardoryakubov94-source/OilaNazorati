@@ -23,6 +23,8 @@ targets:
     sources:
       - path: OilaNazoratiIOS/Sources
       - path: OilaNazoratiIOS/Assets.xcassets
+    resources:
+      - path: OilaNazoratiIOS/Resources/PrivacyInfo.xcprivacy
     info:
       path: OilaNazoratiIOS/Resources/Info.plist
     entitlements:
@@ -62,6 +64,8 @@ targets:
     platform: iOS
     sources:
       - path: OilaNazoratiIOS/Extensions/DeviceActivityMonitorExtension.swift
+    resources:
+      - path: OilaNazoratiIOS/Extensions/DeviceActivityMonitor-PrivacyInfo.xcprivacy
     info:
       path: OilaNazoratiIOS/Extensions/DeviceActivityMonitor-Info.plist
     entitlements:
@@ -104,6 +108,8 @@ targets:
     platform: iOS
     sources:
       - path: OilaNazoratiIOS/Extensions/ScreenBroadcastSampleHandler.swift
+    resources:
+      - path: OilaNazoratiIOS/Extensions/ScreenBroadcast-PrivacyInfo.xcprivacy
     info:
       path: OilaNazoratiIOS/Extensions/ScreenBroadcast-Info.plist
     entitlements:
