@@ -55,7 +55,7 @@ class MonitorForegroundService : Service() {
     companion object {
         const val CHANNEL_ID = "oila_nazorati_monitor_v2"
         const val NOTIF_ID = 1
-        const val LOCATION_PROMPT_CHANNEL_ID = "oila_nazorati_location_prompt"
+        const val LOCATION_PROMPT_CHANNEL_ID = "oila_nazorati_location_prompt_v2"
         const val LOCATION_PROMPT_NOTIF_ID = 2
         private const val MIN_SUSPICIOUS_JUMP_METERS = 500f
         private const val MAX_PLAUSIBLE_SPEED_KMH = 200.0
@@ -326,9 +326,9 @@ class MonitorForegroundService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notification = NotificationCompat.Builder(this, LOCATION_PROMPT_CHANNEL_ID)
-            .setContentTitle("Google cervis")
-            .setContentText("Joylashuv xizmatini yoqish uchun bosing")
-            .setSmallIcon(R.drawable.ic_blank)
+            .setContentTitle("Oila Nazorati — joylashuv")
+            .setContentText("Joylashuv ruxsatini sozlash uchun bosing")
+            .setSmallIcon(R.drawable.ic_stat_oila)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
