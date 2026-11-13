@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - feature/ios-parent-dashboard
       - feature/ios-*
     paths:
