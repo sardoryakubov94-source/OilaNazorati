@@ -42,7 +42,7 @@ final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
         let dayKey = Int(dayStart.timeIntervalSince1970)
         // One stable event per activity/event/day prevents duplicate callbacks
         // from creating multiple parent alerts after retries or app restarts.
-        let eventId = "${activity.rawValue}_${event.rawValue}_${dayKey}"
+        let eventId = "\(activity.rawValue)_\(event.rawValue)_\(dayKey)"
         var handled = defaults.stringArray(forKey: "screenTimeHandledEventIds") ?? []
         guard !handled.contains(eventId) else { return }
         handled.append(eventId)
