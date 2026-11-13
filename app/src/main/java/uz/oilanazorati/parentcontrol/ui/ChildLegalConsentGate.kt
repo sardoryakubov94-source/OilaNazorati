@@ -51,7 +51,7 @@ MUHIM
 Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda belgilangan majburiyatlarni bekor qilmaydi. OilaNazorati voyaga yetgan shaxslarni kuzatish uchun mo‘ljallanmagan.
             """.trimIndent()
             textSize = 13f
-            setTextColor(Color.DKGRAY)
+            setTextColor(Color.WHITE)
             setLineSpacing(dp(3).toFloat(), 1.05f)
         }
         content.addView(explanation, LinearLayout.LayoutParams(-1, -2))
@@ -59,14 +59,17 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
         val guardian = CheckBox(activity).apply {
             text = "Men bolaning ota-onasi yoki qonuniy vakiliman va ushbu ma’lumotlarga ishlov berishga rozilik beraman."
             textSize = 13f
+            setTextColor(Color.WHITE)
         }
         val childInformed = CheckBox(activity).apply {
             text = "Nazorat maqsadi va funksiyalari bolaga yoshiga mos tarzda tushuntirildi."
             textSize = 13f
+            setTextColor(Color.WHITE)
         }
         val childAcknowledged = CheckBox(activity).apply {
             text = "Men, farzand, nazorat maqsadi va funksiyalari haqida xabardor qilindim hamda ushbu ogohlantirish bilan tanishdim."
             textSize = 13f
+            setTextColor(Color.WHITE)
         }
         content.addView(guardian)
         content.addView(childInformed)
