@@ -168,8 +168,18 @@ struct IOSParentDashboardView: View {
                     if let child = selectedChild {
                         IOSRiskAlertsView(familyCode: familyCode ?? "", childID: child.id)
                     } else {
-                        ContentUnavailableView("Farzand tanlanmagan", systemImage: "person.crop.circle",
-                                              description: Text("Avval Qurilmalar bo'limidan farzandni tanlang."))
+                        VStack(spacing: 12) {
+                            Image(systemName: "person.crop.circle")
+                                .font(.system(size: 40))
+                                .foregroundStyle(.secondary)
+                            Text("Farzand tanlanmagan")
+                                .font(.headline)
+                            Text("Avval Qurilmalar bo'limidan farzandni tanlang.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding()
                     }
                 } label: {
                     HStack(spacing: 12) {
@@ -895,7 +905,6 @@ struct IOSParentDashboardView: View {
         voiceRequestID = nil
         voiceChannelName = nil
         location = nil
-        metrics = []
         guard let code = familyCode else { return }
         let childRef = Firestore.firestore().collection("families").document(code)
             .collection("children").document(child.id)
@@ -1154,7 +1163,6 @@ struct IOSParentDashboardView: View {
         children = []
         selectedChildID = nil
         location = nil
-        metrics = []
         errorMessage = nil
     }
 }
