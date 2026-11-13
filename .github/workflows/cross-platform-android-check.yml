@@ -29,10 +29,10 @@ jobs:
           java-version: "17"
           cache: gradle
 
-      - name: Set up Gradle 8.5
+      - name: Set up Gradle 8.11.1
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.5"
+          gradle-version: '8.11.1'
 
       - name: Restore Firebase Android configuration
         env:
