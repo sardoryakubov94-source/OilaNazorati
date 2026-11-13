@@ -100,6 +100,17 @@ workflows:
           xcodegen generate --spec project.yml
           test -d OilaNazorati.xcodeproj
 
+      - name: Set unique build number (TestFlight requires a higher number each upload)
+        script: |
+          # Ilova va barcha extension'lar bir xil CFBundleVersion bo'lishi shart.
+          BUILD_NO="${PROJECT_BUILD_NUMBER:-1}"
+          for plist in $(find "$CM_BUILD_DIR/ios/OilaNazoratiIOS" -name "*.plist"); do
+            if /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$plist" >/dev/null 2>&1; then
+              /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $BUILD_NO" "$plist"
+              echo "CFBundleVersion=$BUILD_NO -> $plist"
+            fi
+          done
+
       - name: Apply App Store provisioning profiles
         script: |
           xcode-project use-profiles
