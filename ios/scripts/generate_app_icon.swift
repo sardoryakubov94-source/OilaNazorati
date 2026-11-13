@@ -2,6 +2,9 @@ import Foundation
 import CoreGraphics
 import ImageIO
 
+// Android ilovadagi "Bulut servis" ikoni bilan bir xil: oq fon va 4 rangli bulut.
+// Android adaptive ikonining ko'rinadigan markaziy 72x72 qismi butun rasmga yoyiladi.
+
 let output = CommandLine.arguments.count > 1
     ? CommandLine.arguments[1]
     : "ios/OilaNazoratiIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
@@ -22,104 +25,76 @@ guard let context = CGContext(
     fatalError("Could not create app icon drawing context")
 }
 
-let scale = CGFloat(size) / 1024.0
-context.scaleBy(x: scale, y: scale)
-
-// Brand background: deep navy, without transparency.
-context.setFillColor(CGColor(red: 16.0/255.0, green: 32.0/255.0, blue: 51.0/255.0, alpha: 1))
-context.fill(CGRect(x: 0, y: 0, width: 1024, height: 1024))
-
-// A clear shield silhouette.
-let shield = CGMutablePath()
-shield.move(to: CGPoint(x: 512, y: 925))
-shield.addCurve(to: CGPoint(x: 842, y: 790),
-                control1: CGPoint(x: 690, y: 900),
-                control2: CGPoint(x: 820, y: 850))
-shield.addLine(to: CGPoint(x: 842, y: 485))
-shield.addCurve(to: CGPoint(x: 512, y: 115),
-                control1: CGPoint(x: 842, y: 295),
-                control2: CGPoint(x: 670, y: 155))
-shield.addCurve(to: CGPoint(x: 182, y: 485),
-                control1: CGPoint(x: 354, y: 155),
-                control2: CGPoint(x: 182, y: 295))
-shield.addLine(to: CGPoint(x: 182, y: 790))
-shield.addCurve(to: CGPoint(x: 512, y: 925),
-                control1: CGPoint(x: 204, y: 850),
-                control2: CGPoint(x: 334, y: 900))
-shield.closeSubpath()
-context.addPath(shield)
+// Oq fon, shaffoflik yo'q (App Store talabi).
 context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
-context.fillPath()
+context.fill(CGRect(x: 0, y: 0, width: size, height: size))
 
-// Family silhouettes in the center of the shield.
-context.setFillColor(CGColor(red: 16.0/255.0, green: 32.0/255.0, blue: 51.0/255.0, alpha: 1))
-context.fillEllipse(in: CGRect(x: 447, y: 590, width: 130, height: 130))
-context.fillEllipse(in: CGRect(x: 292, y: 545, width: 100, height: 100))
-context.fillEllipse(in: CGRect(x: 632, y: 545, width: 100, height: 100))
+// Android vektor koordinatalari (yuqori-chap boshlang'ich, 108x108) ishlatiladi.
+let scale = CGFloat(size) / 72.0
+context.translateBy(x: 0, y: CGFloat(size))
+context.scaleBy(x: scale, y: -scale)
+context.translateBy(x: -18, y: -18)
 
-let centerBody = CGMutablePath()
-centerBody.move(to: CGPoint(x: 365, y: 360))
-centerBody.addCurve(to: CGPoint(x: 659, y: 360),
-                    control1: CGPoint(x: 395, y: 520),
-                    control2: CGPoint(x: 629, y: 520))
-centerBody.addLine(to: CGPoint(x: 659, y: 430))
-centerBody.addLine(to: CGPoint(x: 365, y: 430))
-centerBody.closeSubpath()
-context.addPath(centerBody)
-context.fillPath()
+let cloud = CGMutablePath()
+cloud.move(to: CGPoint(x: 74.21, y: 48.61))
+cloud.addCurve(to: CGPoint(x: 54, y: 32),
+               control1: CGPoint(x: 72.34, y: 39.12),
+               control2: CGPoint(x: 64.01, y: 32))
+cloud.addCurve(to: CGPoint(x: 35.71, y: 43.11),
+               control1: CGPoint(x: 46.05, y: 32),
+               control2: CGPoint(x: 39.15, y: 36.51))
+cloud.addCurve(to: CGPoint(x: 21, y: 59.5),
+               control1: CGPoint(x: 27.44, y: 43.99),
+               control2: CGPoint(x: 21, y: 51))
+cloud.addCurve(to: CGPoint(x: 37.5, y: 76),
+               control1: CGPoint(x: 21, y: 68.6),
+               control2: CGPoint(x: 28.4, y: 76))
+cloud.addLine(to: CGPoint(x: 73.25, y: 76))
+cloud.addCurve(to: CGPoint(x: 87, y: 62.25),
+               control1: CGPoint(x: 80.84, y: 76),
+               control2: CGPoint(x: 87, y: 69.84))
+cloud.addCurve(to: CGPoint(x: 74.21, y: 48.61),
+               control1: CGPoint(x: 87, y: 55),
+               control2: CGPoint(x: 81.36, y: 49.11))
+cloud.closeSubpath()
 
-let leftBody = CGMutablePath()
-leftBody.move(to: CGPoint(x: 235, y: 390))
-leftBody.addCurve(to: CGPoint(x: 425, y: 390),
-                  control1: CGPoint(x: 255, y: 500),
-                  control2: CGPoint(x: 405, y: 500))
-leftBody.addLine(to: CGPoint(x: 425, y: 445))
-leftBody.addLine(to: CGPoint(x: 235, y: 445))
-leftBody.closeSubpath()
-context.addPath(leftBody)
-context.fillPath()
+struct Quadrant {
+    let rect: CGRect
+    let red: CGFloat
+    let green: CGFloat
+    let blue: CGFloat
+}
 
-let rightBody = CGMutablePath()
-rightBody.move(to: CGPoint(x: 599, y: 390))
-rightBody.addCurve(to: CGPoint(x: 789, y: 390),
-                   control1: CGPoint(x: 619, y: 500),
-                   control2: CGPoint(x: 769, y: 500))
-rightBody.addLine(to: CGPoint(x: 789, y: 445))
-rightBody.addLine(to: CGPoint(x: 599, y: 445))
-rightBody.closeSubpath()
-context.addPath(rightBody)
-context.fillPath()
+let quadrants: [Quadrant] = [
+    Quadrant(rect: CGRect(x: 0, y: 0, width: 54, height: 54), red: 41.0/255.0, green: 182.0/255.0, blue: 246.0/255.0),
+    Quadrant(rect: CGRect(x: 54, y: 0, width: 54, height: 54), red: 102.0/255.0, green: 187.0/255.0, blue: 106.0/255.0),
+    Quadrant(rect: CGRect(x: 0, y: 54, width: 54, height: 54), red: 255.0/255.0, green: 202.0/255.0, blue: 40.0/255.0),
+    Quadrant(rect: CGRect(x: 54, y: 54, width: 54, height: 54), red: 239.0/255.0, green: 83.0/255.0, blue: 80.0/255.0)
+]
 
-// Blue check mark: safety and verified family connection.
-let check = CGMutablePath()
-check.move(to: CGPoint(x: 650, y: 275))
-check.addLine(to: CGPoint(x: 710, y: 215))
-check.addLine(to: CGPoint(x: 790, y: 315))
-context.addPath(check)
-context.setStrokeColor(CGColor(red: 47.0/255.0, green: 128.0/255.0, blue: 237.0/255.0, alpha: 1))
-context.setLineWidth(42)
-context.setLineCap(.round)
-context.setLineJoin(.round)
-context.strokePath()
+for quadrant in quadrants {
+    context.saveGState()
+    context.clip(to: quadrant.rect)
+    context.addPath(cloud)
+    context.setFillColor(CGColor(red: quadrant.red, green: quadrant.green, blue: quadrant.blue, alpha: 1))
+    context.fillPath()
+    context.restoreGState()
+}
 
 guard let image = context.makeImage() else {
     fatalError("Could not render app icon")
 }
-let outputURL = URL(fileURLWithPath: output)
-try FileManager.default.createDirectory(
-    at: outputURL.deletingLastPathComponent(),
+
+let url = URL(fileURLWithPath: output)
+try? FileManager.default.createDirectory(
+    at: url.deletingLastPathComponent(),
     withIntermediateDirectories: true
 )
-guard let destination = CGImageDestinationCreateWithURL(
-    outputURL as CFURL,
-    "public.png" as CFString,
-    1,
-    nil
-) else {
+guard let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil) else {
     fatalError("Could not create PNG destination")
 }
 CGImageDestinationAddImage(destination, image, nil)
 guard CGImageDestinationFinalize(destination) else {
-    fatalError("Could not write app icon PNG")
+    fatalError("Could not write PNG")
 }
-print("Generated Oila Nazorati app icon at \(outputURL.path)")
+print("Wrote \(output) (\(size)x\(size))")
