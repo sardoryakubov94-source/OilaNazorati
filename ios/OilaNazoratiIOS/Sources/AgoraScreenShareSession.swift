@@ -68,7 +68,7 @@ final class AgoraScreenShareSession: NSObject, ObservableObject, AgoraRtcEngineD
                         uid: UInt(uid), mediaOptions: options)
                     guard result == 0 else {
                         rtc.leaveChannel(nil); AgoraRtcEngineKit.destroy(); self.engine = nil
-                        completion(.failure(ScreenShareError.joinFailed(result))); return
+                        completion(.failure(ScreenShareError.joinFailed(Int(result)))); return
                     }
                     self.status = role == "screen_publisher" ? "Ekran kanaliga ulanmoqda…" : "Bola ekraniga ulanmoqda…"
                     completion(.success(()))
