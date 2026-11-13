@@ -22,6 +22,7 @@ targets:
     platform: iOS
     sources:
       - path: OilaNazoratiIOS/Sources
+      - path: OilaNazoratiIOS/Assets.xcassets
     info:
       path: OilaNazoratiIOS/Resources/Info.plist
     entitlements:
@@ -54,6 +55,7 @@ targets:
         CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Resources/OilaNazoratiIOS.entitlements
         INFOPLIST_FILE: OilaNazoratiIOS/Resources/Info.plist
         ENABLE_PREVIEWS: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 
   OilaNazoratiActivityMonitor:
     type: app-extension
