@@ -65,7 +65,7 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
             textSize = 13f
         }
         val childAcknowledged = CheckBox(activity).apply {
-            text = "Bola ushbu ogohlantirish bilan tanishdi."
+            text = "Men, farzand, nazorat maqsadi va funksiyalari haqida xabardor qilindim hamda ushbu ogohlantirish bilan tanishdim."
             textSize = 13f
         }
         content.addView(guardian)
