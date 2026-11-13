@@ -22,6 +22,10 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Generate branded iOS App Store icon
+        run: |
+          swift ios/scripts/generate_app_icon.swift ios/OilaNazoratiIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png 1024
+
       - name: Generate Xcode project
         working-directory: ios
         run: xcodegen generate
