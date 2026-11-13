@@ -39,10 +39,10 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      - name: Gradle 8.5 o'rnatish
+      - name: Gradle 8.11.1 o'rnatish
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.5'
+          gradle-version: '8.11.1'
 
       - name: google-services.json faylini yaratish
         env:
