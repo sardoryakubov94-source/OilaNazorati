@@ -92,6 +92,12 @@ struct LinkView: View {
                 "deviceRole": "child",
                 "capabilitySchemaVersion": 1,
                 "supportedCapabilities": DeviceCapabilityMatrix.capabilities(for: .ios).map(\.rawValue).sorted(),
+                "legalConsentVersion": UserDefaults.standard.string(forKey: "child_legal_consent_version") ?? "",
+                "guardianLegalConsent": true,
+                "guardianLegalConsentAtMs": UserDefaults.standard.integer(forKey: "guardian_legal_consent_at_ms"),
+                "childInformed": true,
+                "childNoticeAcknowledged": true,
+                "childNoticeAcknowledgedAtMs": UserDefaults.standard.integer(forKey: "child_notice_acknowledged_at_ms"),
                 "yaratilganMs": Int64(Date().timeIntervalSince1970 * 1000)
             ], merge: true) { error in
                 isLinking = false
