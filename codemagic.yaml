@@ -21,6 +21,10 @@ workflows:
           swift "$CM_BUILD_DIR/ios/scripts/generate_app_icon.swift" "$CM_BUILD_DIR/ios/OilaNazoratiIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png" 1024
           swift "$CM_BUILD_DIR/ios/scripts/generate_app_icon.swift" "$CM_BUILD_DIR/store-assets/google-play-icon-512.png" 512
 
+      - name: Prepare Firebase iOS configuration for simulator build
+        script: |
+          python3 "$CM_BUILD_DIR/ios/scripts/prepare_firebase_plist.py" --allow-placeholder
+
       - name: Generate Xcode project
         script: |
           cd "$CM_BUILD_DIR/ios"
