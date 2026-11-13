@@ -11,9 +11,11 @@ struct IOSParentLegalNoticeView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("BULUT SERVIS (OILANAZORATI) — OTA-ONA UCHUN HUQUQIY ESLATMA")
-                            .font(.title3.bold())\n                            .foregroundStyle(.primary)
+                            .font(.title3.bold())
+                            .foregroundStyle(.primary)
                         Text("Ilovadan foydalanishdan oldin quyidagi ma’lumotlar bilan tanishing. Ushbu eslatma ota-ona paneliga birinchi kirishda, Google hisobiga kirish va oila kodi yaratishdan oldin ko‘rsatiladi.")
-                            .font(.subheadline)\n                            .foregroundStyle(.primary)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
                         section("1. OTA-ONANING HUQUQ VA MAJBURIYATLARI", """
 O‘zbekiston Respublikasi Oila kodeksining 73-moddasi ota-onaning bolani tarbiyalash va uning kamoloti haqida g‘amxo‘rlik qilish huquq hamda majburiyatlarini belgilaydi.
 74-modda ota-onaning bolaning qonuniy vakili sifatida uning huquq va manfaatlarini himoya qilishini nazarda tutadi.
