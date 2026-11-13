@@ -13,7 +13,8 @@ android {
         applicationId "uz.oilanazorati.parentcontrol"
         minSdk 26
         targetSdk 36
-        versionCode 6
+        // CI (GitHub Actions) har yuklashda ANDROID_VERSION_CODE beradi; mahalliy build'da 6 qoladi.
+        versionCode Integer.parseInt(System.getenv('ANDROID_VERSION_CODE') ?: '6')
         versionName "1.0.5"
         buildConfigField "String", "AGORA_APP_ID", "\"${System.getenv('AGORA_APP_ID') ?: ''}\""
         buildConfigField "String", "AGORA_APP_CERT", "\"${System.getenv('AGORA_APP_CERT') ?: ''}\""

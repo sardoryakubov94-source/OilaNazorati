@@ -94,6 +94,11 @@ jobs:
           test -n "$OILA_KEYSTORE_PASSWORD" || { echo "::error::Keystore password secret is missing"; exit 1; }
           test -n "$OILA_KEY_ALIAS" || { echo "::error::Key alias secret is missing"; exit 1; }
           test -n "$OILA_KEY_PASSWORD" || { echo "::error::Key password secret is missing"; exit 1; }
+          # Play har yuklashda oldingisidan KATTA versionCode talab qiladi.
+          export ANDROID_VERSION_CODE=$((100 + GITHUB_RUN_NUMBER))
+          echo "versionCode=$ANDROID_VERSION_CODE"
+          test -n "$AGORA_APP_ID" || echo "::warning::AGORA_APP_ID secret is empty - voice and live screen will not work in this build"
+          test -n "$AGORA_APP_CERT" || echo "::warning::AGORA_APP_CERT secret is empty - voice and live screen will not work in this build"
           gradle --no-daemon clean bundleRelease assembleRelease
 
       - name: Verify Android bundle and package metadata
@@ -101,6 +106,10 @@ jobs:
           test -s app/build/outputs/bundle/release/app-release.aab
           test -s app/build/outputs/apk/release/app-release.apk
           echo "AAB and APK were generated."
+          OUT="$(jarsigner -verify -certs app/build/outputs/bundle/release/app-release.aab 2>&1 || true)"
+          echo "$OUT" | head -n 12
+          echo "$OUT" | grep -q "jar verified" || { echo "::error::AAB is NOT signed with a valid key"; exit 1; }
+          echo "AAB signature verified."
           sha256sum app/build/outputs/bundle/release/app-release.aab
 
       - name: Upload signed release artifacts

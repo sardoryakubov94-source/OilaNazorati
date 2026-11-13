@@ -1248,6 +1248,11 @@ struct IOSParentDashboardView: View {
     }
 
     private func requestScreenShare(child: IOSChildDevice) {
+        // Jonli ekran faqat iOS bola uchun; Android bolada screenshot funksiyasi ishlatiladi.
+        guard child.platform == .ios else {
+            errorMessage = "Jonli ekran faqat iPhone/iPad bola uchun. Android bola uchun Screenshot funksiyasidan foydalaning."
+            return
+        }
         if voiceRequestState == "requested" || voiceRequestState == "active" { sendVoiceStopRequest(to: child.id) }
         voiceSession.leave()
         guard let code = familyCode, let owner = Auth.auth().currentUser?.uid else { return }
