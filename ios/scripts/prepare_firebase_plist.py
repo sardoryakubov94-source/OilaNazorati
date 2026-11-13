@@ -57,3 +57,34 @@ else:
         "Missing GoogleService-Info.plist. Set GOOGLE_SERVICE_INFO_PLIST_BASE64 "
         "or place the real Firebase plist at " + str(output)
     )
+
+
+def register_google_sign_in_url_scheme() -> None:
+    """GoogleSignIn needs REVERSED_CLIENT_ID as a URL scheme in the app Info.plist.
+
+    The value only exists in the real GoogleService-Info.plist (kept out of git),
+    so it is copied into Info.plist at build time. Placeholder builds skip this.
+    """
+    try:
+        firebase = plistlib.loads(output.read_bytes())
+    except Exception:
+        return
+    reversed_id = firebase.get("REVERSED_CLIENT_ID")
+    if not reversed_id:
+        print("REVERSED_CLIENT_ID not found; Google Sign-In URL scheme not registered.")
+        return
+    info_path = Path(__file__).resolve().parents[1] / "OilaNazoratiIOS" / "Resources" / "Info.plist"
+    info = plistlib.loads(info_path.read_bytes())
+    types = [t for t in info.get("CFBundleURLTypes", [])
+             if t.get("CFBundleURLName") != "GoogleSignIn"]
+    types.append({
+        "CFBundleTypeRole": "Editor",
+        "CFBundleURLName": "GoogleSignIn",
+        "CFBundleURLSchemes": [reversed_id],
+    })
+    info["CFBundleURLTypes"] = types
+    info_path.write_bytes(plistlib.dumps(info))
+    print(f"Registered Google Sign-In URL scheme in {info_path.name}")
+
+
+register_google_sign_in_url_scheme()
