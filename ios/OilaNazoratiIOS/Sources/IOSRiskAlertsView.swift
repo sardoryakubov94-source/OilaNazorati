@@ -53,11 +53,18 @@ struct IOSRiskAlertsView: View {
                 Section { Text(loadError).foregroundStyle(.red).font(.footnote) }
             }
             if allEvents.isEmpty {
-                ContentUnavailableView(
-                    "Hozircha signal yo'q",
-                    systemImage: "checkmark.shield",
-                    description: Text("Qo'llab-quvvatlanadigan xavf yoki nazorat hodisasi qayd etilsa shu yerda ko'rinadi.")
-                )
+                VStack(spacing: 12) {
+                    Image(systemName: "checkmark.shield")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.secondary)
+                    Text("Hozircha signal yo'q")
+                        .font(.headline)
+                    Text("Qo'llab-quvvatlanadigan xavf yoki nazorat hodisasi qayd etilsa shu yerda ko'rinadi.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
             } else {
                 ForEach(allEvents) { event in
                     VStack(alignment: .leading, spacing: 8) {
