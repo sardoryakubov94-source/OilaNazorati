@@ -238,6 +238,10 @@ struct IOSParentDashboardView: View {
                                 androidMetrics
                             }
                             androidCommunicationModules(child)
+                            if child.capabilities.contains(.screenshots), let code = familyCode {
+                                IOSAndroidScreenshotsView(familyCode: code, childID: child.id)
+                                    .id(child.id)
+                            }
                             androidControls(child)
                             if child.capabilities.contains(.ambientAudio) {
                                 voiceControls(child)
