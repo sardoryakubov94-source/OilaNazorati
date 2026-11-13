@@ -75,11 +75,12 @@ project.yml quyidagi uchta targetni yaratadi:
 4. Xcode'da asosiy ilova, Device Activity Monitor va Device Activity Report targetlarining har biriga Family Controls capability qo'shing.
 5. Apple'ga Family Controls distribution entitlement so'rovini yuboring. Asosiy ilova bilan birga Screen Time ishlatadigan ikkala extension uchun ham so'rov talab qilinadi. Tasdiq avtomatik berilmaydi.
 6. Firebase Console > Authentication > Sign-in method bo'limida Google va Anonymous provider'larini yoqing. Google provider ota-ona kirishi, Anonymous provider esa bola qurilmasining oilaga ulanishi uchun kerak.
-7. Firebase Console'da oilanazorat-3c8de loyihasiga iOS app qo'shing. Bundle ID aynan Xcode targetdagi ID bilan bir xil bo'lsin. GoogleService-Info.plist ni yuklab, asosiy app targetiga qo'shing.
+7. Firebase Console'da oilanazorat-3c8de loyihasiga iOS app qo'shing. Bundle ID aynan Xcode targetdagi ID — uz.oilanazorati.parentcontrol — bilan bir xil bo'lsin. GoogleService-Info.plist ni yuklab, Codemagic'da Secret `GOOGLE_SERVICE_INFO_PLIST_BASE64` sifatida base64 ko'rinishida saqlang. Lokal build uchun faylni `ios/OilaNazoratiIOS/Resources/GoogleService-Info.plist` manziliga qo'ying; XcodeGen uni app bundle'ga qo'shadi.
 8. GoogleService-Info.plist ichidagi REVERSED_CLIENT_ID ni Xcode > Target > Info > URL Types > URL Schemes bo'limiga qo'shing.
 9. Signing & Capabilities bo'limida Apple Team va Automatic Signing'ni sozlang; entitlement tasdiqlangach provisioning profile'larni yangilang.
-10. Avval bola iPhone'ida ilovani ishga tushiring, Family Controls ruxsatini bering, so'ng FamilyActivityPicker'da nazorat qilinadigan ilova/toifa/saytlarni tanlang.
-11. Ota-ona iPhone'ida Google hisob bilan kiring va limit/jadvallarni sinang.
+10. Codemagic Team integrations bo'limida App Store Connect API key integratsiyasini aynan `OilaNazoratiAppStoreConnect` nomi bilan yarating. `GOOGLE_SERVICE_INFO_PLIST_BASE64` Secret'ini ham kiriting. Apple Developer portalida asosiy app va uchta extension uchun App ID/provisioning profile'lar yaratilgan, App Groups va Family Controls entitlement tasdiqlangan bo'lishi kerak.
+11. Avval bola iPhone'ida ilovani ishga tushiring, Family Controls ruxsatini bering, so'ng FamilyActivityPicker'da nazorat qilinadigan ilova/toifa/saytlarni tanlang.
+12. Ota-ona iPhone'ida Google hisob bilan kiring va limit/jadvallarni sinang.
 
 ## 6. Firebase ma'lumotlar sxemasi
 
@@ -127,7 +128,7 @@ The repository's `firestore.rules` now contains dedicated rules for iOS Screen T
 - [ ] Firebase iOS app uchun GoogleService-Info.plist va Google URL scheme (Firebase Console'dan olinadi)
 - [ ] Apple Family Controls development/distribution entitlement tasdig'i
 - [ ] App Group va provisioning profile signing
-- [ ] Imzolangan App Store archive/IPA va haqiqiy iPhone'da ruxsat, limit, jadval, sayt, ReplayKit va hisobot sinovi
+- [ ] Codemagic `ios-appstore-release` workflow orqali imzolangan IPA/TestFlight build va haqiqiy iPhone'da ruxsat, limit, jadval, sayt, ReplayKit va hisobot sinovi
 - [ ] Firebase Security Rules'ni deploy qilish va real ota-ona/bola qurilmalararo sinov
 - [ ] Ota-onaga server push xabari (FCM backend) — alohida server sozlamasi talab qiladi
 
