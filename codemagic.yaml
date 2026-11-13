@@ -16,8 +16,8 @@ workflows:
           xcodegen --version
 
       - name: Generate branded iOS App Store icon
-        run: |
-          swift ios/scripts/generate_app_icon.swift ios/OilaNazoratiIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png 1024
+        script: |
+          swift "$CM_BUILD_DIR/ios/scripts/generate_app_icon.swift" "$CM_BUILD_DIR/ios/OilaNazoratiIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png" 1024
 
       - name: Generate Xcode project
         script: |
