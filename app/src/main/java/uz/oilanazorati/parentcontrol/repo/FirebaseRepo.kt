@@ -89,11 +89,6 @@ object FirebaseRepo {
                             put("fields", JSONObject().apply {
                                 put("ownerUid", JSONObject().put("stringValue", uid))
                                 put("yaratilganMs", JSONObject().put("integerValue", System.currentTimeMillis().toString()))
-                                if (!legalConsentVersion.isNullOrBlank() && (guardianConsentAtMs ?: 0L) > 0L && (childAcknowledgedAtMs ?: 0L) > 0L) {
-                                    put("legalConsentVersion", JSONObject().put("stringValue", legalConsentVersion))
-                                    put("guardianLegalConsentAtMs", JSONObject().put("integerValue", guardianConsentAtMs.toString()))
-                                    put("childNoticeAcknowledgedAtMs", JSONObject().put("integerValue", childAcknowledgedAtMs.toString()))
-                                }
                             })
                         }.toString()
 
@@ -275,6 +270,11 @@ object FirebaseRepo {
                                 put("childUid", JSONObject().put("stringValue", uid))
                                 put("childPlatform", JSONObject().put("stringValue", "android"))
                                 put("yaratilganMs", JSONObject().put("integerValue", System.currentTimeMillis().toString()))
+                                if (!legalConsentVersion.isNullOrBlank() && (guardianConsentAtMs ?: 0L) > 0L && (childAcknowledgedAtMs ?: 0L) > 0L) {
+                                    put("legalConsentVersion", JSONObject().put("stringValue", legalConsentVersion))
+                                    put("guardianLegalConsentAtMs", JSONObject().put("integerValue", guardianConsentAtMs.toString()))
+                                    put("childNoticeAcknowledgedAtMs", JSONObject().put("integerValue", childAcknowledgedAtMs.toString()))
+                                }
                             })
                         }.toString()
 
