@@ -75,7 +75,7 @@ final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
         store.shield.applications = shouldShieldApps && !selection.applicationTokens.isEmpty ? selection.applicationTokens : nil
         store.shield.applicationCategories = shouldShieldApps && !selection.categoryTokens.isEmpty ? .specific(selection.categoryTokens) : nil
         let blockWeb = defaults.bool(forKey: "websiteBlockingEnabled")
-        store.webContent.blockedByFilter = blockWeb && !selection.webDomainTokens.isEmpty ? .specific(selection.webDomainTokens) : nil
+        store.shield.webDomains = blockWeb && !selection.webDomainTokens.isEmpty ? selection.webDomainTokens : nil
     }
 
     private func addActiveReason(_ reason: String) {
