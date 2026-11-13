@@ -17,7 +17,9 @@ workflows:
 
       - name: Generate branded iOS App Store icon
         script: |
+          mkdir -p "$CM_BUILD_DIR/store-assets"
           swift "$CM_BUILD_DIR/ios/scripts/generate_app_icon.swift" "$CM_BUILD_DIR/ios/OilaNazoratiIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png" 1024
+          swift "$CM_BUILD_DIR/ios/scripts/generate_app_icon.swift" "$CM_BUILD_DIR/store-assets/google-play-icon-512.png" 512
 
       - name: Generate Xcode project
         script: |
@@ -50,4 +52,6 @@ workflows:
       - build/DerivedData/Build/Products/Debug-iphonesimulator/*.app
       - build/DerivedData/Build/Products/Debug-iphonesimulator/*.appex
       - build/ios-simulator-build.log
+      - store-assets/google-play-icon-512.png
+      - ios/OilaNazoratiIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png
       - /tmp/xcodebuild_logs/*.log
