@@ -30,6 +30,7 @@ class FamilyCodeEntryActivity : AppCompatActivity() {
         binding.inputFamilyCode.filters = arrayOf(InputFilter.AllCaps(), InputFilter.LengthFilter(6))
         binding.btnBack.setOnClickListener { finish() }
         binding.btnPair.setOnClickListener { connectWithCode() }
+        ChildLegalConsentGate.showIfNeeded(this)
     }
 
     private fun connectWithCode() {
