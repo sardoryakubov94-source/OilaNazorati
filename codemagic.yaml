@@ -59,3 +59,64 @@ workflows:
       - store-assets/google-play-icon-512.png
       - ios/OilaNazoratiIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png
       - /tmp/xcodebuild_logs/*.log
+
+  ios-appstore-release:
+    name: OilaNazorati iOS - signed App Store / TestFlight
+    max_build_duration: 120
+    instance_type: mac_mini_m2
+
+    integrations:
+      app_store_connect: OilaNazoratiAppStoreConnect
+
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: uz.oilanazorati.parentcontrol
+      vars:
+        BUNDLE_ID: uz.oilanazorati.parentcontrol
+      xcode: latest
+
+    scripts:
+      - name: Install XcodeGen
+        script: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen --version
+
+      - name: Restore production Firebase iOS configuration
+        script: |
+          python3 "$CM_BUILD_DIR/ios/scripts/prepare_firebase_plist.py"
+
+      - name: Generate App Store and Google Play icons
+        script: |
+          mkdir -p "$CM_BUILD_DIR/store-assets"
+          swift "$CM_BUILD_DIR/ios/scripts/generate_app_icon.swift" "$CM_BUILD_DIR/ios/OilaNazoratiIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png" 1024
+          swift "$CM_BUILD_DIR/ios/scripts/generate_app_icon.swift" "$CM_BUILD_DIR/store-assets/google-play-icon-512.png" 512
+
+      - name: Generate Xcode project
+        script: |
+          cd "$CM_BUILD_DIR/ios"
+          xcodegen generate --spec project.yml
+          test -d OilaNazorati.xcodeproj
+
+      - name: Apply App Store provisioning profiles
+        script: |
+          xcode-project use-profiles
+
+      - name: Build signed App Store IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/ios/OilaNazorati.xcodeproj" \
+            --scheme OilaNazoratiIOS
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - store-assets/google-play-icon-512.png
+      - ios/OilaNazoratiIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
