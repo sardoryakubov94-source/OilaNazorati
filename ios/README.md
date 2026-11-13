@@ -146,5 +146,5 @@ The repository's `firestore.rules` now contains dedicated rules for iOS Screen T
 ## Store assetlari va privacy manifest
 
 - iOS App Store uchun 1024×1024 ikonka va Google Play uchun 512×512 ikonka `ios/scripts/generate_app_icon.swift` orqali CI/Codemagic build paytida yaratiladi.
-- Asosiy iOS ilova, DeviceActivityMonitor va ReplayKit extension'larda `PrivacyInfo.xcprivacy` manifestlari mavjud. App Store Connect дахь privacy label'lar shu ma'lumot yig'ish ro'yxati bilan bir xil bo'lishi shart.
+- Asosiy iOS ilova, DeviceActivityMonitor va ReplayKit extension'larda `PrivacyInfo.xcprivacy` manifestlari mavjud. App Store Connect'dagi privacy label'lar shu ma'lumot yig'ish ro'yxati bilan bir xil bo'lishi shart.
 - App Store uchun imzolangan archive, provisioning profiles, Apple Family Controls distribution entitlement va haqiqiy qurilma sinovi hali alohida talab qilinadi.
