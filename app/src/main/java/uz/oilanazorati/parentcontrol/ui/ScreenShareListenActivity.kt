@@ -70,8 +70,8 @@ class ScreenShareListenActivity : AppCompatActivity() {
     }
 
     private fun startRequest(code: String, childId: String, owner: String) {
-        requestId = "scr_\${UUID.randomUUID()}"
-        channel = "sc_\${UUID.randomUUID().toString().replace("-", "").take(24)}"
+        requestId = "scr_${UUID.randomUUID()}"
+        channel = "sc_${UUID.randomUUID().toString().replace("-", "").take(24)}"
         requestRef = db.collection("families").document(code).collection("children")
             .document(childId).collection("screen_requests").document("current")
         requestRef!!.set(mapOf(
@@ -79,7 +79,7 @@ class ScreenShareListenActivity : AppCompatActivity() {
             "status" to "requested", "transport" to "agora", "platform" to "ios",
             "requestedAtMs" to System.currentTimeMillis(), "expiresAtMs" to System.currentTimeMillis() + 180_000
         )).addOnFailureListener {
-            toast("Ekran so‘rovi yuborilmadi: \${it.localizedMessage}"); finish()
+            toast("Ekran so‘rovi yuborilmadi: ${it.localizedMessage}"); finish()
         }
         requestListener = requestRef!!.addSnapshotListener { snap, error ->
             if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
@@ -101,7 +101,7 @@ class ScreenShareListenActivity : AppCompatActivity() {
                 try {
                     val connection = URL("https://us-central1-oilanazorat-3c8de.cloudfunctions.net/agoraVoiceToken").openConnection() as HttpURLConnection
                     connection.requestMethod = "POST"
-                    connection.setRequestProperty("Authorization", "Bearer \${auth.token}")
+                    connection.setRequestProperty("Authorization", "Bearer ${auth.token}")
                     connection.setRequestProperty("Content-Type", "application/json")
                     connection.doOutput = true
                     connection.outputStream.use {
@@ -117,7 +117,7 @@ class ScreenShareListenActivity : AppCompatActivity() {
                     runOnUiThread { joinChannel(appId, token) }
                     connection.disconnect()
                 } catch (e: Exception) {
-                    runOnUiThread { status.text = "Token xatosi: \${e.localizedMessage}" }
+                    runOnUiThread { status.text = "Token xatosi: ${e.localizedMessage}" }
                 }
             }
         }.addOnFailureListener { status.text = "Hisob tokeni olinmadi" }
@@ -134,7 +134,7 @@ class ScreenShareListenActivity : AppCompatActivity() {
                         runOnUiThread { status.text = "iPhone ekraniga ulanildi…"; joined = true }
                     }
                     override fun onUserJoined(uid: Int, elapsed: Int) {
-                        if (uid in 501..1000) runOnUiThread {
+                        runOnUiThread {
                             val surface = SurfaceView(this@ScreenShareListenActivity)
                             videoContainer.removeAllViews()
                             videoContainer.addView(surface, FrameLayout.LayoutParams(-1, -1))
@@ -143,7 +143,7 @@ class ScreenShareListenActivity : AppCompatActivity() {
                         }
                     }
                     override fun onUserOffline(uid: Int, reason: Int) {
-                        if (uid in 1001..2000) runOnUiThread { status.text = "Ekran uzatish tugadi" }
+                        runOnUiThread { status.text = "Ekran uzatish tugadi" }
                     }
                     override fun onError(err: Int) { runOnUiThread { status.text = "Agora xatosi: $err" } }
                 }
@@ -160,7 +160,7 @@ class ScreenShareListenActivity : AppCompatActivity() {
             }
             val result = rtc.joinChannel(token, channel, 1, options)
             if (result != 0) { status.text = "Kanalga ulanish xatosi: $result"; leaveAgora() }
-        } catch (e: Exception) { status.text = "Agora ishga tushmadi: \${e.localizedMessage}" }
+        } catch (e: Exception) { status.text = "Agora ishga tushmadi: ${e.localizedMessage}" }
     }
 
     private fun leaveAgora() {
