@@ -40,6 +40,28 @@ private struct IOSAppUsage: Identifiable {
     let durationSeconds: Int
 }
 
+private struct IOSCallRecord: Identifiable {
+    let id: String
+    let kind: String
+    let number: String
+    let timestamp: Date
+    let durationSeconds: Int
+}
+
+private struct IOSSMSRecord: Identifiable {
+    let id: String
+    let kind: String
+    let number: String
+    let message: String
+    let timestamp: Date
+}
+
+private struct IOSContactRecord: Identifiable {
+    let id: String
+    let name: String
+    let hash: String
+}
+
 struct IOSParentDashboardView: View {
     @AppStorage("device_role") private var deviceRoleRaw = DeviceRole.unselected.rawValue
     @State private var familyCode: String?
@@ -47,6 +69,9 @@ struct IOSParentDashboardView: View {
     @State private var selectedChildID: String?
     @State private var location: IOSChildLocation?
     @State private var androidAppUsage: [IOSAppUsage] = []
+    @State private var androidCalls: [IOSCallRecord] = []
+    @State private var androidSMS: [IOSSMSRecord] = []
+    @State private var androidContacts: [IOSContactRecord] = []
     @State private var focusEnabled = false
     @State private var loading = false
     @State private var signingIn = false
@@ -55,6 +80,9 @@ struct IOSParentDashboardView: View {
     @State private var selectedTab = 0
     @State private var childrenListener: ListenerRegistration?
     @State private var locationListener: ListenerRegistration?
+    @State private var callsListener: ListenerRegistration?
+    @State private var smsListener: ListenerRegistration?
+    @State private var contactsListener: ListenerRegistration?
     @State private var focusListener: ListenerRegistration?
     @State private var voiceListener: ListenerRegistration?
     @State private var micSettingsListener: ListenerRegistration?
@@ -207,6 +235,7 @@ struct IOSParentDashboardView: View {
                             if child.capabilities.contains(.appUsage) {
                                 androidMetrics
                             }
+                            androidCommunicationModules(child)
                             androidControls(child)
                             if child.capabilities.contains(.ambientAudio) {
                                 voiceControls(child)
@@ -370,9 +399,172 @@ struct IOSParentDashboardView: View {
                 .padding(.horizontal, 14)
                 .background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 15))
             }
-            Text("Faqat Android bolaning ilova faolligi ma'lumotlari ko'rsatiladi. SMS, qo‘ng‘iroq, kontakt va screenshot modullari iOS ota-ona interfeysida ochilmaydi.")
+            Text("Ma’lumotlar Android bolaning ilovasida tegishli ruxsatlar yoqilgan bo‘lsa sinxronlanadi.")
                 .font(.caption2).foregroundStyle(ParentPalette.muted)
         }
+    }
+
+    private func androidCommunicationModules(_ child: IOSChildDevice) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if child.capabilities.contains(.calls) {
+                VStack(alignment: .leading, spacing: 8) {
+                    sectionHeading("Qo‘ng‘iroqlar", detail: "Oxirgi 50 ta Android yozuvi")
+                    if androidCalls.isEmpty {
+                        Text("Qo‘ng‘iroq ma’lumoti hali kelmagan yoki Android ruxsati yoqilmagan.")
+                            .font(.caption).foregroundStyle(ParentPalette.muted)
+                    } else {
+                        ForEach(androidCalls) { item in
+                            HStack(spacing: 10) {
+                                Image(systemName: item.kind.lowercased().contains("chiq") ? "phone.arrow.up.right" : "phone.arrow.down.left")
+                                    .foregroundStyle(ParentPalette.accent)
+                                    .frame(width: 32, height: 32)
+                                    .background(ParentPalette.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(contactDisplayName(hash: item.id, fallback: item.number))
+                                        .font(.subheadline.weight(.medium))
+                                    Text("\(item.kind.isEmpty ? "Qo‘ng‘iroq" : item.kind) • \(item.timestamp.formatted(date: .abbreviated, time: .shortened))")
+                                        .font(.caption2).foregroundStyle(ParentPalette.muted)
+                                }
+                                Spacer()
+                                Text(formatUsageDuration(item.durationSeconds))
+                                    .font(.caption.monospacedDigit())
+                                    .foregroundStyle(ParentPalette.muted)
+                            }
+                            .padding(.vertical, 5)
+                            if item.id != androidCalls.last?.id { Divider() }
+                        }
+                    }
+                }
+            }
+
+            if child.capabilities.contains(.sms) {
+                VStack(alignment: .leading, spacing: 8) {
+                    sectionHeading("SMS xabarlari", detail: "Oxirgi 50 ta Android yozuvi")
+                    if androidSMS.isEmpty {
+                        Text("SMS ma’lumoti hali kelmagan yoki Android ruxsati yoqilmagan.")
+                            .font(.caption).foregroundStyle(ParentPalette.muted)
+                    } else {
+                        ForEach(androidSMS) { item in
+                            VStack(alignment: .leading, spacing: 5) {
+                                HStack {
+                                    Label(item.kind.isEmpty ? "SMS" : item.kind, systemImage: "message")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(ParentPalette.accent)
+                                    Spacer()
+                                    Text(item.timestamp.formatted(date: .abbreviated, time: .shortened))
+                                        .font(.caption2).foregroundStyle(ParentPalette.muted)
+                                }
+                                Text(contactDisplayName(hash: item.id, fallback: item.number))
+                                    .font(.subheadline.weight(.medium))
+                                Text(item.message.isEmpty ? "Xabar matni mavjud emas" : item.message)
+                                    .font(.caption).foregroundStyle(ParentPalette.ink)
+                                    .textSelection(.enabled)
+                                    .lineLimit(4)
+                            }
+                            .padding(.vertical, 7)
+                            if item.id != androidSMS.last?.id { Divider() }
+                        }
+                    }
+                }
+            }
+
+            if child.capabilities.contains(.contacts) {
+                VStack(alignment: .leading, spacing: 8) {
+                    sectionHeading("Kontaktlar", detail: "\(androidContacts.count) ta sinxronlangan")
+                    if androidContacts.isEmpty {
+                        Text("Kontaktlar ro‘yxati hali kelmagan yoki Android ruxsati yoqilmagan.")
+                            .font(.caption).foregroundStyle(ParentPalette.muted)
+                    } else {
+                        ForEach(androidContacts) { item in
+                            HStack(spacing: 10) {
+                                Image(systemName: "person.crop.circle")
+                                    .foregroundStyle(ParentPalette.teal)
+                                Text(item.name.isEmpty ? "Nomsiz kontakt" : item.name)
+                                    .font(.subheadline)
+                                Spacer()
+                            }
+                            .padding(.vertical, 5)
+                        }
+                    }
+                }
+            }
+            Text("SMS, qo‘ng‘iroq va kontaktlar faqat Android qurilmasi ularni ruxsat bilan yuborganida ko‘rinadi. iPhone’ning o‘zida bu ma’lumotlarni yashirincha o‘qish amalga oshirilmaydi.")
+                .font(.caption2).foregroundStyle(ParentPalette.muted)
+        }
+        .padding(16)
+        .background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 18))
+    }
+
+    private func contactDisplayName(hash: String, fallback: String) -> String {
+        if let contact = androidContacts.first(where: { $0.hash == hash }), !contact.name.isEmpty {
+            return contact.name
+        }
+        return fallback.isEmpty ? "Noma’lum raqam" : fallback
+    }
+
+    private func listenAndroidCalls(_ childRef: DocumentReference) {
+        callsListener = childRef.collection("calls")
+            .order(by: "boshlanishMs", descending: true).limit(to: 50)
+            .addSnapshotListener { snapshot, error in
+                if let error {
+                    DispatchQueue.main.async { errorMessage = "Qo‘ng‘iroqlar yuklanmadi: \(error.localizedDescription)" }
+                    return
+                }
+                let rows = (snapshot?.documents ?? []).map { document -> IOSCallRecord in
+                    let data = document.data()
+                    let millis = (data["boshlanishMs"] as? NSNumber)?.doubleValue ?? 0
+                    return IOSCallRecord(
+                        id: data["kontaktHash"] as? String ?? document.documentID,
+                        kind: data["turi"] as? String ?? "",
+                        number: data["raqam"] as? String ?? "",
+                        timestamp: Date(timeIntervalSince1970: millis / 1000),
+                        durationSeconds: (data["davomiylikSoniya"] as? NSNumber)?.intValue ?? 0
+                    )
+                }
+                DispatchQueue.main.async { if selectedChildID == childRef.documentID { androidCalls = rows } }
+            }
+    }
+
+    private func listenAndroidSMS(_ childRef: DocumentReference) {
+        smsListener = childRef.collection("sms")
+            .order(by: "vaqtMs", descending: true).limit(to: 50)
+            .addSnapshotListener { snapshot, error in
+                if let error {
+                    DispatchQueue.main.async { errorMessage = "SMS ma’lumotlari yuklanmadi: \(error.localizedDescription)" }
+                    return
+                }
+                let rows = (snapshot?.documents ?? []).map { document -> IOSSMSRecord in
+                    let data = document.data()
+                    let millis = (data["vaqtMs"] as? NSNumber)?.doubleValue ?? 0
+                    return IOSSMSRecord(
+                        id: data["kontaktHash"] as? String ?? document.documentID,
+                        kind: data["turi"] as? String ?? "",
+                        number: data["raqam"] as? String ?? "",
+                        message: data["matn"] as? String ?? "",
+                        timestamp: Date(timeIntervalSince1970: millis / 1000)
+                    )
+                }
+                DispatchQueue.main.async { if selectedChildID == childRef.documentID { androidSMS = rows } }
+            }
+    }
+
+    private func listenAndroidContacts(_ childRef: DocumentReference) {
+        contactsListener = childRef.collection("contacts")
+            .addSnapshotListener { snapshot, error in
+                if let error {
+                    DispatchQueue.main.async { errorMessage = "Kontaktlar yuklanmadi: \(error.localizedDescription)" }
+                    return
+                }
+                let rows = (snapshot?.documents ?? []).map { document -> IOSContactRecord in
+                    let data = document.data()
+                    return IOSContactRecord(
+                        id: document.documentID,
+                        name: data["nomi"] as? String ?? "",
+                        hash: data["kontaktHash"] as? String ?? document.documentID
+                    )
+                }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+                DispatchQueue.main.async { if selectedChildID == childRef.documentID { androidContacts = rows } }
+            }
     }
 
     private func androidControls(_ child: IOSChildDevice) -> some View {
@@ -855,6 +1047,9 @@ struct IOSParentDashboardView: View {
                         voiceChannelName = nil
                         location = nil
                         androidAppUsage = []
+                        androidCalls = []
+                        androidSMS = []
+                        androidContacts = []
                         boundChildID = nil
                         boundChildPlatform = nil
                         boundCapabilities = nil
@@ -890,6 +1085,9 @@ struct IOSParentDashboardView: View {
         boundCapabilities = child.capabilities
         boundFamilyCode = familyCode
         locationListener?.remove()
+        callsListener?.remove()
+        smsListener?.remove()
+        contactsListener?.remove()
         focusListener?.remove()
         voiceListener?.remove()
         micSettingsListener?.remove()
@@ -905,6 +1103,10 @@ struct IOSParentDashboardView: View {
         voiceRequestID = nil
         voiceChannelName = nil
         location = nil
+        androidAppUsage = []
+        androidCalls = []
+        androidSMS = []
+        androidContacts = []
         guard let code = familyCode else { return }
         let childRef = Firestore.firestore().collection("families").document(code)
             .collection("children").document(child.id)
@@ -1008,8 +1210,11 @@ struct IOSParentDashboardView: View {
                     }
                 }
         }
-        if child.platform == .android, child.capabilities.contains(.appUsage) {
-            loadAndroidMetrics(childRef)
+        if child.platform == .android {
+            if child.capabilities.contains(.appUsage) { loadAndroidMetrics(childRef) }
+            if child.capabilities.contains(.calls) { listenAndroidCalls(childRef) }
+            if child.capabilities.contains(.sms) { listenAndroidSMS(childRef) }
+            if child.capabilities.contains(.contacts) { listenAndroidContacts(childRef) }
         }
     }
 
@@ -1143,6 +1348,9 @@ struct IOSParentDashboardView: View {
         }
         childrenListener?.remove()
         locationListener?.remove()
+        callsListener?.remove()
+        smsListener?.remove()
+        contactsListener?.remove()
         focusListener?.remove()
         voiceListener?.remove()
         micSettingsListener?.remove()
