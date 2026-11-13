@@ -50,7 +50,7 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
                         Divider()
                         Toggle("Men bolaning ota-onasi yoki qonuniy vakiliman va ushbu ma’lumotlarga ishlov berishga rozilik beraman.", isOn: $guardianAccepted)
                         Toggle("Nazorat maqsadi va funksiyalari bolaga yoshiga mos tarzda tushuntirildi.", isOn: $childInformed)
-                        Toggle("Bola ushbu ogohlantirish bilan tanishdi.", isOn: $childAcknowledged)
+                        Toggle("Men, farzand, nazorat maqsadi va funksiyalari haqida xabardor qilindim hamda ushbu ogohlantirish bilan tanishdim.", isOn: $childAcknowledged)
                         if let errorText {
                             Text(errorText).font(.footnote).foregroundStyle(.red)
                         }
