@@ -42,7 +42,8 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         Label("Farzand qurilmasi uchun elektron rozilik", systemImage: "hand.raised.square")
-                            .font(.title2.bold())\n                            .foregroundStyle(.primary)
+                            .font(.title2.bold())
+                            .foregroundStyle(.primary)
                         Text(bodyText)
                             .font(.footnote)
                             .foregroundStyle(.primary)
@@ -52,9 +53,12 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
                         Link("Maxfiylik siyosati", destination: URL(string: "https://oilanazorati.uz/privacy.html")!)
                             .font(.footnote)
                         Divider()
-                        Toggle("Men bolaning ota-onasi yoki qonuniy vakiliman va ushbu ma’lumotlarga ishlov berishga rozilik beraman.", isOn: $guardianAccepted)\n                            .foregroundStyle(.primary)
-                        Toggle("Nazorat maqsadi va funksiyalari bolaga yoshiga mos tarzda tushuntirildi.", isOn: $childInformed)\n                            .foregroundStyle(.primary)
-                        Toggle("Men, farzand, nazorat maqsadi va funksiyalari haqida xabardor qilindim hamda ushbu ogohlantirish bilan tanishdim.", isOn: $childAcknowledged)\n                            .foregroundStyle(.primary)
+                        Toggle("Men bolaning ota-onasi yoki qonuniy vakiliman va ushbu ma’lumotlarga ishlov berishga rozilik beraman.", isOn: $guardianAccepted)
+                            .foregroundStyle(.primary)
+                        Toggle("Nazorat maqsadi va funksiyalari bolaga yoshiga mos tarzda tushuntirildi.", isOn: $childInformed)
+                            .foregroundStyle(.primary)
+                        Toggle("Men, farzand, nazorat maqsadi va funksiyalari haqida xabardor qilindim hamda ushbu ogohlantirish bilan tanishdim.", isOn: $childAcknowledged)
+                            .foregroundStyle(.primary)
                         if let errorText {
                             Text(errorText).font(.footnote).foregroundStyle(.red)
                         }
