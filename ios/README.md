@@ -2,7 +2,7 @@
 
 iOS ilovasi SwiftUI asosida tayyorlanadi. Ushbu branch iOS bola va ota-ona panellarini, Apple Screen Time modullarini hamda Xcode project yaratish konfiguratsiyasini o'z ichiga oladi.
 
-> **Hozirgi holat:** manba kod va XcodeGen konfiguratsiyasi tayyorlanmoqda. Ushbu muhitda macOS/Xcode yo'q, shuning uchun iOS targetlari hali Xcode'da build qilinmagan va haqiqiy iPhone'da sinovdan o'tkazilmagan. Apple entitlement tasdig'i va signing talab qilinadi.
+> **Hozirgi holat:** GitHub Actions orqali XcodeGen loyihasi yaratiladi, iOS Simulator Debug va jismoniy iPhone uchun Release konfiguratsiyasi kompilyatsiya qilinadi. Bu imzolangan App Store arxivi yoki haqiqiy iPhone'dagi end-to-end sinov o'rnini bosmaydi. Apple Family Controls entitlement tasdig'i, signing va Firebase iOS konfiguratsiyasi hali talab qilinadi.
 
 ## 1. iOS bola paneli
 
@@ -32,11 +32,12 @@ iOS ilovasi SwiftUI asosida tayyorlanadi. Ushbu branch iOS bola va ota-ona panel
 
 ## 3. Platformalararo boshqaruv matritsasi
 
-Uchta asosiy kombinatsiya kodda alohida ajratilgan:
+To'rtta qurilma kombinatsiyasi kodda alohida ajratilgan:
 
-- **iOS ota-ona → iOS bola:** ota-ona iOS panelidan kunlik limit, maktab/uyqu jadvali va sayt cheklov siyosatini yuboradi. Bola iPhone'ida Apple ruxsati va FamilyActivityPicker tanlovi asosida qo'llanadi. Joylashuv faqat bolaning roziligi bilan.
-- **Android ota-ona → iOS bola:** Android ilovasi bolaning `supportedCapabilities` ro'yxatini Firestore'dan o'qiydi. Ekran vaqti tugmasi iOS bola uchun maxsus siyosat oynasini ochadi va `screen_time_settings/current` ga limit, jadval va sayt cheklovlarini yuboradi. Batafsil ilova/toifa hisobotlari Android ota-onaga eksport qilinmaydi.
-- **iOS ota-ona → Android bola:** iOS ota-ona paneli iOS tomonida qo'llab-quvvatlanadigan kesishma doirasida joylashuv, ilova faolligi ko'rsatkichlari va umumiy Kontrol rejimini ko'rsatadi/boshqaradi. SMS, qo'ng'iroq, kontaktlar, bildirishnoma matni, screenshot va fon mikrofoni kabi Android'ga xos modullar iOS ota-ona interfeysida ochilmaydi.
+- **Android ota-ona → Android bola:** Android ota-ona paneli Android bolaning amaldagi Android imkoniyatlarini boshqaradi; mavjud screenshot, joylashuv, ilova faoliyati, qo'ng'iroq va SMS modullari shu platforma oqimida qoladi.
+- **Android ota-ona → iOS bola:** Android ilovasi bolaning `supportedCapabilities` ro'yxatini Firestore'dan o'qiydi. iOS bola uchun Screen Time siyosati yuboriladi. Jonli ekran ulash ham mavjud: ota-ona Premium tekshiruvidan o'tadi, bola iPhone'da so'rovni ko'rib ReplayKit tizim oynasida uzatishni o'zi boshlaydi. Yashirin ekran yozuvi yo'q.
+- **iOS ota-ona → Android bola:** iOS ota-ona paneli Android bolaning screenshot tarixini, qo'ng'iroqlar, SMS va kontaktlar bo'yicha sinxronlangan ma'lumotlarini hamda qo'llab-quvvatlanadigan boshqa Android ma'lumotlarini ko'rsatadi. Android bola uchun jonli ekran uzatish yo'q — screenshot funksiyasi saqlanadi.
+- **iOS ota-ona → iOS bola:** ota-ona iOS panelidan kunlik limit, maktab/uyqu jadvali va sayt cheklov siyosatini yuboradi. Bola iPhone'ida Apple ruxsati va FamilyActivityPicker tanlovi asosida qo'llanadi. Joylashuv va jonli ekran/ovoz funksiyalari tegishli bolaning roziligi va iOS tizim oynalari bilan ishlaydi.
 
 Noma'lum platforma yoki e'lon qilinmagan imkoniyatlar avtomatik yoqilmaydi. Android ota-ona paneli iOS uchun faqat iOS bola ilovasi e'lon qilgan Screen Time siyosat imkoniyatlarini ko'rsatadi.
 
@@ -122,12 +123,12 @@ The repository's `firestore.rules` now contains dedicated rules for iOS Screen T
 - [x] Android ota-ona ilovasida iOS bolaning capability ro'yxatini o'qish va Screen Time siyosatini yuborish
 - [x] iOS ota-ona panelida Android bola uchun umumiy Kontrol rejimini yuborish
 - [x] Platforma almashtirilganda Android ota-ona interfeysining asl ko'rinishini tiklash
-- [ ] Mac/Xcode'da project generate va compile
-- [ ] GoogleService-Info.plist va Google URL scheme
+- [x] GitHub Actions'da XcodeGen project generate va iOS Simulator/physical-device Release compile tekshiruvi (CI)
+- [ ] Firebase iOS app uchun GoogleService-Info.plist va Google URL scheme (Firebase Console'dan olinadi)
 - [ ] Apple Family Controls development/distribution entitlement tasdig'i
 - [ ] App Group va provisioning profile signing
-- [ ] Haqiqiy iPhone'da ruxsat, limit, jadval, sayt va hisobot sinovi
-- [ ] Firebase Security Rules va real ota-ona/bola qurilmalararo sinov
+- [ ] Imzolangan App Store archive/IPA va haqiqiy iPhone'da ruxsat, limit, jadval, sayt, ReplayKit va hisobot sinovi
+- [ ] Firebase Security Rules'ni deploy qilish va real ota-ona/bola qurilmalararo sinov
 - [ ] Ota-onaga server push xabari (FCM backend) — alohida server sozlamasi talab qiladi
 
 **Hech bir iOS funksiyasi Xcode build va haqiqiy qurilma sinovisiz 100% tayyor deb belgilanmaydi.**
@@ -140,3 +141,10 @@ The repository's `firestore.rules` now contains dedicated rules for iOS Screen T
 - Android parent live viewer currently supports an iOS child stream. iOS parent viewer supports iOS child stream. Android child live screen publication and Android→iOS live screen viewing remain a separate implementation/testing item; existing Android screenshot capture is unchanged.
 - Firebase Functions and Firestore rules must be deployed before live screen tokens/requests work. Never place the Agora App Certificate in the app or repository.
 - Required final verification: Xcode simulator build (extension target), Android Gradle build, deployed Function/rules, and physical iPhone↔Android/iPhone Broadcast tests. CI/real-device success has not been asserted from code changes alone.
+
+
+## Store assetlari va privacy manifest
+
+- iOS App Store uchun 1024×1024 ikonka va Google Play uchun 512×512 ikonka `ios/scripts/generate_app_icon.swift` orqali CI/Codemagic build paytida yaratiladi.
+- Asosiy iOS ilova, DeviceActivityMonitor va ReplayKit extension'larda `PrivacyInfo.xcprivacy` manifestlari mavjud. App Store Connect дахь privacy label'lar shu ma'lumot yig'ish ro'yxati bilan bir xil bo'lishi shart.
+- App Store uchun imzolangan archive, provisioning profiles, Apple Family Controls distribution entitlement va haqiqiy qurilma sinovi hali alohida talab qilinadi.
