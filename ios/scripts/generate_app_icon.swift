@@ -26,7 +26,7 @@ let scale = CGFloat(size) / 1024.0
 context.scaleBy(x: scale, y: scale)
 
 // Brand background: deep navy, without transparency.
-context.setFillColor(CGColor(red: 16.0/255.0, green: 32.0/255.0, blue: 51/255, alpha: 1))
+context.setFillColor(CGColor(red: 16.0/255.0, green: 32.0/255.0, blue: 51.0/255.0, alpha: 1))
 context.fill(CGRect(x: 0, y: 0, width: 1024, height: 1024))
 
 // A clear shield silhouette.
@@ -52,7 +52,7 @@ context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
 context.fillPath()
 
 // Family silhouettes in the center of the shield.
-context.setFillColor(CGColor(red: 16.0/255.0, green: 32.0/255.0, blue: 51/255, alpha: 1))
+context.setFillColor(CGColor(red: 16.0/255.0, green: 32.0/255.0, blue: 51.0/255.0, alpha: 1))
 context.fillEllipse(in: CGRect(x: 447, y: 590, width: 130, height: 130))
 context.fillEllipse(in: CGRect(x: 292, y: 545, width: 100, height: 100))
 context.fillEllipse(in: CGRect(x: 632, y: 545, width: 100, height: 100))
