@@ -4,6 +4,7 @@ struct ContentView: View {
     @AppStorage("family_code") private var familyCode: String = ""
     @AppStorage("child_uid") private var childUid: String = ""
     @AppStorage("device_role") private var deviceRoleRaw: String = DeviceRole.unselected.rawValue
+    @AppStorage("child_legal_consent_version") private var childLegalConsentVersion: String = ""
 
     private var resolvedRole: DeviceRole {
         if let role = DeviceRole(rawValue: deviceRoleRaw), role != .unselected {
@@ -21,7 +22,11 @@ struct ContentView: View {
                     deviceRoleRaw = role.rawValue
                 }
             case .child:
-                if familyCode.isEmpty || childUid.isEmpty {
+                if childLegalConsentVersion != ChildLegalConsentView.version {
+                    ChildLegalConsentView(familyCode: familyCode, childUid: childUid) {
+                        childLegalConsentVersion = ChildLegalConsentView.version
+                    }
+                } else if familyCode.isEmpty || childUid.isEmpty {
                     LinkView()
                 } else {
                     StatusView(familyCode: familyCode, childUid: childUid)
