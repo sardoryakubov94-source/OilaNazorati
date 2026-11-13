@@ -42,6 +42,7 @@ private struct IOSAppUsage: Identifiable {
 
 private struct IOSCallRecord: Identifiable {
     let id: String
+    let contactHash: String
     let kind: String
     let number: String
     let timestamp: Date
@@ -50,6 +51,7 @@ private struct IOSCallRecord: Identifiable {
 
 private struct IOSSMSRecord: Identifiable {
     let id: String
+    let contactHash: String
     let kind: String
     let number: String
     let message: String
@@ -420,7 +422,7 @@ struct IOSParentDashboardView: View {
                                     .frame(width: 32, height: 32)
                                     .background(ParentPalette.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
                                 VStack(alignment: .leading, spacing: 3) {
-                                    Text(contactDisplayName(hash: item.id, fallback: item.number))
+                                    Text(contactDisplayName(hash: item.contactHash, fallback: item.number))
                                         .font(.subheadline.weight(.medium))
                                     Text("\(item.kind.isEmpty ? "Qo‘ng‘iroq" : item.kind) • \(item.timestamp.formatted(date: .abbreviated, time: .shortened))")
                                         .font(.caption2).foregroundStyle(ParentPalette.muted)
@@ -514,7 +516,8 @@ struct IOSParentDashboardView: View {
                     let data = document.data()
                     let millis = (data["boshlanishMs"] as? NSNumber)?.doubleValue ?? 0
                     return IOSCallRecord(
-                        id: data["kontaktHash"] as? String ?? document.documentID,
+                        id: document.documentID,
+                        contactHash: data["kontaktHash"] as? String ?? "",
                         kind: data["turi"] as? String ?? "",
                         number: data["raqam"] as? String ?? "",
                         timestamp: Date(timeIntervalSince1970: millis / 1000),
@@ -537,7 +540,8 @@ struct IOSParentDashboardView: View {
                     let data = document.data()
                     let millis = (data["vaqtMs"] as? NSNumber)?.doubleValue ?? 0
                     return IOSSMSRecord(
-                        id: data["kontaktHash"] as? String ?? document.documentID,
+                        id: document.documentID,
+                        contactHash: data["kontaktHash"] as? String ?? "",
                         kind: data["turi"] as? String ?? "",
                         number: data["raqam"] as? String ?? "",
                         message: data["matn"] as? String ?? "",
