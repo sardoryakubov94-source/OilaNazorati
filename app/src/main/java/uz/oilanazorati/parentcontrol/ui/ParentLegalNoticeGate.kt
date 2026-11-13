@@ -13,7 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 
 /** One-time legal notice shown to a parent before Google sign-in / family creation. */
 object ParentLegalNoticeGate {
-    const val VERSION = "2026-11-13-parent-v1"
+    const val VERSION = "2026-11-14-parent-v2"
     private const val PREFS = "oila_nazorati"
 
     fun showIfNeeded(activity: AppCompatActivity, onAccepted: () -> Unit) {
@@ -27,7 +27,7 @@ object ParentLegalNoticeGate {
         fun dp(value: Int) = (value * density).toInt()
         val content = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(8), dp(20), dp(12))
+            setPadding(dp(20), dp(8), dp(20), dp(12))\n            setBackgroundColor(Color.WHITE)
         }
         val notice = TextView(activity).apply {
             text = """
@@ -56,7 +56,7 @@ Ma’lumotlarni qayta ishlash, saqlash va o‘chirish tartibi ilovaning Maxfiyli
 Ushbu eslatma qonun matnining to‘liq nusxasi emas, balki foydalanuvchiga mo‘ljallangan qisqacha izohdir. Batafsil ma’lumot uchun ilovaning Foydalanish shartlari va Maxfiylik siyosatini o‘qing.
             """.trimIndent()
             textSize = 13f
-            setTextColor(Color.WHITE)
+            setTextColor(Color.BLACK)
             setLineSpacing(dp(3).toFloat(), 1.04f)
         }
         content.addView(notice, LinearLayout.LayoutParams(-1, -2))
