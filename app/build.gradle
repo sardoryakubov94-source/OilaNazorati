@@ -7,13 +7,14 @@ plugins {
 
 android {
     namespace 'uz.oilanazorati.parentcontrol'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "uz.oilanazorati.parentcontrol"
         minSdk 26
-        targetSdk 34
-        versionCode 6
+        targetSdk 36
+        // CI (GitHub Actions) har yuklashda ANDROID_VERSION_CODE beradi; mahalliy build'da 6 qoladi.
+        versionCode Integer.parseInt(System.getenv('ANDROID_VERSION_CODE') ?: '6')
         versionName "1.0.5"
         buildConfigField "String", "AGORA_APP_ID", "\"${System.getenv('AGORA_APP_ID') ?: ''}\""
         buildConfigField "String", "AGORA_APP_CERT", "\"${System.getenv('AGORA_APP_CERT') ?: ''}\""
@@ -141,9 +142,11 @@ dependencies {
     implementation 'com.google.firebase:firebase-crashlytics-ndk'
     implementation 'com.google.firebase:firebase-analytics-ktx'
 
-    // Agora Voice SDK — Android ilovaning o'z "Ovoz" ekrani uchun (3-oktabr,
-    // WebRTC o'rniga). Faqat ovoz (video emas) uchun eng kichik SDK.
-    implementation 'io.agora.rtc:voice-sdk:4.7.0'
+    // Agora RTC SDK (ovoz + video). Ilovaning "Ovoz" ekrani (mikrofon tinglash)
+    // ishlashda davom etadi; iOS bolaning jonli ekranini KO'RISH uchun video
+    // kerak, shuning uchun faqat-ovoz "voice-sdk" o'rniga "full-rtc-basic"
+    // (qo'shimcha extension'larsiz, eng kichik ovoz+video paketi).
+    implementation 'io.agora.rtc:full-rtc-basic:4.7.0'
 
     // Grafik (statistikani chizish uchun)
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'

@@ -227,8 +227,9 @@ class AgoraMicService : Service() {
     }
 
     private fun readyNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_blank)
-        .setContentTitle("Oila Nazorati — Ovoz xizmati tayyor")
+        .setSmallIcon(R.drawable.ic_stat_oila)
+        .setContentTitle("Oila Nazorati — ovoz xizmati tayyor")
+         .setContentText("Jonli ovoz funksiyasi uchun xizmat tayyor")
         .setContentText("Ovoz ota-ona jonli ovozni ishga tushirganda faollashadi")
         .setPriority(NotificationCompat.PRIORITY_LOW)
         .setCategory(NotificationCompat.CATEGORY_SERVICE)

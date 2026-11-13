@@ -90,6 +90,7 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnDeviceAdmin.setOnClickListener { requestDeviceAdmin() }
         binding.btnFinish.setOnClickListener { finishSetupAndStartMonitoring() }
         restoreSavedPairingIntoUi()
+        ChildLegalConsentGate.showIfNeeded(this)
     }
 
     private fun openAppSettings() {
@@ -258,7 +259,14 @@ class ChildSetupActivity : AppCompatActivity() {
             }
         }
         timeoutHandler.postDelayed(timeoutRunnable, 15_000L)
-        FirebaseRepo.joinFamily(code, childName) { ok, error ->
+        val consentPrefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        FirebaseRepo.joinFamily(
+            code,
+            childName,
+            legalConsentVersion = consentPrefs.getString("child_legal_consent_version", null),
+            guardianConsentAtMs = consentPrefs.getLong("guardian_legal_consent_at_ms", 0L),
+            childAcknowledgedAtMs = consentPrefs.getLong("child_notice_acknowledged_at_ms", 0L)
+        ) { ok, error ->
             if (answered) return@joinFamily
             answered = true
             timeoutHandler.removeCallbacks(timeoutRunnable)

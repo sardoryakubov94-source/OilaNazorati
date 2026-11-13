@@ -1,0 +1,123 @@
+name: Android Store Build (AAB)
+
+on:
+  push:
+    branches:
+      - feature/ios-risk-alerts
+    paths:
+      - "app/**"
+      - "build.gradle"
+      - "settings.gradle"
+      - "gradle.properties"
+      - ".github/workflows/android-store-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-store-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Android SDK 36 components
+        run: |
+          SDK_ROOT="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager | head -n 1)"
+          test -x "$SDKMANAGER" || { echo "::error::Android sdkmanager not found under $SDK_ROOT"; exit 1; }
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Restore Firebase configuration
+        env:
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          test -n "$GOOGLE_SERVICES_JSON_B64" || { echo "::error::GOOGLE_SERVICES_JSON_B64 secret is missing"; exit 1; }
+          echo "$GOOGLE_SERVICES_JSON_B64" | base64 -d > app/google-services.json
+
+      - name: Generate Google Web OAuth resource
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("app/google-services.json").read_text())
+          client_id = next((oauth.get("client_id")
+              for client in data.get("client", [])
+              for oauth in client.get("oauth_client", [])
+              if oauth.get("client_type") == 3 and oauth.get("client_id")), None)
+          if not client_id:
+              raise SystemExit("Firebase Web OAuth client (client_type=3) is missing")
+          out = Path("app/src/main/res/values/google_auth.xml")
+          out.parent.mkdir(parents=True, exist_ok=True)
+          escaped = (client_id.replace("&", "&amp;").replace("<", "&lt;")
+                     .replace(">", "&gt;").replace('"', "&quot;").replace("'", "&apos;"))
+          out.write_text('<?xml version="1.0" encoding="utf-8"?>\n<resources>\n'
+                         '  <string name="default_web_client_id" translatable="false">'
+                         + escaped + '</string>\n</resources>\n')
+          PY
+
+      - name: Restore release signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE_BASE64" || { echo "::error::KEYSTORE_BASE64 secret is missing"; exit 1; }
+          echo "$KEYSTORE_BASE64" | base64 -d > app/release.keystore
+          test -s app/release.keystore
+
+      - name: Build signed Play bundle and APK
+        env:
+          OILA_KEYSTORE_PATH: ${{ github.workspace }}/app/release.keystore
+          OILA_KEYSTORE_PASSWORD: ${{ secrets.OILA_KEYSTORE_PASSWORD || secrets.KEYSTORE_PASSWORD }}
+          OILA_KEY_ALIAS: ${{ secrets.OILA_KEY_ALIAS || secrets.KEY_ALIAS }}
+          OILA_KEY_PASSWORD: ${{ secrets.OILA_KEY_PASSWORD || secrets.KEY_PASSWORD }}
+          AGORA_APP_ID: ${{ secrets.AGORA_APP_ID }}
+          AGORA_APP_CERT: ${{ secrets.AGORA_APP_CERT }}
+        run: |
+          test -n "$OILA_KEYSTORE_PASSWORD" || { echo "::error::Keystore password secret is missing"; exit 1; }
+          test -n "$OILA_KEY_ALIAS" || { echo "::error::Key alias secret is missing"; exit 1; }
+          test -n "$OILA_KEY_PASSWORD" || { echo "::error::Key password secret is missing"; exit 1; }
+          # Play har yuklashda oldingisidan KATTA versionCode talab qiladi.
+          export ANDROID_VERSION_CODE=$((100 + GITHUB_RUN_NUMBER))
+          echo "versionCode=$ANDROID_VERSION_CODE"
+          test -n "$AGORA_APP_ID" || echo "::warning::AGORA_APP_ID secret is empty - voice and live screen will not work in this build"
+          test -n "$AGORA_APP_CERT" || echo "::warning::AGORA_APP_CERT secret is empty - voice and live screen will not work in this build"
+          gradle --no-daemon clean bundleRelease assembleRelease
+
+      - name: Verify Android bundle and package metadata
+        run: |
+          test -s app/build/outputs/bundle/release/app-release.aab
+          test -s app/build/outputs/apk/release/app-release.apk
+          echo "AAB and APK were generated."
+          OUT="$(jarsigner -verify -certs app/build/outputs/bundle/release/app-release.aab 2>&1 || true)"
+          echo "$OUT" | head -n 12
+          echo "$OUT" | grep -q "jar verified" || { echo "::error::AAB is NOT signed with a valid key"; exit 1; }
+          echo "AAB signature verified."
+          sha256sum app/build/outputs/bundle/release/app-release.aab
+
+      - name: Upload signed release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: OilaNazorati-Android-Store-Release
+          path: |
+            app/build/outputs/bundle/release/app-release.aab
+            app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 30

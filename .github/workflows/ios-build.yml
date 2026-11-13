@@ -1,0 +1,71 @@
+name: iOS Build
+
+on:
+  push:
+    branches:
+      - feature/ios-parent-dashboard
+      - feature/ios-*
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-build.yml"
+concurrency:
+  group: ios-build-${{ (github.head_ref || github.ref_name) }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate branded iOS App Store icon
+        run: |
+          mkdir -p store-assets
+          swift ios/scripts/generate_app_icon.swift ios/OilaNazoratiIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png 1024
+          swift ios/scripts/generate_app_icon.swift store-assets/google-play-icon-512.png 512
+
+      - name: Prepare Firebase iOS configuration for compile-only CI
+        env:
+          GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
+        run: |
+          python3 ios/scripts/prepare_firebase_plist.py --allow-placeholder
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Build iOS app and Screen Time extensions
+        run: |
+          xcodebuild \
+            -project ios/OilaNazorati.xcodeproj \
+            -scheme OilaNazoratiIOS \
+            -sdk iphonesimulator \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Build Release configuration for physical iOS devices
+        run: |
+          xcodebuild \
+            -project ios/OilaNazorati.xcodeproj \
+            -scheme OilaNazoratiIOS \
+            -sdk iphoneos \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Upload generated store icons
+        uses: actions/upload-artifact@v4
+        with:
+          name: OilaNazorati-store-icons
+          path: |
+            ios/OilaNazoratiIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png
+            store-assets/google-play-icon-512.png
+          if-no-files-found: error
+          retention-days: 30

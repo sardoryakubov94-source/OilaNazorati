@@ -1,5 +1,6 @@
 import SwiftUI
 import FirebaseCore
+import GoogleSignIn
 
 /// Ilova kirish nuqtasi. GoogleService-Info.plist fayli (Firebase konsolidan
 /// olinadigan, Android bilan BIR XIL Firebase loyihasiga iOS ilova sifatida
@@ -14,6 +15,10 @@ struct OilaNazoratiApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onOpenURL { url in
+                    // Google Sign-In qaytish havolasini qabul qiladi.
+                    _ = GIDSignIn.sharedInstance.handle(url)
+                }
         }
     }
 }

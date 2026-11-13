@@ -201,7 +201,7 @@ class LegacyMicAudioService : Service() {
     }
 
     private fun idleNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)
-        .setSmallIcon(R.drawable.ic_blank).setContentTitle("Oila Nazorati").setPriority(NotificationCompat.PRIORITY_LOW)
+        .setSmallIcon(R.drawable.ic_stat_oila).setContentTitle("Oila Nazorati").setPriority(NotificationCompat.PRIORITY_LOW)
         .setCategory(NotificationCompat.CATEGORY_SERVICE).setOngoing(true).setShowWhen(false).build()
 
     private fun activeNotification(): Notification = NotificationCompat.Builder(this, CHANNEL_ID)

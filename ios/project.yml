@@ -1,0 +1,144 @@
+name: OilaNazorati
+options:
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+  bundleIdPrefix: uz.oilanazorati
+
+packages:
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: 11.0.0
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: 8.0.0
+  AgoraRtcEngine_iOS:
+    url: https://github.com/AgoraIO/AgoraRtcEngine_iOS
+    from: 4.5.3
+
+targets:
+  OilaNazoratiIOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: OilaNazoratiIOS/Sources
+      - path: OilaNazoratiIOS/Assets.xcassets
+    resources:
+      - path: OilaNazoratiIOS/Resources/GoogleService-Info.plist
+      - path: OilaNazoratiIOS/Resources/PrivacyInfo.xcprivacy
+    info:
+      path: OilaNazoratiIOS/Resources/Info.plist
+    entitlements:
+      path: OilaNazoratiIOS/Resources/OilaNazoratiIOS.entitlements
+    dependencies:
+      - package: Firebase
+        product: FirebaseCore
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseFirestore
+      - package: GoogleSignIn
+        product: GoogleSignIn
+      - package: AgoraRtcEngine_iOS
+        product: RtcBasic
+      - target: OilaNazoratiActivityMonitor
+        embed: true
+      - target: OilaNazoratiActivityReport
+        embed: true
+      - target: OilaNazoratiScreenBroadcast
+        embed: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uz.oilanazorati.parentcontrol
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+        GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Resources/OilaNazoratiIOS.entitlements
+        INFOPLIST_FILE: OilaNazoratiIOS/Resources/Info.plist
+        ENABLE_PREVIEWS: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+  OilaNazoratiActivityMonitor:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: OilaNazoratiIOS/Extensions/DeviceActivityMonitorExtension.swift
+    resources:
+      - path: OilaNazoratiIOS/Extensions/DeviceActivityMonitor-PrivacyInfo.xcprivacy
+    info:
+      path: OilaNazoratiIOS/Extensions/DeviceActivityMonitor-Info.plist
+    entitlements:
+      path: OilaNazoratiIOS/Extensions/DeviceActivityMonitor.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uz.oilanazorati.parentcontrol.DeviceActivityMonitor
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        CODE_SIGN_STYLE: Automatic
+        APPLICATION_EXTENSION_API_ONLY: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: OilaNazoratiIOS/Extensions/DeviceActivityMonitor-Info.plist
+        CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Extensions/DeviceActivityMonitor.entitlements
+        SKIP_INSTALL: YES
+
+  OilaNazoratiActivityReport:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: OilaNazoratiIOS/Extensions/DeviceActivityReportExtension.swift
+    info:
+      path: OilaNazoratiIOS/Extensions/DeviceActivityReport-Info.plist
+    entitlements:
+      path: OilaNazoratiIOS/Extensions/DeviceActivityReport.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uz.oilanazorati.parentcontrol.DeviceActivityReport
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        CODE_SIGN_STYLE: Automatic
+        APPLICATION_EXTENSION_API_ONLY: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: OilaNazoratiIOS/Extensions/DeviceActivityReport-Info.plist
+        CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Extensions/DeviceActivityReport.entitlements
+        SKIP_INSTALL: YES
+
+  OilaNazoratiScreenBroadcast:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: OilaNazoratiIOS/Extensions/ScreenBroadcastSampleHandler.swift
+    resources:
+      - path: OilaNazoratiIOS/Extensions/ScreenBroadcast-PrivacyInfo.xcprivacy
+    info:
+      path: OilaNazoratiIOS/Extensions/ScreenBroadcast-Info.plist
+    entitlements:
+      path: OilaNazoratiIOS/Extensions/ScreenBroadcast.entitlements
+    dependencies:
+      - package: AgoraRtcEngine_iOS
+        product: ReplayKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uz.oilanazorati.parentcontrol.ScreenBroadcast
+        SWIFT_VERSION: "5.0"
+        IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+        CODE_SIGN_STYLE: Automatic
+        APPLICATION_EXTENSION_API_ONLY: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: OilaNazoratiIOS/Extensions/ScreenBroadcast-Info.plist
+        CODE_SIGN_ENTITLEMENTS: OilaNazoratiIOS/Extensions/ScreenBroadcast.entitlements
+        SWIFT_OBJC_BRIDGING_HEADER: OilaNazoratiIOS/Extensions/ScreenBroadcast-Bridging-Header.h
+        SKIP_INSTALL: YES
+
+schemes:
+  OilaNazoratiIOS:
+    build:
+      targets:
+        OilaNazoratiIOS: all
+        OilaNazoratiActivityMonitor: all
+        OilaNazoratiActivityReport: all
+        OilaNazoratiScreenBroadcast: all
+    run:
+      config: Debug
+

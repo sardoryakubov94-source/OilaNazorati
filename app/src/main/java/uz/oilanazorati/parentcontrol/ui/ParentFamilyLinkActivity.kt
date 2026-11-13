@@ -13,6 +13,7 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 import com.google.firebase.auth.FirebaseAuth
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.databinding.ActivityParentFamilyLinkBinding
@@ -82,7 +83,7 @@ class ParentFamilyLinkActivity : AppCompatActivity() {
                 setOnClickListener { selectChild(child.id, child.platform) }
             }
             val avatar = TextView(this).apply {
-                text = if (child.platform == "ios") "" else "A"
+                text = when (ChildDevicePlatform.from(child.platform)) { ChildDevicePlatform.IOS -> ""; ChildDevicePlatform.ANDROID -> "A"; ChildDevicePlatform.UNKNOWN -> "?" }
                 textSize = 18f
                 gravity = Gravity.CENTER
                 setTypeface(typeface, Typeface.BOLD)
@@ -104,7 +105,11 @@ class ParentFamilyLinkActivity : AppCompatActivity() {
                 setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentFamilyLinkActivity, R.color.color_text_primary))
             })
             labels.addView(TextView(this).apply {
-                text = if (child.platform == "ios") "iPhone / iOS qurilmasi" else "Android qurilmasi"
+                text = when (ChildDevicePlatform.from(child.platform)) {
+                    ChildDevicePlatform.IOS -> "iPhone / iOS qurilmasi"
+                    ChildDevicePlatform.ANDROID -> "Android qurilmasi"
+                    ChildDevicePlatform.UNKNOWN -> "Qurilma turi aniqlanmadi"
+                }
                 textSize = 12f
                 setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentFamilyLinkActivity, R.color.color_text_secondary))
                 setPadding(0, dp(3), 0, 0)
@@ -120,21 +125,29 @@ class ParentFamilyLinkActivity : AppCompatActivity() {
     }
 
     private fun selectChild(childId: String, platform: String) {
-        if (platform == "ios") {
-            Toast.makeText(this, "iOS ota-ona paneli iOS ilovasi tayyor bo'lgach faollashadi.", Toast.LENGTH_LONG).show()
+        val normalizedPlatform = ChildDevicePlatform.from(platform)
+        if (normalizedPlatform == ChildDevicePlatform.UNKNOWN) {
+            AlertDialog.Builder(this)
+                .setTitle("Qurilma turi aniqlanmadi")
+                .setMessage("Bu farzand qurilmasining Android yoki iOS ekanligi haqida ma'lumot topilmadi. Xavfsizlik uchun boshqaruv funksiyalari ochilmadi. Farzand ilovasini yangilab, qayta ulab ko'ring.")
+                .setPositiveButton("Tushunarli", null)
+                .show()
             return
         }
+        val platformValue = if (normalizedPlatform == ChildDevicePlatform.IOS) "ios" else "android"
         getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
             .putString("parent_uid", parentUid)
             .putString("parent_family_code", familyCode)
             .putString("parent_selected_child_id", childId)
-            .putString("parent_selected_platform", platform)
+            .putString("parent_selected_platform", platformValue)
             .putString("family_code", familyCode)
             .putString("child_id", childId)
             .apply()
         FirebaseRepo.familyCode = familyCode
         FirebaseRepo.childId = childId
         startActivity(Intent(this, ParentDashboardActivity::class.java).apply {
+            putExtra(ParentDashboardActivity.EXTRA_CHILD_ID, childId)
+            putExtra(ParentDashboardActivity.EXTRA_CHILD_PLATFORM, platformValue)
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
         })
         finish()
