@@ -20,10 +20,34 @@ struct IOSRiskAlertsView: View {
         List {
             Section {
                 Label(
-                    "Android'da mavjud xavf tahlili signallari, iOS'da esa Apple Screen Time orqali qayd etilishi mumkin bo'lgan limit hodisalari ko'rsatiladi. iOS boshqa ilovalardagi barcha yozishma yoki media mazmunini o'qimaydi.",
+                    "iOS'da Apple Screen Time orqali tanlangan ilova, kategoriya yoki saytlar bo'yicha foydalanish limitlari qayd etiladi. iPhone boshqa ilovalardagi barcha video va yozishmalar mazmunini OilaNazorati'ga ochmaydi.",
                     systemImage: "info.circle"
                 )
                 .font(.footnote).foregroundStyle(.secondary)
+            }
+            Section("iOS'dagi kontent aniqlash cheklovlari") {
+                Label {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("18+ video kontent")
+                            .font(.subheadline.weight(.medium))
+                        Text("Boshqa ilovalardagi video tasvirini avtomatik tekshirish iOS tomonidan ochilmagan. Tanlangan ilova yoki saytning foydalanish vaqti kuzatilishi mumkin.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "video.slash")
+                        .foregroundStyle(.secondary)
+                }
+                Label {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Intim suhbatlar va xabarlar")
+                            .font(.subheadline.weight(.medium))
+                        Text("Telegram, WhatsApp, iMessage va boshqa ilovalarning shaxsiy yozishmalarini OilaNazorati fonda o'qiy olmaydi. Shu sababli intim suhbat, rasm so'rovi yoki shantajni iOS'da avtomatik aniqlash yoqilmagan.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                } icon: {
+                    Image(systemName: "message.badge.filled.fill")
+                        .foregroundStyle(.secondary)
+                }
             }
             if let loadError {
                 Section { Text(loadError).foregroundStyle(.red).font(.footnote) }
