@@ -229,6 +229,24 @@ class MainActivity : AppCompatActivity() {
                     return@addOnSuccessListener
                 }
 
+                // Tezkor yo'l: shu Gmail uchun oila kodi qurilmada saqlangan bo'lsa,
+                // serverni kutmasdan darhol ochamiz; haqiqiy kod fonda tekshiriladi.
+                val fastPrefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+                val cachedFamily = fastPrefs.getString("parent_family_code", null)
+                if (fastPrefs.getString("parent_uid", null) == user.uid && !cachedFamily.isNullOrBlank()) {
+                    openAfterFamilyKnown(cachedFamily, user.uid)
+                    FirebaseRepo.findOrCreateFamilyForCurrentUser { realCode ->
+                        if (!realCode.isNullOrBlank() && realCode != cachedFamily) {
+                            FirebaseRepo.familyCode = realCode
+                            fastPrefs.edit()
+                                .putString("parent_family_code", realCode)
+                                .putString("family_code", realCode)
+                                .apply()
+                        }
+                    }
+                    return@addOnSuccessListener
+                }
+
                 // Har bir Gmail kirishida oila kodi serverdan aniqlanadi.
                 // Bola oldin tanlangan bo'lsa, aynan shu Gmail + oila uchun saqlangan
                 // tanlov tiklanadi va tanlash oynasi qayta ko'rsatilmaydi.
@@ -250,35 +268,39 @@ class MainActivity : AppCompatActivity() {
                         binding.loginStatusText.text = "Oila ma'lumotlarini olishda xato. Qayta urinib ko'ring."
                         return@findOrCreateFamilyForCurrentUser
                     }
-                    FirebaseRepo.familyCode = code
-                    val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
-                    val selectedChild = prefs.getString("parent_selected_child_id", null)
-                    val sameParent = prefs.getString("parent_uid", null) == user.uid
-                    val sameFamily = prefs.getString("parent_family_code", null) == code
-                    val validSavedSelection = sameParent && sameFamily && !selectedChild.isNullOrBlank()
-
-                    prefs.edit()
-                        .putString("parent_uid", user.uid)
-                        .putString("parent_family_code", code)
-                        .putString("family_code", code)
-                        .apply()
-
-                    if (validSavedSelection) {
-                        FirebaseRepo.childId = selectedChild
-                        startActivity(Intent(this, ParentDashboardActivity::class.java).apply {
-                            putExtra("selected_child_id", selectedChild)
-                            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                        })
-                    } else {
-                        startActivity(Intent(this, ParentFamilyLinkActivity::class.java).apply {
-                            putExtra(ParentFamilyLinkActivity.EXTRA_FAMILY_CODE, code)
-                        })
-                    }
+                    openAfterFamilyKnown(code, user.uid)
                 }
             }
             .addOnFailureListener {
                 binding.loginStatusText.text = "Kirishda xato yuz berdi, qayta urinib ko'ring"
             }
+    }
+
+    private fun openAfterFamilyKnown(code: String, uid: String) {
+        FirebaseRepo.familyCode = code
+        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        val selectedChild = prefs.getString("parent_selected_child_id", null)
+        val sameParent = prefs.getString("parent_uid", null) == uid
+        val sameFamily = prefs.getString("parent_family_code", null) == code
+        val validSavedSelection = sameParent && sameFamily && !selectedChild.isNullOrBlank()
+
+        prefs.edit()
+            .putString("parent_uid", uid)
+            .putString("parent_family_code", code)
+            .putString("family_code", code)
+            .apply()
+
+        if (validSavedSelection) {
+            FirebaseRepo.childId = selectedChild
+            startActivity(Intent(this, ParentDashboardActivity::class.java).apply {
+                putExtra("selected_child_id", selectedChild)
+                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+            })
+        } else {
+            startActivity(Intent(this, ParentFamilyLinkActivity::class.java).apply {
+                putExtra(ParentFamilyLinkActivity.EXTRA_FAMILY_CODE, code)
+            })
+        }
     }
 
     private fun saveParentProfile(uid: String, name: String, email: String) {

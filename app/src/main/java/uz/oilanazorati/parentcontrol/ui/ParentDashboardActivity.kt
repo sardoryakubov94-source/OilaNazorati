@@ -428,24 +428,37 @@ class ParentDashboardActivity : AppCompatActivity() {
         val selectedId = prefs.getString("parent_selected_child_id", null)
             ?: prefs.getString("child_id", null)
 
-        FirebaseRepo.fetchLinkedChildren(code) { children ->
+        // Panel avval qurilmadagi keshdan darhol ochiladi, server javobi kelgach
+        // faqat o'zgargan bo'lsa qayta chiziladi (kutish yo'q).
+        var renderedId: String? = null
+        var renderedPlatform: ChildDevicePlatform? = null
+        var renderedCaps: Set<String>? = null
+
+        FirebaseRepo.fetchLinkedChildrenFast(code) { children, fromCache ->
             val selectedChild = children.firstOrNull { it.id == selectedId }
             if (selectedChild != null) {
                 val platform = ChildDevicePlatform.from(selectedChild.platform)
                 if (platform == ChildDevicePlatform.UNKNOWN) {
+                    if (fromCache) return@fetchLinkedChildrenFast // server javobini kutamiz
                     FirebaseRepo.childId = null
                     Toast.makeText(this, "Bola qurilmasi platformasi aniqlanmadi. Ilovani yangilab qayta ulang.", Toast.LENGTH_LONG).show()
                     startActivity(Intent(this, ParentFamilyLinkActivity::class.java).apply {
                         putExtra(ParentFamilyLinkActivity.EXTRA_FAMILY_CODE, code)
                     })
                     finish()
-                    return@fetchLinkedChildren
+                    return@fetchLinkedChildrenFast
                 }
+                if (renderedId == selectedChild.id && renderedPlatform == platform &&
+                    renderedCaps == selectedChild.supportedCapabilities
+                ) return@fetchLinkedChildrenFast // o'zgarmagan, qayta chizmaymiz
+                renderedId = selectedChild.id
+                renderedPlatform = platform
+                renderedCaps = selectedChild.supportedCapabilities
                 setChildId(selectedChild.id)
                 setChildPlatform(platform, selectedChild.supportedCapabilities)
                 applyChildPlatformUi()
                 loadTodayStats()
-            } else {
+            } else if (!fromCache) {
                 // Tanlov yo'qolgan yoki bola oiladan chiqarilgan bo'lsa,
                 // dashboard o'rniga umumiy bolalar oynasiga qaytamiz.
                 FirebaseRepo.childId = null

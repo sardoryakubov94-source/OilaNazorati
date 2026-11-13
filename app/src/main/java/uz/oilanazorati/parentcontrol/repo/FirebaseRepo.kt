@@ -378,6 +378,35 @@ object FirebaseRepo {
             }.addOnFailureListener { onResult(emptyList()) }
     }
 
+    /**
+     * Tezkor variant: avval qurilmadagi keshdan (darhol), keyin serverdan (yangilash uchun)
+     * javob beradi. Ikkinchi parametr true bo'lsa natija keshdan. Server javobi kelgach
+     * kesh javobi e'tiborga olinmaydi.
+     */
+    fun fetchLinkedChildrenFast(code: String, onResult: (List<LinkedChildDevice>, Boolean) -> Unit) {
+        val ref = db.collection("families").document(code).collection("children")
+        var serverDone = false
+        fun toDevices(snap: com.google.firebase.firestore.QuerySnapshot): List<LinkedChildDevice> =
+            snap.documents.map { doc ->
+                LinkedChildDevice(
+                    id = doc.id,
+                    name = doc.getString("nomi")?.takeIf { it.isNotBlank() } ?: "Farzand (${doc.id.take(5)})",
+                    platform = (doc.getString("childPlatform") ?: doc.getString("platform") ?: "unknown").lowercase(),
+                    supportedCapabilities = (doc.get("supportedCapabilities") as? List<*>)?.mapNotNull { it as? String }?.toSet()
+                )
+            }.sortedBy { it.name.lowercase() }
+        ref.get(com.google.firebase.firestore.Source.CACHE).addOnSuccessListener { snap ->
+            if (!serverDone && !snap.isEmpty) onResult(toDevices(snap), true)
+        }
+        ref.get().addOnSuccessListener { snap ->
+            serverDone = true
+            onResult(toDevices(snap), false)
+        }.addOnFailureListener {
+            serverDone = true
+            onResult(emptyList(), false)
+        }
+    }
+
     fun fetchChildren(code: String, onResult: (List<Pair<String, String>>) -> Unit) {
         db.collection("families").document(code).collection("children").get()
             .addOnSuccessListener { snap ->
