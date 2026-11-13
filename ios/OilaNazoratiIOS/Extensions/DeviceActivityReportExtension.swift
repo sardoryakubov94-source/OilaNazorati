@@ -106,7 +106,7 @@ private struct UsageSummaryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title).font(.headline)
-            Text(configuration.totalDuration.formatted(.time(pattern: .hourMinute)))
+            Text(Duration.seconds(Int(configuration.totalDuration)).formatted(.time(pattern: .hourMinute)))
                 .font(.largeTitle.bold().monospacedDigit())
 
             if !configuration.categories.isEmpty {
@@ -115,7 +115,7 @@ private struct UsageSummaryView: View {
                     HStack {
                         Label(item.token)
                         Spacer()
-                        Text(item.duration.formatted(.time(pattern: .hourMinute)))
+                        Text(Duration.seconds(Int(item.duration)).formatted(.time(pattern: .hourMinute)))
                             .font(.caption.monospacedDigit())
                     }
                 }
@@ -127,7 +127,7 @@ private struct UsageSummaryView: View {
                     HStack {
                         Label(item.token)
                         Spacer()
-                        Text(item.duration.formatted(.time(pattern: .hourMinute)))
+                        Text(Duration.seconds(Int(item.duration)).formatted(.time(pattern: .hourMinute)))
                             .font(.caption.monospacedDigit())
                     }
                 }
