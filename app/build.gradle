@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace 'uz.oilanazorati.parentcontrol'
-    compileSdk 34
+    compileSdk 36
 
     defaultConfig {
         applicationId "uz.oilanazorati.parentcontrol"
         minSdk 26
-        targetSdk 34
+        targetSdk 36
         versionCode 6
         versionName "1.0.5"
         buildConfigField "String", "AGORA_APP_ID", "\"${System.getenv('AGORA_APP_ID') ?: ''}\""
