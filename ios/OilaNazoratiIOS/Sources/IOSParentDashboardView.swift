@@ -164,6 +164,28 @@ struct IOSParentDashboardView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 header
+                NavigationLink {
+                    if let child = selectedChild {
+                        IOSRiskAlertsView(familyCode: familyCode ?? "", childID: child.id)
+                    } else {
+                        ContentUnavailableView("Farzand tanlanmagan", systemImage: "person.crop.circle",
+                                              description: Text("Avval Qurilmalar bo'limidan farzandni tanlang."))
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "shield.lefthalf.filled")
+                            .font(.title2).foregroundStyle(ParentPalette.orange)
+                            .frame(width: 44, height: 44)
+                            .background(ParentPalette.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 13))
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Xavfsizlik signallari").font(.headline)
+                            Text("18+ • Qimor • Giyohvandlik • Xavfli aloqa")
+                                .font(.caption).foregroundStyle(ParentPalette.muted)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right").foregroundStyle(ParentPalette.muted)
+                    }.padding(14).background(ParentPalette.surface, in: RoundedRectangle(cornerRadius: 17))
+                }.buttonStyle(.plain)
                 if children.isEmpty {
                     emptyChildrenCard
                 } else {
