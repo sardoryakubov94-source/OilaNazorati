@@ -84,7 +84,14 @@ class FamilyCodeEntryActivity : AppCompatActivity() {
 
     private fun submitPairing(code: String, childName: String, uid: String, timeout: Runnable) {
         if (requestAnswered) return
-        FirebaseRepo.joinFamily(code, childName) { ok, error ->
+        val consentPrefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        FirebaseRepo.joinFamily(
+            code,
+            childName,
+            legalConsentVersion = consentPrefs.getString("child_legal_consent_version", null),
+            guardianConsentAtMs = consentPrefs.getLong("guardian_legal_consent_at_ms", 0L),
+            childAcknowledgedAtMs = consentPrefs.getLong("child_notice_acknowledged_at_ms", 0L)
+        ) { ok, error ->
             if (requestAnswered) return@joinFamily
             requestAnswered = true
             handler.removeCallbacks(timeout)
