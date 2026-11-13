@@ -122,11 +122,13 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, FamilyCodeEntryActivity::class.java))
         }
         binding.btnOpenParentDashboard.setOnClickListener {
-            if (FirebaseAuth.getInstance().currentUser?.isAnonymous == false) {
-                startActivity(Intent(this, ParentDashboardActivity::class.java))
-            } else {
-                pendingDestination = PendingDestination.PARENT_DASHBOARD
-                showGoogleLoginSection()
+            ParentLegalNoticeGate.showIfNeeded(this) {
+                if (FirebaseAuth.getInstance().currentUser?.isAnonymous == false) {
+                    startActivity(Intent(this, ParentDashboardActivity::class.java))
+                } else {
+                    pendingDestination = PendingDestination.PARENT_DASHBOARD
+                    showGoogleLoginSection()
+                }
             }
         }
         binding.btnSetupGuide.setOnClickListener {
