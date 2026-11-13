@@ -2,6 +2,7 @@ package uz.oilanazorati.parentcontrol.ui
 
 import android.content.Context
 import android.graphics.Color
+import android.text.util.Linkify
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.LinearLayout
@@ -30,7 +31,7 @@ object ParentLegalNoticeGate {
         }
         val notice = TextView(activity).apply {
             text = """
-OILANAZORATI — OTA-ONA UCHUN HUQUQIY ESLATMA
+BULUT SERVIS (OILANAZORATI) — OTA-ONA UCHUN HUQUQIY ESLATMA
 
 Ilovadan foydalanishdan oldin quyidagi ma’lumotlar bilan tanishing. Ushbu eslatma ota-ona paneliga birinchi kirishda, Google hisobiga kirish va oila kodi yaratishdan oldin ko‘rsatiladi.
 
@@ -59,6 +60,14 @@ Ushbu eslatma qonun matnining to‘liq nusxasi emas, balki foydalanuvchiga mo‘
             setLineSpacing(dp(3).toFloat(), 1.04f)
         }
         content.addView(notice, LinearLayout.LayoutParams(-1, -2))
+        val legalLinks = TextView(activity).apply {
+            autoLinkMask = Linkify.WEB_URLS
+            linksClickable = true
+            text = "Foydalanish shartnomasi: https://oilanazorati.uz/terms.html\nMaxfiylik siyosati: https://oilanazorati.uz/privacy.html"
+            textSize = 13f
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        content.addView(legalLinks)
         val acknowledgement = CheckBox(activity).apply {
             text = "Men ushbu huquqiy eslatmani o‘qidim, mazmunini tushundim va ilovadan qonuniy maqsadlarda foydalanishga roziman."
             textSize = 13f

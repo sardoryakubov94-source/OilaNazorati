@@ -16,7 +16,7 @@ struct ChildLegalConsentView: View {
     @State private var errorText: String?
 
     private let bodyText = """
-OilaNazorati voyaga yetmagan farzand xavfsizligi, tarbiyasi va qonuniy manfaatlarini himoya qilishga ko‘maklashuvchi ota-ona nazorati ilovasidir.
+Bulut servis (OilaNazorati) voyaga yetmagan farzand xavfsizligi, tarbiyasi va qonuniy manfaatlarini himoya qilishga ko‘maklashuvchi ota-ona nazorati ilovasidir.
 
 QANDAY MA’LUMOTLAR ISHLATILISHI MUMKIN?
 Qurilma turi va berilgan ruxsatlarga qarab: joylashuv, ilovalardan foydalanish statistikasi, ekran vaqti, bildirishnomalar hamda qurilma imkoniyatlariga qarab ekran uzatish yoki mikrofon funksiyalari. iOS’da Android’ga xos SMS va qo‘ng‘iroqlar jurnalini o‘qish imkoniyati mavjud emas. Har bir funksiya faqat platforma ruxsat bergan doirada ishlaydi.
@@ -33,7 +33,7 @@ ROZILIKNI BEKOR QILISH
 Qurilma egasi yoki qonuniy vakil tegishli ruxsatlarni qurilma sozlamalarida o‘chirishi, ulanishni to‘xtatishi va shaxsga doir ma’lumotlarga ishlov berishga berilgan rozilikni qonunda belgilangan tartibda chaqirib olishi mumkin. Ma’lumotlarni saqlash yoki yo‘q qilish qonuniy majburiyatlar va amaldagi saqlash asoslariga muvofiq hal qilinadi.
 
 MUHIM
-Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda belgilangan majburiyatlarni bekor qilmaydi. OilaNazorati voyaga yetgan shaxslarni kuzatish uchun mo‘ljallanmagan.
+Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda belgilangan majburiyatlarni bekor qilmaydi. Bulut servis (OilaNazorati) voyaga yetgan shaxslarni kuzatish uchun mo‘ljallanmagan.
 """
 
     var body: some View {
@@ -47,6 +47,10 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
                             .font(.footnote)
                             .foregroundStyle(.primary)
                             .fixedSize(horizontal: false, vertical: true)
+                        Link("Foydalanish shartnomasi", destination: URL(string: "https://oilanazorati.uz/terms.html")!)
+                            .font(.footnote)
+                        Link("Maxfiylik siyosati", destination: URL(string: "https://oilanazorati.uz/privacy.html")!)
+                            .font(.footnote)
                         Divider()
                         Toggle("Men bolaning ota-onasi yoki qonuniy vakiliman va ushbu ma’lumotlarga ishlov berishga rozilik beraman.", isOn: $guardianAccepted)
                         Toggle("Nazorat maqsadi va funksiyalari bolaga yoshiga mos tarzda tushuntirildi.", isOn: $childInformed)

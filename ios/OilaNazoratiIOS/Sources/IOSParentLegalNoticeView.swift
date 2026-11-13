@@ -10,7 +10,7 @@ struct IOSParentLegalNoticeView: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("OILANAZORATI — OTA-ONA UCHUN HUQUQIY ESLATMA")
+                        Text("BULUT SERVIS (OILANAZORATI) — OTA-ONA UCHUN HUQUQIY ESLATMA")
                             .font(.title3.bold())
                         Text("Ilovadan foydalanishdan oldin quyidagi ma’lumotlar bilan tanishing. Ushbu eslatma ota-ona paneliga birinchi kirishda, Google hisobiga kirish va oila kodi yaratishdan oldin ko‘rsatiladi.")
                             .font(.subheadline)
@@ -32,6 +32,10 @@ Kuzatuv imkoniyatlari qurilma turi, operatsion tizim va foydalanuvchi bergan rux
                         section("5. MA’LUMOTLAR VA ROZILIK", """
 Ma’lumotlarni qayta ishlash, saqlash va o‘chirish tartibi ilovaning Maxfiylik siyosatida bayon etilgan. Rozilikni chaqirib olish yoki funksiyalarni o‘chirish masalalari amaldagi qonunchilik va xizmat ko‘rsatish shartlariga muvofiq amalga oshiriladi.
 """)
+                        Link("Foydalanish shartnomasi", destination: URL(string: "https://oilanazorati.uz/terms.html")!)
+                            .font(.footnote)
+                        Link("Maxfiylik siyosati", destination: URL(string: "https://oilanazorati.uz/privacy.html")!)
+                            .font(.footnote)
                         Text("Ushbu eslatma qonun matnining to‘liq nusxasi emas, balki foydalanuvchiga mo‘ljallangan qisqacha izohdir. Batafsil ma’lumot uchun ilovaning Foydalanish shartlari va Maxfiylik siyosatini o‘qing.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
