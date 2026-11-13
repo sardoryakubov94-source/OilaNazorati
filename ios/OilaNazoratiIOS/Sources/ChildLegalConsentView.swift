@@ -3,7 +3,7 @@ import FirebaseFirestore
 
 /// Guardian authorization plus child-facing acknowledgement, shown before child setup.
 struct ChildLegalConsentView: View {
-    static let version = "2026-11-13-v1"
+    static let version = "2026-11-14-v2"
 
     let familyCode: String
     let childUid: String
