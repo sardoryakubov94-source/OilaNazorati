@@ -154,9 +154,9 @@ final class ScreenTimeController: ObservableObject {
                 end: policy["sleepEnd"] as? String ?? "07:00"
             )
             if websiteBlocking && !selection.webDomainTokens.isEmpty {
-                settings.webContent.blockedByFilter = .specific(selection.webDomainTokens)
+                settings.shield.webDomains = selection.webDomainTokens
             } else {
-                settings.webContent.blockedByFilter = nil
+                settings.shield.webDomains = nil
             }
         } else {
             clearAllShields()
@@ -243,7 +243,7 @@ final class ScreenTimeController: ObservableObject {
     private func clearAllShields() {
         settings.shield.applications = nil
         settings.shield.applicationCategories = nil
-        settings.webContent.blockedByFilter = nil
+        settings.shield.webDomains = nil
         UserDefaults(suiteName: ScreenTimeContract.appGroup)?.removeObject(forKey: "activeScreenTimeReasons")
         UserDefaults(suiteName: ScreenTimeContract.appGroup)?.set(false, forKey: "websiteBlockingEnabled")
         center.stopMonitoring([
