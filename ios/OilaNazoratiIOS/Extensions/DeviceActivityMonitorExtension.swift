@@ -1,10 +1,10 @@
 import DeviceActivity
 import ManagedSettings
 import FamilyControls
-import UserNotifications
 
 /// Xcode'da alohida Device Activity Monitor Extension targetiga qo'shiladi.
 /// Targetga Family Controls capability va App Group entitlement ham beriladi.
+/// Child-facing notification/banner yo'q: monitoring jim ishlaydi, eventlar parent panelida ko'rinadi.
 @available(iOS 16.0, *)
 final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
     private let store = ManagedSettingsStore()
@@ -14,7 +14,6 @@ final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
         if activity.rawValue.contains("school") || activity.rawValue.contains("sleep") {
             addActiveReason(activity.rawValue)
             applyCurrentShields()
-            notify(title: "Nazorat jadvali boshlandi", body: "Belgilangan vaqt cheklovlari faollashtirildi.")
         }
     }
 
@@ -23,7 +22,6 @@ final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
         if activity.rawValue.contains("school") || activity.rawValue.contains("sleep") {
             removeActiveReason(activity.rawValue)
             applyCurrentShields()
-            notify(title: "Nazorat jadvali tugadi", body: "Vaqt cheklovi yakunlandi.")
         }
         if activity.rawValue == "uz.oilanazorati.daily" {
             removeActiveReason("daily_limit")
@@ -44,7 +42,7 @@ final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
         let dayKey = Int(dayStart.timeIntervalSince1970)
         // One stable event per activity/event/day prevents duplicate callbacks
         // from creating multiple parent alerts after retries or app restarts.
-        let eventId = "\(activity.rawValue)_\(event.rawValue)_\(dayKey)"
+        let eventId = "${activity.rawValue}_${event.rawValue}_${dayKey}"
         var handled = defaults.stringArray(forKey: "screenTimeHandledEventIds") ?? []
         guard !handled.contains(eventId) else { return }
         handled.append(eventId)
@@ -64,7 +62,7 @@ final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
             queue.append(payload)
             defaults.set(queue, forKey: "screenTimePendingEvents")
         }
-        notify(title: "Kunlik limit tugadi", body: "Tanlangan ilova va saytlar uchun vaqt limiti yakunlandi.")
+        // No local popup: event is queued for the parent dashboard.
     }
 
     private func applyCurrentShields() {
@@ -90,18 +88,5 @@ final class OilaNazoratiActivityMonitor: DeviceActivityMonitor {
         let defaults = UserDefaults(suiteName: "group.uz.oilanazorati.shared") ?? .standard
         let reasons = (defaults.stringArray(forKey: "activeScreenTimeReasons") ?? []).filter { $0 != reason }
         defaults.set(reasons, forKey: "activeScreenTimeReasons")
-    }
-
-    private func notify(title: String, body: String) {
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        content.sound = .default
-        let request = UNNotificationRequest(
-            identifier: UUID().uuidString,
-            content: content,
-            trigger: nil
-        )
-        UNUserNotificationCenter.current().add(request)
     }
 }
