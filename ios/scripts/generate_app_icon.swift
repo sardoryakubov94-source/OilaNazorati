@@ -6,7 +6,7 @@ let output = CommandLine.arguments.count > 1
     ? CommandLine.arguments[1]
     : "ios/OilaNazoratiIOS/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 let size = CommandLine.arguments.count > 2
-    ? max(1024, Int(CommandLine.arguments[2]) ?? 1024)
+    ? max(1, Int(CommandLine.arguments[2]) ?? 1024)
     : 1024
 
 let colorSpace = CGColorSpaceCreateDeviceRGB()
