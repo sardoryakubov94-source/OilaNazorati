@@ -150,7 +150,7 @@ final class AgoraScreenShareSession: NSObject, ObservableObject, AgoraRtcEngineD
     }
 
     func rtcEngine(_ engine: AgoraRtcEngineKit, didJoinedOfUid uid: UInt, elapsed: Int) {
-        guard (501...1000).contains(uid), let renderView else { return }
+        guard let renderView else { return }
         remoteScreenUID = uid
         let canvas = AgoraRtcVideoCanvas()
         canvas.uid = uid
