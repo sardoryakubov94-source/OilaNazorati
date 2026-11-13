@@ -67,7 +67,7 @@ struct CrossPlatformConfiguration {
         case (.ios, .ios):
             parentAllowed = [.location, .focusMode, .appUsage, .usageReports, .timeLimits, .schedules, .websiteRestrictions, .ambientAudio]
         case (.ios, .android):
-            parentAllowed = [.location, .focusMode, .appUsage, .ambientAudio]
+            parentAllowed = [.location, .focusMode, .appUsage, .calls, .sms, .contacts, .ambientAudio]
         case (.android, .ios):
             // iOS'ning batafsil usage hisoboti faqat bolaning o'z qurilmasida ko'rsatiladi.
             parentAllowed = [.location, .focusMode, .timeLimits, .schedules, .websiteRestrictions, .ambientAudio]
