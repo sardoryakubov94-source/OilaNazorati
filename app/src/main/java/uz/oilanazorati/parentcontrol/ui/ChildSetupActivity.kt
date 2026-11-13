@@ -90,6 +90,7 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnDeviceAdmin.setOnClickListener { requestDeviceAdmin() }
         binding.btnFinish.setOnClickListener { finishSetupAndStartMonitoring() }
         restoreSavedPairingIntoUi()
+        ChildLegalConsentGate.showIfNeeded(this)
     }
 
     private fun openAppSettings() {
