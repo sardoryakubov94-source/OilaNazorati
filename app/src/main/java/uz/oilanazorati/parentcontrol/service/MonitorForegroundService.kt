@@ -53,7 +53,7 @@ class MonitorForegroundService : Service() {
     private val locationPrefs by lazy { getSharedPreferences("location_filter", Context.MODE_PRIVATE) }
 
     companion object {
-        const val CHANNEL_ID = "oila_nazorati_monitor"
+        const val CHANNEL_ID = "oila_nazorati_monitor_v2"
         const val NOTIF_ID = 1
         const val LOCATION_PROMPT_CHANNEL_ID = "oila_nazorati_location_prompt"
         const val LOCATION_PROMPT_NOTIF_ID = 2
