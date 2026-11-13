@@ -1,6 +1,7 @@
 import SwiftUI
 import DeviceActivity
 import FamilyControls
+import ManagedSettings
 
 /// Screen Time report extension. Apple runs this extension in a privacy sandbox:
 /// usage details are rendered locally and are deliberately NOT exported to Firebase.
