@@ -45,7 +45,7 @@ struct IOSRiskAlertsView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 } icon: {
-                    Image(systemName: "message.badge.filled.fill")
+                    Image(systemName: "bubble.left.and.bubble.right")
                         .foregroundStyle(.secondary)
                 }
             }
