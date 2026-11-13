@@ -5,6 +5,7 @@ struct ContentView: View {
     @AppStorage("child_uid") private var childUid: String = ""
     @AppStorage("device_role") private var deviceRoleRaw: String = DeviceRole.unselected.rawValue
     @AppStorage("child_legal_consent_version") private var childLegalConsentVersion: String = ""
+    @AppStorage("parent_legal_notice_version") private var parentLegalNoticeVersion: String = ""
 
     private var resolvedRole: DeviceRole {
         if let role = DeviceRole(rawValue: deviceRoleRaw), role != .unselected {
@@ -32,7 +33,13 @@ struct ContentView: View {
                     StatusView(familyCode: familyCode, childUid: childUid)
                 }
             case .parent:
-                IOSParentDashboardView()
+                if parentLegalNoticeVersion != IOSParentLegalNoticeView.version {
+                    IOSParentLegalNoticeView {
+                        parentLegalNoticeVersion = IOSParentLegalNoticeView.version
+                    }
+                } else {
+                    IOSParentDashboardView()
+                }
             }
         }
         .onAppear {
