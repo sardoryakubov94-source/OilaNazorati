@@ -24,6 +24,7 @@ targets:
       - path: OilaNazoratiIOS/Sources
       - path: OilaNazoratiIOS/Assets.xcassets
     resources:
+      - path: OilaNazoratiIOS/Resources/GoogleService-Info.plist
       - path: OilaNazoratiIOS/Resources/PrivacyInfo.xcprivacy
     info:
       path: OilaNazoratiIOS/Resources/Info.plist
