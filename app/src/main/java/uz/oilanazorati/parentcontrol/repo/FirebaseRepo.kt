@@ -89,6 +89,11 @@ object FirebaseRepo {
                             put("fields", JSONObject().apply {
                                 put("ownerUid", JSONObject().put("stringValue", uid))
                                 put("yaratilganMs", JSONObject().put("integerValue", System.currentTimeMillis().toString()))
+                                if (!legalConsentVersion.isNullOrBlank() && (guardianConsentAtMs ?: 0L) > 0L && (childAcknowledgedAtMs ?: 0L) > 0L) {
+                                    put("legalConsentVersion", JSONObject().put("stringValue", legalConsentVersion))
+                                    put("guardianLegalConsentAtMs", JSONObject().put("integerValue", guardianConsentAtMs.toString()))
+                                    put("childNoticeAcknowledgedAtMs", JSONObject().put("integerValue", childAcknowledgedAtMs.toString()))
+                                }
                             })
                         }.toString()
 
@@ -218,7 +223,14 @@ object FirebaseRepo {
      * orqali yuboriladi. Auth ID token ishlatilgani uchun Firestore Rules
      * baribir to'liq qo'llanadi. Qolgan Firestore funksiyalari o'zgarmaydi.
      */
-    fun joinFamily(code: String, childName: String, onResult: (Boolean, String?) -> Unit) {
+    fun joinFamily(
+        code: String,
+        childName: String,
+        legalConsentVersion: String? = null,
+        guardianConsentAtMs: Long? = null,
+        childAcknowledgedAtMs: Long? = null,
+        onResult: (Boolean, String?) -> Unit
+    ) {
         val user = auth.currentUser
         val uid = user?.uid
         if (uid.isNullOrBlank()) {
