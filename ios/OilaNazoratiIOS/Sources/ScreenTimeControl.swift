@@ -3,7 +3,6 @@ import FamilyControls
 import DeviceActivity
 import ManagedSettings
 import FirebaseFirestore
-import UserNotifications
 
 /// Firestore contract shared by the iOS parent and child panels:
 /// families/{code}/children/{uid}/screen_time_settings/current
@@ -44,7 +43,6 @@ final class ScreenTimeController: ObservableObject {
             try await AuthorizationCenter.shared.requestAuthorization(for: .child)
             authorizationStatus = AuthorizationCenter.shared.authorizationStatus
             syncAuthorizationStatus()
-            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
             lastError = nil
             if authorizationStatus == .approved, let latestPolicy {
                 apply(policy: latestPolicy)
