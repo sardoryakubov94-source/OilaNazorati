@@ -2,6 +2,7 @@ package uz.oilanazorati.parentcontrol.ui
 
 import android.content.Context
 import android.graphics.Color
+import android.text.util.Linkify
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.LinearLayout
@@ -31,7 +32,7 @@ object ChildLegalConsentGate {
         }
         val explanation = TextView(activity).apply {
             text = """
-OilaNazorati voyaga yetmagan farzand xavfsizligi, tarbiyasi va qonuniy manfaatlarini himoya qilishga ko‘maklashuvchi ota-ona nazorati ilovasidir.
+Bulut servis (OilaNazorati) voyaga yetmagan farzand xavfsizligi, tarbiyasi va qonuniy manfaatlarini himoya qilishga ko‘maklashuvchi ota-ona nazorati ilovasidir.
 
 QANDAY MA’LUMOTLAR ISHLATILISHI MUMKIN?
 Qurilma turi va berilgan ruxsatlarga qarab: joylashuv, qo‘ng‘iroqlar tarixi, SMS, kontaktlar, ilovalardan foydalanish statistikasi, bildirishnomalar va ekran tasvirlari. Mikrofon yoki jonli ekran funksiyasi faqat tegishli qurilma imkoniyati, alohida sozlama/ruxsat va ilovada ko‘rsatilgan ishga tushirish tartibi mavjud bo‘lganda ishlaydi. Barcha funksiyalar har bir qurilmada bir xil emas.
@@ -48,13 +49,21 @@ ROZILIKNI BEKOR QILISH
 Qurilma egasi yoki qonuniy vakil tegishli ruxsatlarni qurilma sozlamalarida o‘chirishi, ulanishni to‘xtatishi va shaxsga doir ma’lumotlarga ishlov berishga berilgan rozilikni qonunda belgilangan tartibda chaqirib olishi mumkin. Rozilik chaqirib olinganidan keyin ma’lumotlarni saqlash yoki yo‘q qilish qonuniy majburiyatlar va amaldagi saqlash asoslariga muvofiq hal qilinadi.
 
 MUHIM
-Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda belgilangan majburiyatlarni bekor qilmaydi. OilaNazorati voyaga yetgan shaxslarni kuzatish uchun mo‘ljallanmagan.
+Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda belgilangan majburiyatlarni bekor qilmaydi. Bulut servis (OilaNazorati) voyaga yetgan shaxslarni kuzatish uchun mo‘ljallanmagan.
             """.trimIndent()
             textSize = 13f
             setTextColor(Color.DKGRAY)
             setLineSpacing(dp(3).toFloat(), 1.05f)
         }
         content.addView(explanation, LinearLayout.LayoutParams(-1, -2))
+        val legalLinks = TextView(activity).apply {
+            autoLinkMask = Linkify.WEB_URLS
+            linksClickable = true
+            text = "Foydalanish shartnomasi: https://oilanazorati.uz/terms.html\nMaxfiylik siyosati: https://oilanazorati.uz/privacy.html"
+            textSize = 13f
+            setPadding(0, dp(8), 0, dp(8))
+        }
+        content.addView(legalLinks)
 
         val guardian = CheckBox(activity).apply {
             text = "Men bolaning ota-onasi yoki qonuniy vakiliman va ushbu ma’lumotlarga ishlov berishga rozilik beraman."
