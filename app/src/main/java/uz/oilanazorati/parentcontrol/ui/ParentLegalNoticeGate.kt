@@ -55,13 +55,14 @@ Ma’lumotlarni qayta ishlash, saqlash va o‘chirish tartibi ilovaning Maxfiyli
 Ushbu eslatma qonun matnining to‘liq nusxasi emas, balki foydalanuvchiga mo‘ljallangan qisqacha izohdir. Batafsil ma’lumot uchun ilovaning Foydalanish shartlari va Maxfiylik siyosatini o‘qing.
             """.trimIndent()
             textSize = 13f
-            setTextColor(Color.DKGRAY)
+            setTextColor(Color.WHITE)
             setLineSpacing(dp(3).toFloat(), 1.04f)
         }
         content.addView(notice, LinearLayout.LayoutParams(-1, -2))
         val acknowledgement = CheckBox(activity).apply {
             text = "Men ushbu huquqiy eslatmani o‘qidim, mazmunini tushundim va ilovadan qonuniy maqsadlarda foydalanishga roziman."
             textSize = 13f
+            setTextColor(Color.WHITE)
         }
         content.addView(acknowledgement)
         val scroll = ScrollView(activity).apply {
