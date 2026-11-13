@@ -65,13 +65,14 @@ Ushbu eslatma qonun matnining to‘liq nusxasi emas, balki foydalanuvchiga mo‘
             linksClickable = true
             text = "Foydalanish shartnomasi: https://oilanazorati.uz/terms.html\nMaxfiylik siyosati: https://oilanazorati.uz/privacy.html"
             textSize = 13f
+            setTextColor(Color.BLACK)
             setPadding(0, dp(8), 0, dp(8))
         }
         content.addView(legalLinks)
         val acknowledgement = CheckBox(activity).apply {
             text = "Men ushbu huquqiy eslatmani o‘qidim, mazmunini tushundim va ilovadan qonuniy maqsadlarda foydalanishga roziman."
             textSize = 13f
-            setTextColor(Color.WHITE)
+            setTextColor(Color.BLACK)
         }
         content.addView(acknowledgement)
         val scroll = ScrollView(activity).apply {
