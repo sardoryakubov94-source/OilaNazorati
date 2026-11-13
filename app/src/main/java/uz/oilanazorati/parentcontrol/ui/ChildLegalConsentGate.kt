@@ -16,7 +16,7 @@ import androidx.appcompat.app.AppCompatActivity
  * the child's acknowledgement are stored locally with a version and times.
  */
 object ChildLegalConsentGate {
-    const val VERSION = "2026-11-13-v1"
+    const val VERSION = "2026-11-14-v2"
     private const val PREFS = "oila_nazorati"
 
     fun showIfNeeded(activity: AppCompatActivity) {
@@ -28,7 +28,7 @@ object ChildLegalConsentGate {
 
         val content = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(8), dp(20), dp(12))
+            setPadding(dp(20), dp(8), dp(20), dp(12))\n            setBackgroundColor(Color.WHITE)
         }
         val explanation = TextView(activity).apply {
             text = """
@@ -52,7 +52,7 @@ MUHIM
 Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda belgilangan majburiyatlarni bekor qilmaydi. Bulut servis (OilaNazorati) voyaga yetgan shaxslarni kuzatish uchun mo‘ljallanmagan.
             """.trimIndent()
             textSize = 13f
-            setTextColor(Color.WHITE)
+            setTextColor(Color.BLACK)
             setLineSpacing(dp(3).toFloat(), 1.05f)
         }
         content.addView(explanation, LinearLayout.LayoutParams(-1, -2))
