@@ -30,6 +30,8 @@ enum MonitoringCapability: String, CaseIterable, Codable, Hashable {
     case screenshots
     case ambientAudio = "ambient_audio"
     case riskAlerts = "risk_alerts"
+    case simInfo = "sim_info"
+    case trends
 }
 
 /// Ota-ona interfeysining vizual platformasi.
@@ -67,7 +69,7 @@ struct CrossPlatformConfiguration {
         case (.ios, .ios):
             parentAllowed = [.location, .focusMode, .appUsage, .usageReports, .timeLimits, .schedules, .websiteRestrictions, .ambientAudio]
         case (.ios, .android):
-            parentAllowed = [.location, .focusMode, .appUsage, .calls, .sms, .contacts, .screenshots, .ambientAudio]
+            parentAllowed = [.location, .focusMode, .appUsage, .calls, .sms, .contacts, .screenshots, .notifications, .simInfo, .trends, .ambientAudio]
         case (.android, .ios):
             // iOS'ning batafsil usage hisoboti faqat bolaning o'z qurilmasida ko'rsatiladi.
             parentAllowed = [.location, .focusMode, .timeLimits, .schedules, .websiteRestrictions, .ambientAudio]

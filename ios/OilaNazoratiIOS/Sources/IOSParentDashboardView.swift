@@ -242,6 +242,18 @@ struct IOSParentDashboardView: View {
                                 IOSAndroidScreenshotsView(familyCode: code, childID: child.id)
                                     .id(child.id)
                             }
+                            if child.capabilities.contains(.notifications), let code = familyCode {
+                                IOSAndroidNotificationsView(familyCode: code, childID: child.id)
+                                    .id(child.id)
+                            }
+                            if child.capabilities.contains(.simInfo), let code = familyCode {
+                                IOSAndroidSimInfoView(familyCode: code, childID: child.id)
+                                    .id(child.id)
+                            }
+                            if child.capabilities.contains(.trends), let code = familyCode {
+                                IOSAndroidTrendsView(familyCode: code, childID: child.id)
+                                    .id(child.id)
+                            }
                             androidControls(child)
                             if child.capabilities.contains(.ambientAudio) {
                                 voiceControls(child)
