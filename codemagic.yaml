@@ -47,9 +47,3 @@ workflows:
       - build/DerivedData/Build/Products/Debug-iphonesimulator/*.appex
       - build/ios-simulator-build.log
       - /tmp/xcodebuild_logs/*.log
-
-    publishing:
-      email:
-        notify:
-          success: false
-          failure: false
