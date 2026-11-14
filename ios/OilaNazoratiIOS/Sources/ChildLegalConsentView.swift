@@ -3,7 +3,7 @@ import FirebaseFirestore
 
 /// Guardian authorization plus child-facing acknowledgement, shown before child setup.
 struct ChildLegalConsentView: View {
-    static let version = "2026-11-14-v2"
+    static let version = "2026-11-14-v3"
 
     let familyCode: String
     let childUid: String
@@ -63,8 +63,11 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
                             Text(errorText).font(.footnote).foregroundStyle(.red)
                         }
                     }
+                    .foregroundStyle(Color.black)
                     .padding()
+                    .background(Color.white)
                 }
+                .background(Color.white)
                 Button(action: accept) {
                     if isSaving {
                         ProgressView()
@@ -74,10 +77,16 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(!guardianAccepted || !childInformed || !childAcknowledged || isSaving)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+                .tint(.blue)
+                .foregroundStyle(Color.white)
+                .disabled(!guardianAccepted) || !childInformed || !childAcknowledged || isSaving)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(Color(red: 0.055, green: 0.12, blue: 0.25))
             }
+            .background(Color.white)
+            .toolbarBackground(Color(red: 0.055, green: 0.12, blue: 0.25), for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .navigationTitle("Elektron rozilik")
             .navigationBarTitleDisplayMode(.inline)
         }
