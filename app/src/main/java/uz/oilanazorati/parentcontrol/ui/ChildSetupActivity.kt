@@ -75,6 +75,7 @@ class ChildSetupActivity : AppCompatActivity() {
         if (intent.getBooleanExtra(FamilyCodeEntryActivity.EXTRA_FAMILY_LINKED, false)) {
             binding.pairingSection.visibility = View.GONE
         }
+        showLinkedDeviceCard()
         binding.btnInstallationWizard.setOnClickListener { startActivity(Intent(this, InstallationWizardActivity::class.java)) }
         binding.btnPair.setOnClickListener { pairWithFamilyCode() }
         binding.btnGrantPermissions.setOnClickListener { requestOrOpenRuntimePermissions() }
@@ -91,6 +92,43 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnFinish.setOnClickListener { finishSetupAndStartMonitoring() }
         restoreSavedPairingIntoUi()
         ChildLegalConsentGate.showIfNeeded(this)
+    }
+
+    /** Ulangan bola qurilmasi haqida qisqa karta va "O'zgartirish" tugmasi. */
+    private fun showLinkedDeviceCard() {
+        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        val code = prefs.getString("family_code", null)
+        if (!prefs.contains("child_name") || code.isNullOrBlank()) return
+        val name = prefs.getString("child_name", null)?.takeIf { it.isNotBlank() } ?: "Bola qurilmasi"
+        val density = resources.displayMetrics.density
+        fun dp(v: Int) = (v * density).toInt()
+        val parentLayout = binding.btnInstallationWizard.parent as? android.widget.LinearLayout ?: return
+        val card = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                cornerRadius = dp(14).toFloat()
+                setColor(ContextCompat.getColor(this@ChildSetupActivity, R.color.color_surface))
+            }
+            layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(16) }
+        }
+        val label = android.widget.TextView(this).apply {
+            text = "👤 $name\nOila kodi: $code"
+            textSize = 14f
+            setTextColor(ContextCompat.getColor(this@ChildSetupActivity, R.color.color_text_primary))
+            layoutParams = android.widget.LinearLayout.LayoutParams(0, -2, 1f)
+        }
+        val change = android.widget.Button(this).apply {
+            text = "O'zgartirish"
+            setOnClickListener {
+                startActivity(Intent(this@ChildSetupActivity, FamilyCodeEntryActivity::class.java))
+                finish()
+            }
+        }
+        card.addView(label)
+        card.addView(change)
+        parentLayout.addView(card, 0)
     }
 
     private fun openAppSettings() {

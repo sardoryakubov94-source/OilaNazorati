@@ -244,6 +244,7 @@ class ParentDashboardActivity : AppCompatActivity() {
         if (content.findViewWithTag<View>("ios_screen_share_card") == null) {
             val screenCard = TextView(this).apply {
                 tag = "ios_screen_share_card"
+                visibility = if (selectedChildPlatform == ChildDevicePlatform.IOS) View.VISIBLE else View.GONE
                 text = "📺  Jonli ekran ulash\n      iPhone farzand ekranini ko‘rish"
                 textSize = 14f
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
@@ -489,6 +490,9 @@ class ParentDashboardActivity : AppCompatActivity() {
     /** Tanlangan bola platformasiga mos ota-ona boshqaruvlarini ko'rsatadi. */
     private fun applyChildPlatformUi() {
         val isIos = selectedChildPlatform == ChildDevicePlatform.IOS
+        // "Jonli ekran ulash" faqat iPhone bola uchun; Android bolada ko'rinmaydi.
+        binding.root.findViewWithTag<View>("ios_screen_share_card")?.visibility =
+            if (isIos) View.VISIBLE else View.GONE
         val hiddenForIos = listOf(
             binding.cardStatCalls.parent as View,
             (binding.btnCallHistory.parent as View).parent as View,
