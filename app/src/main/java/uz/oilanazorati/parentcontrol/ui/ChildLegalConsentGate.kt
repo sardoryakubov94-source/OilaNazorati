@@ -75,13 +75,14 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
         val childInformed = CheckBox(activity).apply {
             text = "Nazorat maqsadi va funksiyalari bolaga yoshiga mos tarzda tushuntirildi."
             textSize = 13f
-            setTextColor(Color.WHITE)
+            setTextColor(Color.BLACK)
         }
         val childAcknowledged = CheckBox(activity).apply {
             text = "Men, farzand, nazorat maqsadi va funksiyalari haqida xabardor qilindim hamda ushbu ogohlantirish bilan tanishdim."
             textSize = 13f
-            setTextColor(Color.WHITE)
+            setTextColor(Color.BLACK)
         }
+        listOf(guardian, childInformed, childAcknowledged).forEach { styleCheckBox(it) }
         content.addView(guardian)
         content.addView(childInformed)
         content.addView(childAcknowledged)
@@ -120,4 +121,16 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
         }
         dialog.show()
     }
+}
+
+/** Katakcha belgisi oq fonda ham ko'rinsin: belgilanganda ko'k, belgilanmaganda to'q kulrang. */
+private fun styleCheckBox(box: CheckBox) {
+    box.setTextColor(Color.BLACK)
+    androidx.core.widget.CompoundButtonCompat.setButtonTintList(
+        box,
+        android.content.res.ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(0xFF1565C0.toInt(), 0xFF424242.toInt())
+        )
+    )
 }
