@@ -52,6 +52,7 @@ Ma’lumotlarni qayta ishlash, saqlash va o‘chirish tartibi ilovaning Maxfiyli
                     Toggle("Men huquqiy eslatmani o‘qidim, tushundim va ilovadan qonuniy maqsadlarda foydalanishga roziman.", isOn: $acknowledged)
                         .font(.footnote)
                         .foregroundStyle(Color.white)
+                        .tint(.blue)
                     Button(action: onAccept) {
                         Text("Qabul qilaman va davom etish")
                             .font(.headline)
