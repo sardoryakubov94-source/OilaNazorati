@@ -28,7 +28,8 @@ object ChildLegalConsentGate {
 
         val content = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(8), dp(20), dp(12))\n            setBackgroundColor(Color.WHITE)
+            setPadding(dp(20), dp(8), dp(20), dp(12))
+            setBackgroundColor(Color.WHITE)
         }
         val explanation = TextView(activity).apply {
             text = """

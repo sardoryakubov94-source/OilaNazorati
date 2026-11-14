@@ -119,6 +119,18 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnPasswordSubmit.setOnClickListener { onPasswordSubmit() }
         binding.btnChildDevice.setOnClickListener {
+            // Oldin ulangan bola qurilmasi bo'lsa, ism va oila kodi qayta so'ralmaydi,
+            // bola paneli darhol ochiladi (o'zgartirish tugmasi panelning o'zida).
+            val savedPrefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+            val alreadyLinked = savedPrefs.contains("child_name") &&
+                !savedPrefs.getString("family_code", null).isNullOrBlank() &&
+                !savedPrefs.getString("child_id", null).isNullOrBlank()
+            if (alreadyLinked) {
+                startActivity(Intent(this, ChildSetupActivity::class.java).apply {
+                    putExtra(FamilyCodeEntryActivity.EXTRA_FAMILY_LINKED, true)
+                })
+                return@setOnClickListener
+            }
             startActivity(Intent(this, FamilyCodeEntryActivity::class.java))
         }
         binding.btnOpenParentDashboard.setOnClickListener {
