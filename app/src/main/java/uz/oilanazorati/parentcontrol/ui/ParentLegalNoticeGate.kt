@@ -75,6 +75,7 @@ Ushbu eslatma qonun matnining to‘liq nusxasi emas, balki foydalanuvchiga mo‘
             textSize = 13f
             setTextColor(Color.BLACK)
         }
+        styleCheckBox(acknowledgement)
         content.addView(acknowledgement)
         val scroll = ScrollView(activity).apply {
             addView(content, ViewGroup.LayoutParams(-1, -2))
@@ -101,4 +102,16 @@ Ushbu eslatma qonun matnining to‘liq nusxasi emas, balki foydalanuvchiga mo‘
         }
         dialog.show()
     }
+}
+
+/** Katakcha belgisi oq fonda ham ko'rinsin: belgilanganda ko'k, belgilanmaganda to'q kulrang. */
+private fun styleCheckBox(box: CheckBox) {
+    box.setTextColor(Color.BLACK)
+    androidx.core.widget.CompoundButtonCompat.setButtonTintList(
+        box,
+        android.content.res.ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
+            intArrayOf(0xFF1565C0.toInt(), 0xFF424242.toInt())
+        )
+    )
 }
