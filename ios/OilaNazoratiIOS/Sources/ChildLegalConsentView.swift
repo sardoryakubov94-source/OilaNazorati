@@ -64,6 +64,7 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
                         }
                     }
                     .foregroundStyle(Color.black)
+                    .tint(.blue)
                     .padding()
                     .background(Color.white)
                 }
@@ -79,7 +80,7 @@ Ushbu tasdiq ota-onaning qonuniy vakilligini avtomatik tekshirmaydi va qonunda b
                 .buttonStyle(.borderedProminent)
                 .tint(.blue)
                 .foregroundStyle(Color.white)
-                .disabled(!guardianAccepted) || !childInformed || !childAcknowledged || isSaving)
+                .disabled(!guardianAccepted || !childInformed || !childAcknowledged || isSaving)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 14)
                 .background(Color(red: 0.055, green: 0.12, blue: 0.25))
