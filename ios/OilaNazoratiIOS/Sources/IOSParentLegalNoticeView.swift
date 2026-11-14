@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct IOSParentLegalNoticeView: View {
-    static let version = "2026-11-13-parent-v1"
+    static let version = "2026-11-14-parent-v2"
     let onAccept: () -> Void
     @State private var acknowledged = false
 
@@ -42,12 +42,16 @@ Ma’lumotlarni qayta ishlash, saqlash va o‘chirish tartibi ilovaning Maxfiyli
                             .font(.footnote).foregroundStyle(.primary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .foregroundStyle(Color.black)
                     .padding(20)
+                    .background(Color.white)
                 }
+                .background(Color.white)
                 Divider()
                 VStack(spacing: 12) {
                     Toggle("Men huquqiy eslatmani o‘qidim, tushundim va ilovadan qonuniy maqsadlarda foydalanishga roziman.", isOn: $acknowledged)
                         .font(.footnote)
+                        .foregroundStyle(Color.white)
                     Button(action: onAccept) {
                         Text("Qabul qilaman va davom etish")
                             .font(.headline)
@@ -55,11 +59,16 @@ Ma’lumotlarni qayta ishlash, saqlash va o‘chirish tartibi ilovaning Maxfiyli
                             .padding()
                     }
                     .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                    .foregroundStyle(Color.white)
                     .disabled(!acknowledged)
                 }
                 .padding()
-                .background(.regularMaterial)
+                .background(Color(red: 0.055, green: 0.12, blue: 0.25))
             }
+            .background(Color.white)
+            .toolbarBackground(Color(red: 0.055, green: 0.12, blue: 0.25), for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .navigationTitle("Huquqiy eslatma")
             .navigationBarTitleDisplayMode(.inline)
             .interactiveDismissDisabled(true)
