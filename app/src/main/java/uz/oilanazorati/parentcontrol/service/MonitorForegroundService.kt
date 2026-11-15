@@ -165,7 +165,7 @@ class MonitorForegroundService : Service() {
             val label = snap.getString("launcherShortcutLabel")?.trim().orEmpty()
             if (label.isBlank()) return@addSnapshotListener
 
-            val manager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+            val manager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 getSystemService(android.content.pm.ShortcutManager::class.java)
             } else null
             if (manager == null || !manager.isRequestPinShortcutSupported) {
