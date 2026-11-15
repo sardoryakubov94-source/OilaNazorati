@@ -172,7 +172,11 @@ class ParentDashboardActivity : AppCompatActivity() {
                 binding.sosAlertLocation.text = if (displayLocation.isNotBlank()) "📍 $displayLocation  ·  Xaritani ochish" else ""
                 binding.sosAlertLocation.setOnClickListener {
                     val url = mapUrl.ifBlank {
-                        if (latitude != null && longitude != null) "https://maps.google.com/?q=$latitude,$longitude" else ""
+                        when {
+                            latitude != null && longitude != null -> "https://maps.google.com/?q=$latitude,$longitude"
+                            locationLabel.isNotBlank() -> "https://www.google.com/maps/search/?api=1&query=" + android.net.Uri.encode(locationLabel)
+                            else -> ""
+                        }
                     }
                     if (url.isNotBlank()) runCatching {
                         startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
