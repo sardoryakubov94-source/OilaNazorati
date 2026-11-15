@@ -24,6 +24,7 @@ class SosAlarmReceiver : BroadcastReceiver() {
         when (action) {
             ACTION_PROMPT -> showPrompt(context, id)
             ACTION_AUTO_SEND -> {
+                SosTimerManager.markAutoStarted(context)
                 val name = SosTimerManager.savedChildName(context)
                 SosHelper.send(context, name, id) { result ->
                     if (result == "SOS SMS yuborildi." || result.startsWith("SMS yuborilmadi")) {
