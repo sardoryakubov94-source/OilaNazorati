@@ -48,8 +48,6 @@ object SosTimerManager {
             "childId" to childId,
             "childName" to childName,
             "note" to note,
-            "latitude" to latitude,
-            "longitude" to longitude,
             "locationLabel" to placeLabel.orEmpty(),
             "mapUrl" to if (latitude != null && longitude != null) "https://maps.google.com/?q=$latitude,$longitude" else "",
             "dueAtMs" to dueAt,
@@ -57,6 +55,10 @@ object SosTimerManager {
             "createdAtMs" to System.currentTimeMillis(),
             "status" to "scheduled"
         )
+        if (latitude != null && longitude != null) {
+            data["latitude"] = latitude
+            data["longitude"] = longitude
+        }
         onSaved(true, "Taymer telefonda yoqildi. Server jadvali internet orqali sinxronlanadi.")
         FirebaseFirestore.getInstance().collection("families").document(familyCode)
             .collection("children").document(childId).collection("sos_schedules")
