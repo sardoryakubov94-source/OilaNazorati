@@ -89,6 +89,8 @@ class SosComposeActivity : AppCompatActivity() {
     private fun sendNow() {
         val details = childDetails() ?: return
         binding.btnSosSendNow.isEnabled = false
+        getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).edit()
+            .putString("family_code", details.first).putString("child_id", details.second).apply()
         SosHelper.send(this, details.third, null, note(), selectedLat, selectedLng, placeLabel()) { message ->
             runOnUiThread {
                 binding.btnSosSendNow.isEnabled = true
