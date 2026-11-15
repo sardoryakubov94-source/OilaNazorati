@@ -240,6 +240,16 @@
                 android:textColor="#7F1D1D"
                 android:textSize="13sp"/>
             <TextView
+                android:id="@+id/sosAlertLocation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="#B71C1C"
+                android:textSize="12sp"
+                android:visibility="gone"
+                android:clickable="true"
+                android:focusable="true"/>
+            <TextView
                 android:id="@+id/btnSosAlertSeen"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
