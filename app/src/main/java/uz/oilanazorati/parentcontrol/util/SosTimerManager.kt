@@ -16,6 +16,7 @@ object SosTimerManager {
     private const val KEY_FAMILY = "sos_timer_family"
     private const val KEY_CHILD = "sos_timer_child"
     private const val KEY_NAME = "sos_timer_child_name"
+    private const val KEY_AUTO_STARTED = "sos_timer_auto_started"
 
     fun start(context: Context, familyCode: String, childId: String, childName: String, delayMinutes: Long, onSaved: (Boolean, String) -> Unit = { _, _ -> }) {
         if (delayMinutes < 1L || delayMinutes > 30L * 24L * 60L) {
@@ -29,7 +30,7 @@ object SosTimerManager {
         val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_ID, id).putLong(KEY_DUE, dueAt)
             .putString(KEY_FAMILY, familyCode).putString(KEY_CHILD, childId)
-            .putString(KEY_NAME, childName).apply()
+            .putString(KEY_NAME, childName).putBoolean(KEY_AUTO_STARTED, false).apply()
 
         scheduleAlarm(app, id, dueAt, SosAlarmReceiver.ACTION_PROMPT)
         val data = hashMapOf<String, Any>(
@@ -96,9 +97,16 @@ object SosTimerManager {
         return Triple(p.getString(KEY_ID, null), p.getString(KEY_FAMILY, null), p.getString(KEY_CHILD, null))
     }
 
+    internal fun markAutoStarted(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_AUTO_STARTED, true).apply()
+    }
+
+    internal fun isAutoStarted(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_AUTO_STARTED, false)
+
     internal fun clearCurrent(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .remove(KEY_ID).remove(KEY_DUE).remove(KEY_FAMILY).remove(KEY_CHILD).remove(KEY_NAME).apply()
+            .remove(KEY_ID).remove(KEY_DUE).remove(KEY_FAMILY).remove(KEY_CHILD).remove(KEY_NAME).remove(KEY_AUTO_STARTED).apply()
     }
 
     internal fun markStatus(context: Context, status: String) {
