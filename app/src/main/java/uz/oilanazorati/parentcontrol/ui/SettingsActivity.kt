@@ -218,7 +218,7 @@ class SettingsActivity : AppCompatActivity() {
             adapter = ArrayAdapter(
                 this@SettingsActivity,
                 android.R.layout.simple_spinner_dropdown_item,
-                listOf("Bulut belgisi", "Geometrik belgi", "Ilova belgisi")
+                listOf("Bulut belgisi", "Geometrik belgi", "Qalqon — xavfsizlik", "Oila belgisi", "Joylashuv belgisi", "Mehr belgisi", "Asl ilova belgisi")
             )
         }
         val layout = LinearLayout(this).apply {
@@ -247,7 +247,11 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 val key = when (iconPicker.selectedItemPosition) {
                     1 -> "geometric"
-                    2 -> "default"
+                    2 -> "shield"
+                    3 -> "family"
+                    4 -> "location"
+                    5 -> "heart"
+                    6 -> "default"
                     else -> "cloud"
                 }
                 sendChildShortcutRequest(code, child, label, key, null)
