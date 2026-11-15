@@ -19,8 +19,8 @@ class SosFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
-        val title = message.notification?.title ?: "🆘 SOS — yordam so'rovi"
-        val body = message.notification?.body ?: "Farzandingiz SOS yubordi. Oila nazorati panelini oching."
+        val title = message.data["title"] ?: message.notification?.title ?: "🆘 SOS — yordam so'rovi"
+        val body = message.data["body"] ?: message.notification?.body ?: "Farzandingiz SOS yubordi. Oila nazorati panelini oching."
         val channelId = "parent_sos"
         if (Build.VERSION.SDK_INT >= 26) {
             getSystemService(NotificationManager::class.java)
