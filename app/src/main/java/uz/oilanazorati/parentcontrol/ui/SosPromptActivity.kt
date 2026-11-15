@@ -25,7 +25,7 @@ class SosPromptActivity : AppCompatActivity() {
                 val location = SosTimerManager.savedLocation(this)
                 SosHelper.send(this, SosTimerManager.savedChildName(this), id, SosTimerManager.savedNote(this), location.first, location.second, location.third) { result ->
                     runOnUiThread {
-                        if (result == "SOS SMS yuborildi." || result.startsWith("SMS yuborilmadi")) {
+                        if (result == "SOS SMS yuborildi." || result.startsWith("SMS yuborilmadi") || result.startsWith("SOS so'rovi internet orqali")) {
                             SosTimerManager.markStatus(this, "child_confirmed")
                         }
                         SosTimerManager.clearCurrent(this)
