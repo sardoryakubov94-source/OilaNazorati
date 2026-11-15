@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/color_bg" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="22dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="🆘 SOS YORDAM MARKAZI" android:textSize="22sp"
+            android:textStyle="bold" android:textColor="@color/color_text_primary"
+            android:gravity="center" android:paddingTop="18dp" android:paddingBottom="8dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Zarur holatda ota-onangizga tezkor xabar yuboring."
+            android:textSize="13sp" android:textColor="@color/color_text_secondary"
+            android:gravity="center" android:paddingBottom="26dp"/>
+        <Button android:id="@+id/btnSosSendSection" android:layout_width="match_parent"
+            android:layout_height="60dp" android:text="🆘  Ota-onaga SOS yordam xabarini yuborish"
+            android:textAllCaps="false" android:textStyle="bold"
+            android:backgroundTint="#C62828" android:textColor="#FFFFFF"/>
+        <Button android:id="@+id/btnParentSosPanel" android:layout_width="match_parent"
+            android:layout_height="56dp" android:layout_marginTop="14dp"
+            android:text="Ota-ona SOS paneli" android:textAllCaps="false"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="SOS xabari yuborilganda izohingiz va tanlangan joylashuvingiz ota-onaga ko‘rsatiladi."
+            android:textSize="12sp" android:textColor="@color/color_text_secondary"
+            android:gravity="center" android:paddingTop="20dp"/>
+    </LinearLayout>
+</ScrollView>
