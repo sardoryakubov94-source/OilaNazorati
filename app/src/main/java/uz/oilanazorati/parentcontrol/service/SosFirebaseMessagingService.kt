@@ -32,6 +32,6 @@ class SosFirebaseMessagingService : FirebaseMessagingService() {
             .setSmallIcon(R.drawable.ic_app_logo).setContentTitle(title).setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setPriority(NotificationCompat.PRIORITY_MAX).setAutoCancel(true).setContentIntent(pending).build()
-        (getSystemService(NotificationManager::class.java)).notify(991, notification)
+        runCatching { (getSystemService(NotificationManager::class.java)).notify(991, notification) }
     }
 }
