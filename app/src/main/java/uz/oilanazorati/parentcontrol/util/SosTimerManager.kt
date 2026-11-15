@@ -103,6 +103,14 @@ object SosTimerManager {
             .document(id).update("status", status, "updatedAtMs", System.currentTimeMillis())
     }
 
+    internal fun scheduleAutoSend(context: Context, id: String) {
+        scheduleAlarm(context, id, System.currentTimeMillis() + 60_000L, uz.oilanazorati.parentcontrol.service.SosAlarmReceiver.ACTION_AUTO_SEND)
+    }
+
+    internal fun cancelAutoSend(context: Context, id: String) {
+        cancelAlarm(context, id, uz.oilanazorati.parentcontrol.service.SosAlarmReceiver.ACTION_AUTO_SEND)
+    }
+
     private fun scheduleAlarm(context: Context, id: String, atMs: Long, action: String) {
         val alarm = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, SosAlarmReceiver::class.java).setAction(action).putExtra("scheduleId", id)
