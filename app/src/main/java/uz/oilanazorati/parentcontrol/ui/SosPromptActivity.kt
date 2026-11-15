@@ -18,7 +18,7 @@ class SosPromptActivity : AppCompatActivity() {
             .setMessage("Ota-onangizga yordam so'rovini yuboraymi? Javob bermasangiz, 1 daqiqadan so'ng SOS avtomatik yuboriladi.")
             .setPositiveButton("Ha, yuborish") { _, _ ->
                 SosTimerManager.cancelAutoSend(this, id)
-                if (SosTimerManager.savedSchedule(this).first != id) {
+                if (SosTimerManager.savedSchedule(this).first != id || SosTimerManager.isAutoStarted(this)) {
                     finish()
                     return@setPositiveButton
                 }
@@ -34,6 +34,11 @@ class SosPromptActivity : AppCompatActivity() {
             }
              .setNegativeButton("Yo'q, bekor qilish") { _, _ ->
                 SosTimerManager.cancelAutoSend(this, id)
+                if (SosTimerManager.savedSchedule(this).first != id || SosTimerManager.isAutoStarted(this)) {
+                    android.widget.Toast.makeText(this, "SOS yuborish jarayoni boshlangan; uni endi bekor qilib bo'lmaydi.", android.widget.Toast.LENGTH_LONG).show()
+                    finish()
+                    return@setNegativeButton
+                }
                 SosTimerManager.markStatus(this, "cancelled")
                 SosTimerManager.clearCurrent(this)
                 android.widget.Toast.makeText(this, "Taymer telefonda bekor qilindi. Internet bo'lmasa, bekor qilish serverga kechikib yetishi mumkin.", android.widget.Toast.LENGTH_LONG).show()
