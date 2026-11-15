@@ -33,16 +33,15 @@ class SosComposeActivity : AppCompatActivity() {
         }
     }
 
-    private val sendPermissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        if (result[Manifest.permission.SEND_SMS] == true) sendNow()
-        else showStatus("SMS yuborish ruxsati berilmadi. SOS SMS yuborilmadi.")
+    private val sendPermissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        // SMS ruxsati bo'lmasa ham, internet orqali SOS ota-onaga yuboriladi.
+        sendNow()
     }
 
     private val timerPermissions = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
-        if (result[Manifest.permission.SEND_SMS] == true &&
-            (android.os.Build.VERSION.SDK_INT < 33 || result[Manifest.permission.POST_NOTIFICATIONS] == true)) {
+        if (android.os.Build.VERSION.SDK_INT < 33 || result[Manifest.permission.POST_NOTIFICATIONS] == true) {
             startTimer(pendingDelay)
-        } else showStatus("SOS taymeri uchun SMS va bildirishnoma ruxsatlari kerak.")
+        } else showStatus("Taymerdagi 1 daqiqalik tasdiqlash oynasi uchun bildirishnoma ruxsati kerak.")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
