@@ -125,6 +125,7 @@ exports.agoraVoiceToken = onRequest(
 // when the child's phone is offline or powered off, provided the schedule was
 // synced to Firestore before the device went offline.
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 
 exports.processScheduledSos = onSchedule(
   { schedule: "every 1 minutes", region: "us-central1", timeZone: "Asia/Tashkent", maxInstances: 1 },
@@ -139,21 +140,12 @@ exports.processScheduledSos = onSchedule(
 
     for (const scheduleDoc of due.docs) {
       const data = scheduleDoc.data() || {};
-      if (Number(data.serverNotifyAtMs || 0) > now) continue;
       const childRef = scheduleDoc.ref.parent.parent;
       if (!childRef) continue;
       const familyRef = childRef.parent.parent;
       if (!familyRef) continue;
-      const family = await familyRef.get();
-      const ownerUid = family.data()?.ownerUid;
-      if (!ownerUid) continue;
-      const parentRef = db.collection("parents").doc(ownerUid);
-      const parent = await parentRef.get();
-      const tokens = (parent.data()?.fcmTokens || []).filter(t => typeof t === "string" && t.length > 20);
       const alertRef = childRef.collection("sos_alerts").doc(scheduleDoc.id);
-      let shouldNotify = false;
       await db.runTransaction(async tx => {
-        shouldNotify = false;
         const fresh = await tx.get(scheduleDoc.ref);
         if (!fresh.exists || fresh.data()?.status !== "scheduled" ||
             Number(fresh.data()?.serverNotifyAtMs || 0) > Date.now()) return;
@@ -167,29 +159,46 @@ exports.processScheduledSos = onSchedule(
           status: "active",
           source: "server_timer"
         }, { merge: true });
-        shouldNotify = true;
       });
-      if (shouldNotify && tokens.length) {
-        const response = await getMessaging().sendEachForMulticast({
-          tokens,
-          notification: {
-            title: "🆘 SOS — yordam so'rovi",
-            body: (data.childName || "Farzandingiz") + " SOS taymeriga javob bermadi. Tekshiring."
-          },
-          data: {
-            type: "scheduled_sos",
-            familyCode: familyRef.id,
-            childId: childRef.id,
-            scheduleId: scheduleDoc.id
-          },
-          android: { priority: "high" }
-        });
-        const invalid = [];
-        response.responses.forEach((r, i) => {
-          if (!r.success && ["messaging/registration-token-not-registered", "messaging/invalid-registration-token"].includes(r.error?.code)) invalid.push(tokens[i]);
-        });
-        if (invalid.length) await parentRef.update({ fcmTokens: require("firebase-admin/firestore").FieldValue.arrayRemove(...invalid) });
-      }
+    }
+  }
+);
+
+// Any SOS alert (manual or timed, local or server-created) notifies the family
+// owner. The Firestore alert remains the durable source for the parent dashboard.
+exports.notifyParentOnSosAlert = onDocumentCreated(
+  { document: "families/{familyCode}/children/{childId}/sos_alerts/{alertId}", region: "us-central1", maxInstances: 10 },
+  async event => {
+    const data = event.data?.data() || {};
+    const db = getFirestore();
+    const family = await db.collection("families").doc(event.params.familyCode).get();
+    const ownerUid = family.data()?.ownerUid;
+    if (!ownerUid) return;
+    const parentRef = db.collection("parents").doc(ownerUid);
+    const parent = await parentRef.get();
+    const tokens = (parent.data()?.fcmTokens || []).filter(t => typeof t === "string" && t.length > 20);
+    if (!tokens.length) return;
+
+    const response = await getMessaging().sendEachForMulticast({
+      tokens,
+      notification: {
+        title: "🆘 SOS — yordam so'rovi",
+        body: data.message || ((data.childName || "Farzandingiz") + " SOS xabarini yubordi. Tekshiring.")
+      },
+      data: {
+        type: "sos_alert",
+        familyCode: event.params.familyCode,
+        childId: event.params.childId,
+        alertId: event.params.alertId
+      },
+      android: { priority: "high" }
+    });
+    const invalid = [];
+    response.responses.forEach((r, i) => {
+      if (!r.success && ["messaging/registration-token-not-registered", "messaging/invalid-registration-token"].includes(r.error?.code)) invalid.push(tokens[i]);
+    });
+    if (invalid.length) {
+      await parentRef.update({ fcmTokens: require("firebase-admin/firestore").FieldValue.arrayRemove(...invalid) });
     }
   }
 );
