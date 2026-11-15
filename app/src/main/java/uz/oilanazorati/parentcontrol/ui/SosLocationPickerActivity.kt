@@ -23,6 +23,7 @@ class SosLocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
     private var map: GoogleMap? = null
     private var marker: Marker? = null
     private var selected: LatLng? = null
+    private var locationPermissionRequested = false
 
     private val locationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) {
         enableLocationIfAllowed()
@@ -59,6 +60,12 @@ class SosLocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
             marker = googleMap.addMarker(MarkerOptions().position(point).title("SOS manzili"))
         }
         enableLocationIfAllowed()
+        val hasLocation = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!hasLocation && !locationPermissionRequested) {
+            locationPermissionRequested = true
+            locationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
         moveToCurrentLocation()
     }
 
@@ -66,7 +73,6 @@ class SosLocationPickerActivity : AppCompatActivity(), OnMapReadyCallback {
         val granted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
             ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
         if (granted) runCatching { map?.isMyLocationEnabled = true }
-        else if (map != null && !isFinishing) locationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
     private fun moveToCurrentLocation() {
