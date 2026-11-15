@@ -132,7 +132,7 @@ exports.processScheduledSos = onSchedule(
     const db = getFirestore();
     const now = Date.now();
     const due = await db.collectionGroup("sos_schedules")
-      .where("status", "==", "scheduled")
+      .where("serverNotifyAtMs", "<=", now)
       .limit(100)
       .get();
 
