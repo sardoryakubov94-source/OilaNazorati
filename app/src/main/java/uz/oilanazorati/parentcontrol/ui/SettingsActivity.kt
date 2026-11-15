@@ -117,7 +117,7 @@ class SettingsActivity : AppCompatActivity() {
             setTextColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.color_text_primary))
         })
         row.addView(TextView(this).apply {
-            text = "Bulut, kalkulyator, bloknot va neytral shakllar"
+            text = "Bulut va geometrik belgi variantlari"
             textSize = 12f
             setTextColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.color_text_secondary))
         })
