@@ -180,6 +180,9 @@ class MainActivity : AppCompatActivity() {
 
         val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
         val hasPassword = prefs.contains("app_password_hash")
+        val childDevice = prefs.getBoolean("is_child_device", false) ||
+            !prefs.getString("family_code", null).isNullOrBlank()
+        binding.btnSosFromLock.visibility = if (childDevice) View.VISIBLE else View.GONE
         if (hasPassword) {
             // Keyingi kirishlarda hech qanday izoh yozuv ko'rsatilmaydi —
             // faqat tepada bulut belgisi va pastda parol maydoni.
