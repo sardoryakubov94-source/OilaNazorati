@@ -95,6 +95,11 @@ object SosTimerManager {
         return Triple(p.getString(KEY_ID, null), p.getString(KEY_FAMILY, null), p.getString(KEY_CHILD, null))
     }
 
+    internal fun clearCurrent(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .remove(KEY_ID).remove(KEY_DUE).remove(KEY_FAMILY).remove(KEY_CHILD).remove(KEY_NAME).apply()
+    }
+
     internal fun markStatus(context: Context, status: String) {
         val (id, family, child) = savedSchedule(context)
         if (id.isNullOrBlank() || family.isNullOrBlank() || child.isNullOrBlank()) return
