@@ -21,6 +21,7 @@ import uz.oilanazorati.parentcontrol.model.LocationEvent
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.util.ContactSyncHelper
 import uz.oilanazorati.parentcontrol.util.SimInfoSync
+import uz.oilanazorati.parentcontrol.util.ChildAppAppearanceManager
 
 /**
  * Doimiy fon xizmati. Asosiy vazifalari:
@@ -75,6 +76,7 @@ class MonitorForegroundService : Service() {
     }
 
     private var agoraMicRequestListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var childAppearanceListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -98,6 +100,7 @@ class MonitorForegroundService : Service() {
                 stopSelf()
                 return@checkMinRequiredVersion
             }
+            registerChildAppearanceListener()
             registerAgoraMicRequestListener()
             registerCallLogObserver()
             registerContactsObserver()
@@ -122,6 +125,22 @@ class MonitorForegroundService : Service() {
      * qarang AgoraMicService izohi). Faqat transport=="agora" bo'lgan
      * so'rovlarga reaksiya beradi, shuning uchun veb-panelning WebRTC
      * so'rovlariga aralashmaydi. */
+    /** Ota-ona tanlagan launcher ko'rinishini bola qurilmasiga sinxronlaydi. */
+    private fun registerChildAppearanceListener() {
+        val isChild = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+            .getBoolean("is_child_device", false)
+        if (!isChild) return
+        val family = FirebaseRepo.familyCode ?: return
+        val child = FirebaseRepo.childId ?: com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val ref = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            .collection("families").document(family).collection("children").document(child)
+        childAppearanceListener = ref.addSnapshotListener { snap, error ->
+            if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
+            val requested = snap.getString("launcherAppearance") ?: ChildAppAppearanceManager.DEFAULT
+            ChildAppAppearanceManager.apply(applicationContext, requested)
+        }
+    }
+
     private fun registerAgoraMicRequestListener() {
         val isChild = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
             .getBoolean("is_child_device", false)
@@ -404,5 +423,6 @@ class MonitorForegroundService : Service() {
         callLogObserver?.let { contentResolver.unregisterContentObserver(it) }
         liveTrackingListener?.remove()
         agoraMicRequestListener?.remove()
+        childAppearanceListener?.remove()
     }
 }
