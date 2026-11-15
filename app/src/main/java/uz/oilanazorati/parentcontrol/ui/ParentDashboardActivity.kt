@@ -152,9 +152,32 @@ class ParentDashboardActivity : AppCompatActivity() {
                     return@addSnapshotListener
                 }
                 val childName = alert.getString("childName") ?: "Farzandingiz"
-                val message = alert.getString("message") ?: "SOS yordam so'rovi yuborildi."
+                val message = alert.getString("note")?.takeIf { it.isNotBlank() }
+                    ?: alert.getString("message") ?: "SOS yordam so'rovi yuborildi."
                 val time = alert.getLong("createdAtMs")?.let { timeFmt.format(Date(it)) } ?: ""
                 binding.sosAlertMessage.text = "$childName: $message\n$time"
+                val mapUrl = alert.getString("mapUrl").orEmpty()
+                val locationLabel = alert.getString("locationLabel").orEmpty()
+                val latitude = alert.getDouble("latitude")
+                val longitude = alert.getDouble("longitude")
+                val displayLocation = when {
+                    locationLabel.isNotBlank() && latitude != null && longitude != null ->
+                        "$locationLabel (${"%.5f".format(java.util.Locale.US, latitude)}, ${"%.5f".format(java.util.Locale.US, longitude)})"
+                    locationLabel.isNotBlank() -> locationLabel
+                    latitude != null && longitude != null ->
+                        "Xaritada ko'rish: ${"%.5f".format(java.util.Locale.US, latitude)}, ${"%.5f".format(java.util.Locale.US, longitude)}"
+                    else -> ""
+                }
+                binding.sosAlertLocation.visibility = if (displayLocation.isNotBlank()) View.VISIBLE else View.GONE
+                binding.sosAlertLocation.text = if (displayLocation.isNotBlank()) "📍 $displayLocation  ·  Xaritani ochish" else ""
+                binding.sosAlertLocation.setOnClickListener {
+                    val url = mapUrl.ifBlank {
+                        if (latitude != null && longitude != null) "https://maps.google.com/?q=$latitude,$longitude" else ""
+                    }
+                    if (url.isNotBlank()) runCatching {
+                        startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                    }
+                }
                 binding.cardSosAlert.visibility = View.VISIBLE
                 binding.btnSosAlertSeen.setOnClickListener {
                     alert.reference.update(
