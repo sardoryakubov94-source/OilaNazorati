@@ -47,8 +47,84 @@ class SettingsActivity : AppCompatActivity() {
 
         findViewById<android.view.View>(R.id.rowSignOut).setOnClickListener { confirmSignOut() }
         addSosNumbersRow()
+        addChildAppearanceRow()
     }
 
+
+
+    // ---------------- Bola qurilmasi launcher ko'rinishi ----------------
+    private fun addChildAppearanceRow() {
+        val anchor = findViewById<android.view.View>(R.id.rowTheme)
+        val container = anchor.parent as? LinearLayout ?: return
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            background = androidx.core.content.ContextCompat.getDrawable(this@SettingsActivity, R.drawable.bg_card_clickable_theme)
+            isClickable = true
+            isFocusable = true
+        }
+        row.addView(TextView(this).apply {
+            text = "Bola qurilmasi ikonkasini tanlash"
+            textSize = 14f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.color_text_primary))
+        })
+        row.addView(TextView(this).apply {
+            text = "Bulut, kalkulyator, bloknot va neytral shakllar"
+            textSize = 12f
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.color_text_secondary))
+        })
+        row.setOnClickListener { showChildAppearancePicker() }
+        container.addView(row, container.indexOfChild(anchor) + 1)
+    }
+
+    private fun showChildAppearancePicker() {
+        val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val code = FirebaseRepo.familyCode ?: prefs.getString("parent_family_code", null)
+            ?: prefs.getString("family_code", null)
+        val child = FirebaseRepo.childId ?: prefs.getString("parent_selected_child_id", null)
+            ?: prefs.getString("child_id", null)
+        if (code.isNullOrBlank() || child.isNullOrBlank()) {
+            Toast.makeText(this, "Avval ota-ona panelida bolani tanlang.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val options = arrayOf(
+            "Asl ikonka — Bulut servis",
+            "Bulut",
+            "Kalkulyator",
+            "Bloknot",
+            "Geometrik shakl"
+        )
+        val keys = arrayOf("default", "cloud", "calculator", "notebook", "geometric")
+        val ref = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            .collection("families").document(code).collection("children").document(child)
+        ref.get().addOnSuccessListener { doc ->
+            val current = doc.getString("launcherAppearance") ?: "default"
+            val selected = keys.indexOf(current).coerceAtLeast(0)
+            AlertDialog.Builder(this)
+                .setTitle("Bola qurilmasi ikonkasini tanlang")
+                .setMessage("Ilovaning haqiqiy nomi «Bulut servis» bo'lib qoladi. Tanlangan ikonka bola qurilmasidagi bosh ekranda ko'rinadi.")
+                .setSingleChoiceItems(options, selected) { dialog, which ->
+                    val key = keys[which]
+                    ref.set(
+                        mapOf(
+                            "launcherAppearance" to key,
+                            "launcherAppearanceUpdatedAtMs" to System.currentTimeMillis()
+                        ),
+                        com.google.firebase.firestore.SetOptions.merge()
+                    ).addOnSuccessListener {
+                        Toast.makeText(this, "Tanlov bola qurilmasiga yuborildi.", Toast.LENGTH_SHORT).show()
+                    }.addOnFailureListener {
+                        Toast.makeText(this, "Saqlashda xato: ${it.localizedMessage}", Toast.LENGTH_LONG).show()
+                    }
+                    dialog.dismiss()
+                }
+                .setNegativeButton("Bekor qilish", null)
+                .show()
+        }.addOnFailureListener {
+            Toast.makeText(this, "Bola qurilmasi ma'lumotini olishda xato.", Toast.LENGTH_LONG).show()
+        }
+    }
 
     // ---------------- Ilova (kirish) parolini o'zgartirish ----------------
 
