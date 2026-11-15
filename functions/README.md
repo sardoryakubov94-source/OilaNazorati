@@ -51,6 +51,7 @@ leaves the active state; it does not claim silent background microphone access.
 The `processScheduledSos` function checks child SOS schedules every minute. If the child device is offline or powered off after the schedule was synced, the function creates a parent-visible SOS alert and sends an FCM push to registered parent devices. Deploy with:
 
 ```sh
+firebase deploy --only firestore:indexes --project oilanazorat-3c8de
 firebase deploy --only functions:processScheduledSos --project oilanazorat-3c8de
 ```
 
