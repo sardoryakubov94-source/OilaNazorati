@@ -22,10 +22,15 @@ class SosPromptActivity : AppCompatActivity() {
                     finish()
                     return@setPositiveButton
                 }
-                SosTimerManager.markStatus(this, "child_confirmed")
-                SosHelper.send(this, SosTimerManager.savedChildName(this), id) { }
-                SosTimerManager.clearCurrent(this)
-                finish()
+                SosHelper.send(this, SosTimerManager.savedChildName(this), id) { result ->
+                    runOnUiThread {
+                        if (result == "SOS SMS yuborildi." || result.startsWith("SMS yuborilmadi")) {
+                            SosTimerManager.markStatus(this, "child_confirmed")
+                        }
+                        SosTimerManager.clearCurrent(this)
+                        finish()
+                    }
+                }
             }
              .setNegativeButton("Yo'q, bekor qilish") { _, _ ->
                 SosTimerManager.cancelAutoSend(this, id)
