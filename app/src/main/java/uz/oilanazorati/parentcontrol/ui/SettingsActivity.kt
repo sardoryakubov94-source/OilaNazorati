@@ -28,7 +28,13 @@ class SettingsActivity : AppCompatActivity() {
     private val shortcutImagePicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri == null) return@registerForActivityResult
         try {
-            val source = contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) throw IllegalStateException("Rasm formati qo'llab-quvvatlanmaydi")
+            var sampleSize = 1
+            while (bounds.outWidth / sampleSize > 512 || bounds.outHeight / sampleSize > 512) sampleSize *= 2
+            val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+            val source = contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, decodeOptions) }
                 ?: throw IllegalStateException("Rasmni ochib bo'lmadi")
             val scaled = Bitmap.createScaledBitmap(source, 128, 128, true)
             val output = java.io.ByteArrayOutputStream()
