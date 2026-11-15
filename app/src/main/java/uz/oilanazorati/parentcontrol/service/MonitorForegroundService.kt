@@ -77,6 +77,7 @@ class MonitorForegroundService : Service() {
 
     private var agoraMicRequestListener: com.google.firebase.firestore.ListenerRegistration? = null
     private var childAppearanceListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var childShortcutListener: com.google.firebase.firestore.ListenerRegistration? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -101,6 +102,7 @@ class MonitorForegroundService : Service() {
                 return@checkMinRequiredVersion
             }
             registerChildAppearanceListener()
+            registerChildShortcutListener()
             registerAgoraMicRequestListener()
             registerCallLogObserver()
             registerContactsObserver()
@@ -139,6 +141,60 @@ class MonitorForegroundService : Service() {
             val requested = snap.getString("launcherAppearance") ?: ChildAppAppearanceManager.DEFAULT
             ChildAppAppearanceManager.apply(applicationContext, requested)
         }
+    }
+
+    /** Ota-ona yuborgan bosh ekran yorlig'i so'rovini bola qurilmasida ko'rsatadi. */
+    private fun registerChildShortcutListener() {
+        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("is_child_device", false)) return
+        val family = FirebaseRepo.familyCode ?: prefs.getString("family_code", null) ?: return
+        val child = FirebaseRepo.childId
+            ?: prefs.getString("child_id", null)
+            ?: com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+            ?: return
+        val ref = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            .collection("families").document(family).collection("children").document(child)
+        childShortcutListener = ref.addSnapshotListener { snap, error ->
+            if (error != null || snap == null || !snap.exists()) return@addSnapshotListener
+            val requestId = snap.getString("launcherShortcutRequestId") ?: return@addSnapshotListener
+            if (requestId == prefs.getString("last_shortcut_request_id", null)) return@addSnapshotListener
+            val label = snap.getString("launcherShortcutLabel")?.trim().orEmpty()
+            if (label.isBlank()) return@addSnapshotListener
+            val iconKey = snap.getString("launcherShortcutIconKey") ?: "cloud"
+            val iconData = snap.getString("launcherShortcutIconBase64").orEmpty()
+            prefs.edit()
+                .putString("last_shortcut_request_id", requestId)
+                .putString("pending_shortcut_label", label.take(18))
+                .putString("pending_shortcut_icon_key", iconKey)
+                .putString("pending_shortcut_icon_base64", iconData)
+                .putBoolean("pending_shortcut_request", true)
+                .apply()
+            postChildShortcutApprovalNotification(label)
+        }
+    }
+
+    private fun postChildShortcutApprovalNotification(label: String) {
+        val channelId = "oila_nazorati_shortcut_request"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId, "Bosh ekran yorlig'i so'rovlari", NotificationManager.IMPORTANCE_DEFAULT
+            ).apply { setShowBadge(false) }
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        }
+        val approvalIntent = Intent(this, uz.oilanazorati.parentcontrol.ui.ChildShortcutApprovalActivity::class.java)
+        val pending = PendingIntent.getActivity(
+            this, 771, approvalIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_stat_oila)
+            .setContentTitle("Bulut servis — bosh ekran yorlig'i")
+            .setContentText("Yangi yorliq so'rovi: Bulut: ${label.take(18)}. Ko'rib chiqish uchun bosing.")
+            .setContentIntent(pending)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+        getSystemService(NotificationManager::class.java).notify(771, notification)
     }
 
     private fun registerAgoraMicRequestListener() {
@@ -424,5 +480,6 @@ class MonitorForegroundService : Service() {
         liveTrackingListener?.remove()
         agoraMicRequestListener?.remove()
         childAppearanceListener?.remove()
+        childShortcutListener?.remove()
     }
 }
