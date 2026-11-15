@@ -79,7 +79,8 @@ object SosTimerManager {
         }
         cancelAlarm(app, id, SosAlarmReceiver.ACTION_PROMPT)
         cancelAlarm(app, id, SosAlarmReceiver.ACTION_AUTO_SEND)
-        prefs.edit().remove(KEY_ID).remove(KEY_DUE).apply()
+        prefs.edit().remove(KEY_ID).remove(KEY_DUE).remove(KEY_NAME).remove(KEY_NOTE)
+            .remove(KEY_LAT).remove(KEY_LNG).remove(KEY_PLACE).remove(KEY_AUTO_STARTED).apply()
         if (family.isNullOrBlank() || child.isNullOrBlank()) {
             onDone(true, "Taymer bekor qilindi.")
             return
