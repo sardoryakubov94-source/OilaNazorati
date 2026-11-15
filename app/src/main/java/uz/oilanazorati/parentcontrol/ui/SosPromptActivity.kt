@@ -36,6 +36,7 @@ class SosPromptActivity : AppCompatActivity() {
                 SosTimerManager.cancelAutoSend(this, id)
                 SosTimerManager.markStatus(this, "cancelled")
                 SosTimerManager.clearCurrent(this)
+                android.widget.Toast.makeText(this, "Taymer telefonda bekor qilindi. Internet bo'lmasa, bekor qilish serverga kechikib yetishi mumkin.", android.widget.Toast.LENGTH_LONG).show()
                 finish()
             }
             .setOnCancelListener { }
