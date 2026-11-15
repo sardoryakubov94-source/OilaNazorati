@@ -106,6 +106,10 @@ class ChildShortcutApprovalActivity : AppCompatActivity() {
         }
         val resource = when (key) {
             "geometric" -> R.drawable.ic_launcher_geometric_neutral
+            "shield" -> R.drawable.ic_shortcut_shield
+            "family" -> R.drawable.ic_shortcut_family
+            "location" -> R.drawable.ic_shortcut_location
+            "heart" -> R.drawable.ic_shortcut_heart
             "default" -> R.mipmap.ic_launcher
             else -> R.drawable.ic_launcher_cloud_neutral
         }
