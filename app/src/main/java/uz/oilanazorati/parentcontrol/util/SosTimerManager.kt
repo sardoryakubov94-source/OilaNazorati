@@ -41,14 +41,12 @@ object SosTimerManager {
             "createdAtMs" to System.currentTimeMillis(),
             "status" to "scheduled"
         )
+        onSaved(true, "Taymer telefonda yoqildi. Server jadvali internet orqali sinxronlanadi.")
         FirebaseFirestore.getInstance().collection("families").document(familyCode)
             .collection("children").document(childId).collection("sos_schedules")
             .document(id).set(data)
-            .addOnSuccessListener { onSaved(true, "SOS taymeri yoqildi.") }
-            .addOnFailureListener { error ->
-                // Firestore offline persistence queues writes; local alarm remains active.
-                onSaved(true, "Taymer telefonda yoqildi. Server bilan sinxronlash internet qaytganda amalga oshadi.")
-            }
+            .addOnSuccessListener { onSaved(true, "SOS taymeri telefon va serverda saqlandi.") }
+            .addOnFailureListener { onSaved(false, "Serverga saqlanmadi. Telefon o'chsa SOS yetib bormasligi mumkin.") }
     }
 
     fun cancel(context: Context, onDone: (Boolean, String) -> Unit = { _, _ -> }) {
@@ -68,11 +66,10 @@ object SosTimerManager {
             onDone(true, "Taymer bekor qilindi.")
             return
         }
+        onDone(true, "Taymer telefonda bekor qilindi. Serverga bekor qilish buyrug'i sinxronlanadi; internet bo'lmasa, buyrug' yetib borguncha server ogohlantirishi ishlashi mumkin.")
         FirebaseFirestore.getInstance().collection("families").document(family)
             .collection("children").document(child).collection("sos_schedules")
             .document(id).update("status", "cancelled", "cancelledAtMs", System.currentTimeMillis())
-            .addOnSuccessListener { onDone(true, "Taymer bekor qilindi.") }
-            .addOnFailureListener { onDone(true, "Taymer telefonda bekor qilindi. Serverga bekor qilish buyrug'i internet qaytganda yuboriladi.") }
     }
 
     fun restore(context: Context) {
