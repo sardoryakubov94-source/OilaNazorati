@@ -61,6 +61,7 @@ class ParentDashboardActivity : AppCompatActivity() {
     private var smsListener: com.google.firebase.firestore.ListenerRegistration? = null
     private var appUsageListener: com.google.firebase.firestore.ListenerRegistration? = null
     private var locationListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var sosAlertListener: com.google.firebase.firestore.ListenerRegistration? = null
     private lateinit var simCardText: TextView
     private val timeFmt = SimpleDateFormat("HH:mm", Locale.getDefault())
     private var lastBackPressMs = 0L
@@ -71,6 +72,8 @@ class ParentDashboardActivity : AppCompatActivity() {
         binding = uz.oilanazorati.parentcontrol.databinding.ActivityParentDashboardBinding.inflate(layoutInflater)
         setContentView(binding.root)
         if (!ensureAuth()) return
+        registerParentPushToken()
+        binding.cardSosAlert.visibility = View.GONE
         setupLists(); setupHeader(); setupBottomNav(); setupSectionButtons(); installSimInfoCard(); installOvozXavfRow()
         loadLocationRadarGif()
         FirebaseRepo.checkIsPremium { isPremium ->
@@ -100,6 +103,50 @@ class ParentDashboardActivity : AppCompatActivity() {
             startActivity(Intent(this, ParentFamilyLinkActivity::class.java))
             finish()
         }
+    }
+
+    private fun registerParentPushToken() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+            .addOnSuccessListener { token ->
+                if (token.isNotBlank()) {
+                    com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                        .collection("parents").document(uid)
+                        .set(mapOf("fcmTokens" to com.google.firebase.firestore.FieldValue.arrayUnion(token)),
+                            com.google.firebase.firestore.SetOptions.merge())
+                }
+            }
+    }
+
+    private fun listenForSosAlerts(familyCode: String, childId: String) {
+        sosAlertListener?.remove()
+        binding.cardSosAlert.visibility = View.GONE
+        sosAlertListener = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            .collection("families").document(familyCode)
+            .collection("children").document(childId)
+            .collection("sos_alerts")
+            .orderBy("createdAtMs", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .limit(1)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null || snapshot.isEmpty) {
+                    binding.cardSosAlert.visibility = View.GONE
+                    return@addSnapshotListener
+                }
+                val alert = snapshot.documents.first()
+                if (alert.getString("status") == "dismissed") {
+                    binding.cardSosAlert.visibility = View.GONE
+                    return@addSnapshotListener
+                }
+                val childName = alert.getString("childName") ?: "Farzandingiz"
+                val message = alert.getString("message") ?: "SOS yordam so'rovi yuborildi."
+                val time = alert.getLong("createdAtMs")?.let { timeFmt.format(Date(it)) } ?: ""
+                binding.sosAlertMessage.text = "$childName: $message\n$time"
+                binding.cardSosAlert.visibility = View.VISIBLE
+                binding.btnSosAlertSeen.setOnClickListener {
+                    alert.reference.update("parentSeenAtMs", System.currentTimeMillis())
+                    Toast.makeText(this, "SOS xabari ko'rilgan deb belgilandi.", Toast.LENGTH_SHORT).show()
+                }
+            }
     }
 
     private fun setupLists() {
@@ -456,6 +503,7 @@ class ParentDashboardActivity : AppCompatActivity() {
                 renderedPlatform = platform
                 renderedCaps = selectedChild.supportedCapabilities
                 setChildId(selectedChild.id)
+                listenForSosAlerts(code, selectedChild.id)
                 setChildPlatform(platform, selectedChild.supportedCapabilities)
                 applyChildPlatformUi()
                 loadTodayStats()
@@ -990,7 +1038,7 @@ class ParentDashboardActivity : AppCompatActivity() {
     private fun loadTodayStats() {
         // Bola almashtirilganda avvalgi listenerlar albatta yopiladi.
         contactsListener?.remove(); callsListener?.remove(); smsListener?.remove()
-        appUsageListener?.remove(); locationListener?.remove()
+        appUsageListener?.remove(); locationListener?.remove(); sosAlertListener?.remove()
         simInfoListener?.remove()
         if (selectedChildCapabilities.contains(ParentFeature.SIM_INFO)) refreshSimInfo()
 
