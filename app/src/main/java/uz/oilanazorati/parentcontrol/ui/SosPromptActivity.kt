@@ -22,7 +22,8 @@ class SosPromptActivity : AppCompatActivity() {
                     finish()
                     return@setPositiveButton
                 }
-                SosHelper.send(this, SosTimerManager.savedChildName(this), id) { result ->
+                val location = SosTimerManager.savedLocation(this)
+                SosHelper.send(this, SosTimerManager.savedChildName(this), id, SosTimerManager.savedNote(this), location.first, location.second, location.third) { result ->
                     runOnUiThread {
                         if (result == "SOS SMS yuborildi." || result.startsWith("SMS yuborilmadi")) {
                             SosTimerManager.markStatus(this, "child_confirmed")
