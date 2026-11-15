@@ -77,8 +77,12 @@ object SosTimerManager {
         val id = prefs.getString(KEY_ID, null) ?: return
         val due = prefs.getLong(KEY_DUE, 0L)
         if (due <= 0L) return
-        if (due <= System.currentTimeMillis()) {
-            scheduleAlarm(context, id, System.currentTimeMillis() + 1000L, SosAlarmReceiver.ACTION_PROMPT)
+        val now = System.currentTimeMillis()
+        if (now >= due + 60_000L) {
+            // Qurilma taymer muddati va 1 daqiqalik javob oynasi davomida o'chiq bo'lgan.
+            scheduleAlarm(context, id, now + 1000L, SosAlarmReceiver.ACTION_AUTO_SEND)
+        } else if (now >= due) {
+            scheduleAlarm(context, id, now + 1000L, SosAlarmReceiver.ACTION_PROMPT)
         } else {
             scheduleAlarm(context, id, due, SosAlarmReceiver.ACTION_PROMPT)
         }
