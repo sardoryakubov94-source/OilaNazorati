@@ -4,6 +4,12 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.*
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.util.Base64
+import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -15,6 +21,40 @@ import uz.oilanazorati.parentcontrol.util.AppPasswordUtil
 class SettingsActivity : AppCompatActivity() {
     private val prefsName = "oila_nazorati"
     private val familyCodesKey = "family_codes"
+
+    private var pendingShortcutFamilyCode: String? = null
+    private var pendingShortcutChildId: String? = null
+    private var pendingShortcutLabel: String? = null
+    private var pendingShortcutIconKey: String = "cloud"
+
+    private val shortcutImagePicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        if (uri == null) return@registerForActivityResult
+        try {
+            val source = contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }
+                ?: throw IllegalStateException("Rasmni ochib bo'lmadi")
+            val scaled = Bitmap.createScaledBitmap(source, 128, 128, true)
+            val output = java.io.ByteArrayOutputStream()
+            var quality = 82
+            do {
+                output.reset()
+                scaled.compress(Bitmap.CompressFormat.JPEG, quality, output)
+                quality -= 8
+            } while (output.size() > 90 * 1024 && quality >= 50)
+            if (output.size() > 100 * 1024) throw IllegalStateException("Rasm hajmi juda katta")
+            val encoded = Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+            sendChildShortcutRequest(
+                pendingShortcutFamilyCode,
+                pendingShortcutChildId,
+                pendingShortcutLabel,
+                "photo",
+                encoded
+            )
+            if (source !== scaled) source.recycle()
+            scaled.recycle()
+        } catch (e: Exception) {
+            Toast.makeText(this, "Rasmni tayyorlashda xato: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,6 +88,7 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<android.view.View>(R.id.rowSignOut).setOnClickListener { confirmSignOut() }
         addSosNumbersRow()
         addChildAppearanceRow()
+        addChildShortcutRow()
     }
 
 
@@ -90,12 +131,10 @@ class SettingsActivity : AppCompatActivity() {
         }
         val options = arrayOf(
             "Asl ikonka — Bulut servis",
-            "Bulut",
-            "Kalkulyator",
-            "Bloknot",
-            "Geometrik shakl"
+            "Bulut belgisi",
+            "Geometrik belgi"
         )
-        val keys = arrayOf("default", "cloud", "calculator", "notebook", "geometric")
+        val keys = arrayOf("default", "cloud", "geometric")
         val ref = com.google.firebase.firestore.FirebaseFirestore.getInstance()
             .collection("families").document(code).collection("children").document(child)
         ref.get().addOnSuccessListener { doc ->
@@ -124,6 +163,131 @@ class SettingsActivity : AppCompatActivity() {
         }.addOnFailureListener {
             Toast.makeText(this, "Bola qurilmasi ma'lumotini olishda xato.", Toast.LENGTH_LONG).show()
         }
+    }
+
+    // ---------------- Maxsus bosh ekran yorlig'i ----------------
+    private fun addChildShortcutRow() {
+        val anchor = findViewById<android.view.View>(R.id.rowTheme)
+        val container = anchor.parent as? LinearLayout ?: return
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            background = androidx.core.content.ContextCompat.getDrawable(this@SettingsActivity, R.drawable.bg_card_clickable_theme)
+            isClickable = true
+            isFocusable = true
+        }
+        row.addView(TextView(this).apply {
+            text = "Bosh ekran yorlig'i: nom va rasm"
+            textSize = 14f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.color_text_primary))
+        })
+        row.addView(TextView(this).apply {
+            text = "O'zingiz nom yozing yoki galereyadan rasm tanlang. Bola telefonida qo'shish tasdiqlanadi."
+            textSize = 12f
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.color_text_secondary))
+        })
+        row.setOnClickListener { showChildShortcutEditor() }
+        container.addView(row, container.indexOfChild(anchor) + 2)
+    }
+
+    private fun showChildShortcutEditor() {
+        val prefs = getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+        val code = FirebaseRepo.familyCode ?: prefs.getString("parent_family_code", null)
+            ?: prefs.getString("family_code", null)
+        val child = FirebaseRepo.childId ?: prefs.getString("parent_selected_child_id", null)
+            ?: prefs.getString("child_id", null)
+        if (code.isNullOrBlank() || child.isNullOrBlank()) {
+            Toast.makeText(this, "Avval ota-ona panelida bolani tanlang.", Toast.LENGTH_LONG).show()
+            return
+        }
+
+        val nameInput = EditText(this).apply {
+            hint = "Masalan: Oila nazorati"
+            setSingleLine(true)
+            filters = arrayOf(android.text.InputFilter.LengthFilter(18))
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+        }
+        val iconPicker = Spinner(this).apply {
+            adapter = ArrayAdapter(
+                this@SettingsActivity,
+                android.R.layout.simple_spinner_dropdown_item,
+                listOf("Bulut belgisi", "Geometrik belgi", "Ilova belgisi")
+            )
+        }
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), 0)
+            addView(TextView(this@SettingsActivity).apply {
+                text = "Yorliq nomini yozing. Yorliq Bulut servis ilovasini ochishini bola tasdiqlash oynasida ko'radi."
+                textSize = 13f
+            })
+            addView(nameInput)
+            addView(TextView(this@SettingsActivity).apply {
+                text = "Ikonka"
+                setPadding(0, dp(12), 0, dp(4))
+                textSize = 13f
+            })
+            addView(iconPicker)
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Bosh ekran yorlig'i")
+            .setView(layout)
+            .setPositiveButton("Yuborish") { _, _ ->
+                val label = nameInput.text?.toString()?.trim().orEmpty()
+                if (label.isBlank()) {
+                    Toast.makeText(this, "Yorliq nomini kiriting.", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+                val key = when (iconPicker.selectedItemPosition) {
+                    1 -> "geometric"
+                    2 -> "default"
+                    else -> "cloud"
+                }
+                sendChildShortcutRequest(code, child, label, key, null)
+            }
+            .setNeutralButton("Galereyadan rasm") { _, _ ->
+                val label = nameInput.text?.toString()?.trim().orEmpty()
+                if (label.isBlank()) {
+                    Toast.makeText(this, "Avval yorliq nomini kiriting.", Toast.LENGTH_SHORT).show()
+                    return@setNeutralButton
+                }
+                pendingShortcutFamilyCode = code
+                pendingShortcutChildId = child
+                pendingShortcutLabel = label
+                pendingShortcutIconKey = "photo"
+                shortcutImagePicker.launch("image/*")
+            }
+            .setNegativeButton("Bekor qilish", null)
+            .show()
+    }
+
+    private fun sendChildShortcutRequest(
+        familyCode: String?,
+        childId: String?,
+        label: String?,
+        iconKey: String,
+        iconBase64: String?
+    ) {
+        if (familyCode.isNullOrBlank() || childId.isNullOrBlank() || label.isNullOrBlank()) return
+        val fields = mutableMapOf<String, Any>(
+            "launcherShortcutLabel" to label.take(18),
+            "launcherShortcutIconKey" to iconKey,
+            "launcherShortcutRequestId" to java.util.UUID.randomUUID().toString(),
+            "launcherShortcutUpdatedAtMs" to System.currentTimeMillis()
+        )
+        if (!iconBase64.isNullOrBlank()) fields["launcherShortcutIconBase64"] = iconBase64
+        else fields["launcherShortcutIconBase64"] = ""
+        com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            .collection("families").document(familyCode)
+            .collection("children").document(childId)
+            .set(fields, com.google.firebase.firestore.SetOptions.merge())
+            .addOnSuccessListener {
+                Toast.makeText(this, "So'rov bola qurilmasiga yuborildi. U yerda tasdiqlash talab qilinadi.", Toast.LENGTH_LONG).show()
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Yuborishda xato: ${it.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
     }
 
     // ---------------- Ilova (kirish) parolini o'zgartirish ----------------
