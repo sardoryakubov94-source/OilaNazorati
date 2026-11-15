@@ -3,6 +3,7 @@ name: Firebase Functions Check
 on:
   push:
     branches:
+      - main
       - feature/ios-*
     paths:
       - "functions/**"
