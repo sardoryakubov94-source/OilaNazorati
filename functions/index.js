@@ -152,6 +152,7 @@ exports.processScheduledSos = onSchedule(
       const alertRef = childRef.collection("sos_alerts").doc(scheduleDoc.id);
       let shouldNotify = false;
       await db.runTransaction(async tx => {
+        shouldNotify = false;
         const fresh = await tx.get(scheduleDoc.ref);
         if (!fresh.exists || fresh.data()?.status !== "scheduled" ||
             Number(fresh.data()?.serverNotifyAtMs || 0) > Date.now()) return;
