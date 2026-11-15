@@ -118,6 +118,9 @@ class MainActivity : AppCompatActivity() {
         googleSignInClient = GoogleSignIn.getClient(this, gso)
 
         binding.btnPasswordSubmit.setOnClickListener { onPasswordSubmit() }
+        binding.btnSosFromLock.setOnClickListener {
+            startActivity(Intent(this, SosCenterActivity::class.java))
+        }
         binding.btnChildDevice.setOnClickListener {
             // Oldin ulangan bola qurilmasi bo'lsa, ism va oila kodi qayta so'ralmaydi,
             // bola paneli darhol ochiladi (o'zgartirish tugmasi panelning o'zida).
@@ -160,7 +163,12 @@ class MainActivity : AppCompatActivity() {
         }
         binding.btnBackFromLogin.setOnClickListener { showRoleSection() }
 
-        showPasswordSection()
+        if (intent.getBooleanExtra(EXTRA_OPEN_PARENT_SOS, false)) {
+            pendingDestination = PendingDestination.PARENT_DASHBOARD
+            showGoogleLoginSection()
+        } else {
+            showPasswordSection()
+        }
     }
 
     // ---------------- 1-bosqich: umumiy parol ----------------
