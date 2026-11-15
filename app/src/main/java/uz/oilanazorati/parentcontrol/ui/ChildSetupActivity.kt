@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
 import uz.oilanazorati.parentcontrol.R
 import uz.oilanazorati.parentcontrol.util.SosHelper
+import uz.oilanazorati.parentcontrol.util.SosTimerManager
 import uz.oilanazorati.parentcontrol.databinding.ActivityChildSetupBinding
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.service.AppDeviceAdminReceiver
@@ -72,6 +73,13 @@ class ChildSetupActivity : AppCompatActivity() {
     private val sosPermissionLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
     ) { runSos() }
+    private var pendingSosDelayMinutes = 0L
+    private val sosTimerPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        if (result[android.Manifest.permission.SEND_SMS] == true) startSosTimer(pendingSosDelayMinutes)
+        else android.widget.Toast.makeText(this, "Avtomatik SOS uchun SMS ruxsati kerak.", android.widget.Toast.LENGTH_LONG).show()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -84,6 +92,7 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnInstallationWizard.setOnClickListener { startActivity(Intent(this, InstallationWizardActivity::class.java)) }
         binding.btnPair.setOnClickListener { pairWithFamilyCode() }
         binding.btnGrantPermissions.setOnClickListener { requestOrOpenRuntimePermissions() }
+        binding.btnSosFromPermissions.setOnClickListener { showSosTimerDialog() }
         binding.btnMicrophonePermission.setOnClickListener { requestMicrophonePermission() }
         binding.btnUsageAccess.setOnClickListener { requestUsageAccess() }
         binding.btnAccessibilityScreenshot.setOnClickListener { startActivity(Intent(this, InstallationWizardActivity::class.java)) }
@@ -128,6 +137,63 @@ class ChildSetupActivity : AppCompatActivity() {
     }
 
     /** Ulangan bola qurilmasi haqida qisqa karta, "O'zgartirish" va SOS tugmalari. */
+    private fun showSosTimerDialog() {
+        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        if (!prefs.getString("sos_timer_id", null).isNullOrBlank()) {
+            AlertDialog.Builder(this).setTitle("SOS taymeri faol")
+                .setMessage("Faol taymerni bekor qilmoqchimisiz?")
+                .setPositiveButton("Taymerni bekor qilish") { _, _ ->
+                    SosTimerManager.cancel(this) { _, message ->
+                        android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }.setNegativeButton("Yopish", null).show()
+            return
+        }
+        AlertDialog.Builder(this).setTitle("SOS taymerini sozlash")
+            .setItems(arrayOf("15 daqiqadan keyin", "30 soatdan keyin", "Boshqa vaqtni kiritish")) { _, which ->
+                when (which) {
+                    0 -> startSosTimer(15L)
+                    1 -> startSosTimer(30L * 60L)
+                    else -> {
+                        val input = android.widget.EditText(this).apply {
+                            hint = "Daqiqa (masalan, 45 yoki 1800)"
+                            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+                        }
+                        AlertDialog.Builder(this).setTitle("SOS taymeri")
+                            .setMessage("Necha daqiqadan keyin eslatilsin? Maksimal 30 kun.")
+                            .setView(input)
+                            .setPositiveButton("Boshlash") { _, _ ->
+                                val minutes = input.text?.toString()?.toLongOrNull() ?: 0L
+                                startSosTimer(minutes)
+                            }.setNegativeButton("Bekor qilish", null).show()
+                    }
+                }
+            }.setNegativeButton("Yopish", null).show()
+    }
+
+    private fun startSosTimer(minutes: Long) {
+        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        val family = prefs.getString("family_code", null)
+        val child = prefs.getString("child_id", null) ?: FirebaseRepo.childId
+        val name = prefs.getString("child_name", null)?.takeIf { it.isNotBlank() } ?: "Bola"
+        if (family.isNullOrBlank() || child.isNullOrBlank()) {
+            android.widget.Toast.makeText(this, "Avval ota-ona oilasiga ulang.", android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        if (minutes < 1L || minutes > 30L * 24L * 60L) {
+            android.widget.Toast.makeText(this, "1 daqiqadan 30 kungacha vaqt kiriting.", android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.SEND_SMS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            pendingSosDelayMinutes = minutes
+            sosTimerPermissionLauncher.launch(arrayOf(android.Manifest.permission.SEND_SMS, android.Manifest.permission.ACCESS_FINE_LOCATION))
+            return
+        }
+        SosTimerManager.start(this, family, child, name, minutes) { _, message ->
+            android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
     private fun showLinkedDeviceCard() {
         val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
         val code = prefs.getString("family_code", null)
@@ -171,6 +237,12 @@ class ChildSetupActivity : AppCompatActivity() {
             setOnClickListener { confirmSos() }
         }
         parentLayout.addView(sosButton, 1)
+        val timerButton = android.widget.Button(this).apply {
+            text = "⏱ SOS taymerini yoqish"
+            layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(16) }
+            setOnClickListener { showSosTimerDialog() }
+        }
+        parentLayout.addView(timerButton, 2)
         val childId = prefs.getString("child_id", null) ?: FirebaseRepo.childId
         if (!childId.isNullOrBlank()) SosHelper.refreshFromServer(this, code, childId)
     }
