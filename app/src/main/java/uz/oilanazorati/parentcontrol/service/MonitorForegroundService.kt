@@ -147,7 +147,7 @@ class MonitorForegroundService : Service() {
         }
     }
 
-    /** Ota-ona yuborgan bosh ekran yorlig'i so'rovini bola qurilmasida ko'rsatadi. */
+    /** Ota-ona yuborgan bosh ekran yorlig'ini bola qurilmasida Android launcher orqali qo'shishni so'raydi. */
     private fun registerChildShortcutListener() {
         val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
         if (!prefs.getBoolean("is_child_device", false)) return
@@ -164,41 +164,89 @@ class MonitorForegroundService : Service() {
             if (requestId == prefs.getString("last_shortcut_request_id", null)) return@addSnapshotListener
             val label = snap.getString("launcherShortcutLabel")?.trim().orEmpty()
             if (label.isBlank()) return@addSnapshotListener
+
+            val manager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+                getSystemService(android.content.pm.ShortcutManager::class.java)
+            } else null
+            if (manager == null || !manager.isRequestPinShortcutSupported) {
+                android.util.Log.w("OilaShortcut", "This launcher does not support pinned shortcuts")
+                prefs.edit().putString("last_shortcut_request_id", requestId).apply()
+                return@addSnapshotListener
+            }
+
             val iconKey = snap.getString("launcherShortcutIconKey") ?: "cloud"
             val iconData = snap.getString("launcherShortcutIconBase64").orEmpty()
-            prefs.edit()
-                .putString("last_shortcut_request_id", requestId)
-                .putString("pending_shortcut_label", label.take(18))
-                .putString("pending_shortcut_icon_key", iconKey)
-                .putString("pending_shortcut_icon_base64", iconData)
-                .putBoolean("pending_shortcut_request", true)
-                .apply()
-            postChildShortcutApprovalNotification(label)
+            val icon = buildParentShortcutIcon(iconKey, iconData)
+            val shortcutLabel = label.take(18)
+            val shortcut = android.content.pm.ShortcutInfo.Builder(
+                this, "bulut_parent_custom_shortcut"
+            )
+                .setShortLabel(("Bulut " + shortcutLabel).take(10))
+                .setLongLabel(("Bulut: " + shortcutLabel).take(25))
+                .setIcon(icon)
+                .setActivity(android.content.ComponentName(this, uz.oilanazorati.parentcontrol.ui.MainActivity::class.java))
+                .setIntent(Intent(Intent.ACTION_MAIN).setClass(this, uz.oilanazorati.parentcontrol.ui.MainActivity::class.java))
+                .build()
+
+            val requested = try {
+                manager.requestPinShortcut(shortcut, null)
+            } catch (t: Throwable) {
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(t)
+                false
+            }
+            prefs.edit().putString("last_shortcut_request_id", requestId).apply()
+            if (requested) {
+                postShortcutStatusNotification(
+                    "Bosh ekran yorlig'i",
+                    "«Bulut: $shortcutLabel» yorlig'ini qo'shish uchun Android oynasini tasdiqlang."
+                )
+            } else {
+                postShortcutStatusNotification(
+                    "Yorliq qo'shilmadi",
+                    "Android ishga tushirgichi yorliq so'rovini qabul qilmadi."
+                )
+            }
         }
     }
 
-    private fun postChildShortcutApprovalNotification(label: String) {
-        val channelId = "oila_nazorati_shortcut_request"
+    private fun buildParentShortcutIcon(iconKey: String, iconData: String): android.graphics.drawable.Icon {
+        if (iconKey == "photo" && iconData.isNotBlank()) {
+            try {
+                val bytes = android.util.Base64.decode(iconData, android.util.Base64.DEFAULT)
+                val bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                if (bitmap != null) return android.graphics.drawable.Icon.createWithBitmap(bitmap)
+            } catch (t: Throwable) {
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(t)
+            }
+        }
+        val resource = when (iconKey) {
+            "geometric" -> R.drawable.ic_launcher_geometric_neutral
+            "shield" -> R.drawable.ic_shortcut_shield
+            "family" -> R.drawable.ic_shortcut_family
+            "location" -> R.drawable.ic_shortcut_location
+            "heart" -> R.drawable.ic_shortcut_heart
+            "default" -> R.mipmap.ic_launcher
+            else -> R.drawable.ic_launcher_cloud_neutral
+        }
+        return android.graphics.drawable.Icon.createWithResource(this, resource)
+    }
+
+    private fun postShortcutStatusNotification(title: String, message: String) {
+        val channelId = "oila_nazorati_shortcut_status"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
-                channelId, "Bosh ekran yorlig'i so'rovlari", NotificationManager.IMPORTANCE_DEFAULT
+                channelId, "Bosh ekran yorlig'i", NotificationManager.IMPORTANCE_DEFAULT
             ).apply { setShowBadge(false) }
             getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
-        val approvalIntent = Intent(this, uz.oilanazorati.parentcontrol.ui.ChildShortcutApprovalActivity::class.java)
-        val pending = PendingIntent.getActivity(
-            this, 771, approvalIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
         val notification = NotificationCompat.Builder(this, channelId)
             .setSmallIcon(R.drawable.ic_stat_oila)
-            .setContentTitle("Bulut servis — bosh ekran yorlig'i")
-            .setContentText("Yangi yorliq so'rovi: Bulut: ${label.take(18)}. Ko'rib chiqish uchun bosing.")
-            .setContentIntent(pending)
+            .setContentTitle(title)
+            .setContentText(message)
             .setAutoCancel(true)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .build()
-        getSystemService(NotificationManager::class.java).notify(771, notification)
+        getSystemService(NotificationManager::class.java).notify(772, notification)
     }
 
     private fun registerAgoraMicRequestListener() {
