@@ -77,7 +77,6 @@ object SosHelper {
         onDone: (String) -> Unit
     ) {
         val app = context.applicationContext
-        val app = context.applicationContext
         val numbers = cachedNumbers(app)
         val selectedLocation = if (customLat != null && customLng != null) {
             Location("sos_custom").apply {
@@ -153,7 +152,7 @@ object SosHelper {
         }
         val custom = placeLabel?.takeIf { it.isNotBlank() }?.let { " Manzil: $it." }.orEmpty()
         val detail = note.takeIf { it.isNotBlank() }?.let { " Izoh: ${it.take(65)}." }.orEmpty()
-        return ("SOS! $name yordam so'rayapti.$detail$custom Joylashuv: $where").take(500)
+        return ("SOS! $name yordam so'rayapti.$detail$custom Joylashuv: $where").take(160)
     }
 
     private fun hasLocationPermission(context: Context) =
