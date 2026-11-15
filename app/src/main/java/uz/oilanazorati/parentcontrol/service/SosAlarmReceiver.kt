@@ -24,11 +24,14 @@ class SosAlarmReceiver : BroadcastReceiver() {
         when (action) {
             ACTION_PROMPT -> showPrompt(context, id)
             ACTION_AUTO_SEND -> {
-                SosTimerManager.markStatus(context, "auto_sent")
                 val name = SosTimerManager.savedChildName(context)
-                SosHelper.send(context, name, id) { }
-                SosTimerManager.clearCurrent(context)
-                showSentNotification(context)
+                SosHelper.send(context, name, id) { result ->
+                    if (result == "SOS SMS yuborildi." || result.startsWith("SMS yuborilmadi")) {
+                        SosTimerManager.markStatus(context, "auto_sent")
+                    }
+                    SosTimerManager.clearCurrent(context)
+                    showSentNotification(context, result)
+                }
             }
         }
     }
@@ -50,12 +53,12 @@ class SosAlarmReceiver : BroadcastReceiver() {
         SosTimerManager.scheduleAutoSend(context, id)
     }
 
-    private fun showSentNotification(context: Context) {
+    private fun showSentNotification(context: Context, result: String) {
         createChannel(context)
         val n = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_app_logo)
             .setContentTitle("SOS yuborildi")
-            .setContentText("Ota-onangizga SOS xabari yuborish jarayoni boshlandi.")
+            .setContentText(result)
             .setAutoCancel(true).build()
         runCatching { NotificationManagerCompat.from(context).notify(NOTIFICATION_ID + 1, n) }
     }
