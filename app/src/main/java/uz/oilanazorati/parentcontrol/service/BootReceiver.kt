@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import androidx.core.content.ContextCompat
+import uz.oilanazorati.parentcontrol.util.SosTimerManager
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -12,6 +13,7 @@ class BootReceiver : BroadcastReceiver() {
 
         val prefs: SharedPreferences = context.getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
         val isChildDevice = prefs.getBoolean("is_child_device", false)
+        SosTimerManager.restore(context)
         if (!isChildDevice) return // faqat "bola" sifatida sozlangan qurilmada ishga tushadi
 
         val svcIntent = Intent(context, MonitorForegroundService::class.java)
