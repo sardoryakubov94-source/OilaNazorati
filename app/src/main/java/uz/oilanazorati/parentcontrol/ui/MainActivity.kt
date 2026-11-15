@@ -164,8 +164,10 @@ class MainActivity : AppCompatActivity() {
         binding.btnBackFromLogin.setOnClickListener { showRoleSection() }
 
         if (intent.getBooleanExtra(EXTRA_OPEN_PARENT_SOS, false)) {
-            pendingDestination = PendingDestination.PARENT_DASHBOARD
-            showGoogleLoginSection()
+            ParentLegalNoticeGate.showIfNeeded(this) {
+                pendingDestination = PendingDestination.PARENT_DASHBOARD
+                showGoogleLoginSection()
+            }
         } else {
             showPasswordSection()
         }
