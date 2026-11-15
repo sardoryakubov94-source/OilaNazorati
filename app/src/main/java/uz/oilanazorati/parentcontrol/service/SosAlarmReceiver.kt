@@ -28,7 +28,7 @@ class SosAlarmReceiver : BroadcastReceiver() {
                 val name = SosTimerManager.savedChildName(context)
                 val location = SosTimerManager.savedLocation(context)
                 SosHelper.send(context, name, id, SosTimerManager.savedNote(context), location.first, location.second, location.third) { result ->
-                    if (result == "SOS SMS yuborildi." || result.startsWith("SMS yuborilmadi")) {
+                    if (result == "SOS SMS yuborildi." || result.startsWith("SMS yuborilmadi") || result.startsWith("SOS so'rovi internet orqali")) {
                         SosTimerManager.markStatus(context, "auto_sent")
                     }
                     SosTimerManager.clearCurrent(context)
