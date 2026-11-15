@@ -52,7 +52,7 @@ The `processScheduledSos` function checks child SOS schedules every minute. If t
 
 ```sh
 firebase deploy --only firestore:indexes --project oilanazorat-3c8de
-firebase deploy --only functions:processScheduledSos --project oilanazorat-3c8de
+firebase deploy --only functions:processScheduledSos,functions:notifyParentOnSosAlert --project oilanazorat-3c8de
 ```
 
 Cloud Scheduler / Cloud Functions deployment requires the Firebase project to have billing enabled. Parent devices must have opened the updated app at least once while signed in so their FCM token can be registered. This server function sends an app push; it cannot send a carrier SMS or place a phone call without a separate SMS/voice provider.
