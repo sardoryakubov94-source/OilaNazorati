@@ -17,8 +17,16 @@ object SosTimerManager {
     private const val KEY_CHILD = "sos_timer_child"
     private const val KEY_NAME = "sos_timer_child_name"
     private const val KEY_AUTO_STARTED = "sos_timer_auto_started"
+    private const val KEY_NOTE = "sos_timer_note"
+    private const val KEY_LAT = "sos_timer_lat"
+    private const val KEY_LNG = "sos_timer_lng"
+    private const val KEY_PLACE = "sos_timer_place"
 
-    fun start(context: Context, familyCode: String, childId: String, childName: String, delayMinutes: Long, onSaved: (Boolean, String) -> Unit = { _, _ -> }) {
+    fun start(
+        context: Context, familyCode: String, childId: String, childName: String, delayMinutes: Long,
+        note: String = "", latitude: Double? = null, longitude: Double? = null, placeLabel: String? = null,
+        onSaved: (Boolean, String) -> Unit = { _, _ -> }
+    ) {
         if (delayMinutes < 1L || delayMinutes > 30L * 24L * 60L) {
             onSaved(false, "Taymer 1 daqiqadan 30 kungacha bo'lishi kerak.")
             return
@@ -30,13 +38,20 @@ object SosTimerManager {
         val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         prefs.edit().putString(KEY_ID, id).putLong(KEY_DUE, dueAt)
             .putString(KEY_FAMILY, familyCode).putString(KEY_CHILD, childId)
-            .putString(KEY_NAME, childName).putBoolean(KEY_AUTO_STARTED, false).apply()
+            .putString(KEY_NAME, childName).putBoolean(KEY_AUTO_STARTED, false)
+            .putString(KEY_NOTE, note).putString(KEY_PLACE, placeLabel.orEmpty())
+            .putString(KEY_LAT, latitude?.toString()).putString(KEY_LNG, longitude?.toString()).apply()
 
         scheduleAlarm(app, id, dueAt, SosAlarmReceiver.ACTION_PROMPT)
         val data = hashMapOf<String, Any>(
             "scheduleId" to id,
             "childId" to childId,
             "childName" to childName,
+            "note" to note,
+            "latitude" to latitude,
+            "longitude" to longitude,
+            "locationLabel" to placeLabel.orEmpty(),
+            "mapUrl" to if (latitude != null && longitude != null) "https://maps.google.com/?q=$latitude,$longitude" else "",
             "dueAtMs" to dueAt,
             "serverNotifyAtMs" to notifyAt,
             "createdAtMs" to System.currentTimeMillis(),
@@ -92,6 +107,15 @@ object SosTimerManager {
     internal fun savedChildName(context: Context) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_NAME, null) ?: "Bola"
 
+    internal fun savedNote(context: Context) =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_NOTE, "").orEmpty()
+
+    internal fun savedLocation(context: Context): Triple<Double?, Double?, String?> {
+        val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return Triple(p.getString(KEY_LAT, null)?.toDoubleOrNull(), p.getString(KEY_LNG, null)?.toDoubleOrNull(),
+            p.getString(KEY_PLACE, null)?.takeIf { it.isNotBlank() })
+    }
+
     internal fun savedSchedule(context: Context): Triple<String?, String?, String?> {
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         return Triple(p.getString(KEY_ID, null), p.getString(KEY_FAMILY, null), p.getString(KEY_CHILD, null))
@@ -106,7 +130,8 @@ object SosTimerManager {
 
     internal fun clearCurrent(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .remove(KEY_ID).remove(KEY_DUE).remove(KEY_FAMILY).remove(KEY_CHILD).remove(KEY_NAME).remove(KEY_AUTO_STARTED).apply()
+            .remove(KEY_ID).remove(KEY_DUE).remove(KEY_FAMILY).remove(KEY_CHILD).remove(KEY_NAME)
+            .remove(KEY_AUTO_STARTED).remove(KEY_NOTE).remove(KEY_LAT).remove(KEY_LNG).remove(KEY_PLACE).apply()
     }
 
     internal fun markStatus(context: Context, status: String) {
