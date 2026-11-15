@@ -30,7 +30,13 @@
         <activity android:name=".ui.OnboardingActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" />
         <activity android:name=".ui.SetupGuideActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" />
         <activity android:name=".ui.UpdateRequiredActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" />
-        <activity android:name=".ui.MainActivity" android:exported="true" android:launchMode="singleTop"><intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter></activity>
+        <activity android:name=".ui.MainActivity" android:exported="true" android:launchMode="singleTop" />
+        <activity android:name=".ui.ChildShortcutApprovalActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" />
+        <activity-alias android:name=".ui.LauncherDefaultAlias" android:targetActivity=".ui.MainActivity" android:enabled="true" android:exported="true" android:icon="@mipmap/ic_launcher" android:label="@string/app_name"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        <activity-alias android:name=".ui.LauncherCloudAlias" android:targetActivity=".ui.MainActivity" android:enabled="false" android:exported="true" android:icon="@drawable/ic_launcher_cloud_neutral" android:label="@string/app_name"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
+        
+        
+        <activity-alias android:name=".ui.LauncherGeometricAlias" android:targetActivity=".ui.MainActivity" android:enabled="false" android:exported="true" android:icon="@drawable/ic_launcher_geometric_neutral" android:label="@string/app_name"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity-alias>
         <activity android:name=".ui.InstallationWizardActivity" android:exported="false" />
         <activity android:name=".ui.FamilyCodeEntryActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" />
         <activity android:name=".ui.ParentFamilyLinkActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" />
