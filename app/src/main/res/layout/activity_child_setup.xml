@@ -24,7 +24,7 @@
 
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="2) Kerakli ruxsatlarni bering" android:textStyle="bold" android:layout_marginBottom="8dp"/>
     <Button android:id="@+id/btnGrantPermissions" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Asosiy ruxsatlarni berish" android:layout_marginBottom="8dp"/>
-    <Button android:id="@+id/btnSosFromPermissions" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="🆘 SOS taymerini sozlash" android:layout_marginBottom="8dp" android:backgroundTint="#C62828" android:textColor="#FFFFFF"/>
+    <Button android:id="@+id/btnSosFromPermissions" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="🆘 SOS yordam markazi" android:layout_marginBottom="8dp" android:backgroundTint="#C62828" android:textColor="#FFFFFF"/>
     <Button android:id="@+id/btnMicrophonePermission" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="🎙️ Mikrofon ruxsatini berish" android:layout_marginBottom="8dp"/>
     <Button android:id="@+id/btnUsageAccess" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Ilova ishlatilishi ruxsatini yoqish" android:layout_marginBottom="8dp"/>
 
