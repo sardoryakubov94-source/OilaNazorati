@@ -77,23 +77,8 @@ object SosHelper {
         onDone: (String) -> Unit
     ) {
         val app = context.applicationContext
-        logSosAlert(app, childName, alertId, note, customLat, customLng, placeLabel, "SOS yordam so'rovi yuborildi.")
+        val app = context.applicationContext
         val numbers = cachedNumbers(app)
-        if (numbers.isEmpty()) {
-            onDone("SOS so'rovi internet orqali ota-onaga yuborildi. SMS raqami sozlanmagan.")
-            return
-        }
-        val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val now = System.currentTimeMillis()
-        if (now - prefs.getLong(PREF_LAST_SENT, 0L) < MIN_INTERVAL_MS) {
-            onDone("SOS yaqinda yuborilgan. Biroz kuting.")
-            return
-        }
-        if (ContextCompat.checkSelfPermission(app, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
-            onDone("SMS yuborish ruxsati berilmagan.")
-            return
-        }
-        prefs.edit().putLong(PREF_LAST_SENT, now).apply()
         val selectedLocation = if (customLat != null && customLng != null) {
             Location("sos_custom").apply {
                 latitude = customLat
@@ -102,17 +87,34 @@ object SosHelper {
             }
         } else null
         val locationCallback: (Location?) -> Unit = { location ->
-            val text = buildText(childName, location, note, placeLabel)
-            sendToAll(app, numbers, text) { okCount ->
-                if (okCount > 0) {
-                    onDone("SOS SMS yuborildi.")
+            logSosAlert(app, childName, alertId, note,
+                customLat ?: location?.latitude, customLng ?: location?.longitude, placeLabel,
+                "SOS yordam so'rovi yuborildi.")
+            if (numbers.isEmpty()) {
+                onDone("SOS so'rovi internet orqali ota-onaga yuborildi. SMS raqami sozlanmagan.")
+            } else {
+                val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                val now = System.currentTimeMillis()
+                if (now - prefs.getLong(PREF_LAST_SENT, 0L) < MIN_INTERVAL_MS) {
+                    onDone("SOS yaqinda yuborilgan. Biroz kuting.")
+                } else if (ContextCompat.checkSelfPermission(app, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+                    onDone("SOS so'rovi internet orqali yuborildi, SMS ruxsati berilmagan.")
                 } else {
-                    callFirst(app, numbers.first())
-                    onDone("SMS yuborilmadi, birinchi raqamga qo'ng'iroq qilinmoqda.")
+                    prefs.edit().putLong(PREF_LAST_SENT, now).apply()
+                    val text = buildText(childName, location, note, placeLabel)
+                    sendToAll(app, numbers, text) { okCount ->
+                        if (okCount > 0) onDone("SOS SMS yuborildi.")
+                        else {
+                            callFirst(app, numbers.first())
+                            onDone("SMS yuborilmadi, birinchi raqamga qo'ng'iroq qilinmoqda.")
+                        }
+                    }
                 }
             }
         }
-        if (selectedLocation != null) locationCallback(selectedLocation) else fetchLocation(app, locationCallback)
+        if (selectedLocation != null) locationCallback(selectedLocation)
+        else if (!placeLabel.isNullOrBlank()) locationCallback(null)
+        else fetchLocation(app, locationCallback)
     }
 
     private fun logSosAlert(
