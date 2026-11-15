@@ -26,7 +26,7 @@ class SosAlarmReceiver : BroadcastReceiver() {
             ACTION_AUTO_SEND -> {
                 SosTimerManager.markStatus(context, "auto_sent")
                 val name = SosTimerManager.savedChildName(context)
-                SosHelper.send(context, name) { }
+                SosHelper.send(context, name, id) { }
                 SosTimerManager.clearCurrent(context)
                 showSentNotification(context)
             }
