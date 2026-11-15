@@ -154,7 +154,12 @@ exports.processScheduledSos = onSchedule(
           scheduleId: scheduleDoc.id,
           childId: childRef.id,
           childName: data.childName || "Farzand",
-          message: "SOS taymeri tugadi. Bola 1 daqiqa ichida javob bermadi yoki qurilma bilan aloqa yo'q.",
+          message: data.note || "SOS taymeri tugadi. Bola 1 daqiqa ichida javob bermadi yoki qurilma bilan aloqa yo'q.",
+          note: data.note || "",
+          locationLabel: data.locationLabel || "",
+          latitude: data.latitude ?? null,
+          longitude: data.longitude ?? null,
+          mapUrl: data.mapUrl || "",
           createdAtMs: Date.now(),
           status: "active",
           source: "server_timer"
