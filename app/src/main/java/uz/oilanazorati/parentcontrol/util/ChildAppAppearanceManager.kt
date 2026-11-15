@@ -12,15 +12,11 @@ import uz.oilanazorati.parentcontrol.ui.MainActivity
 object ChildAppAppearanceManager {
     const val DEFAULT = "default"
     const val CLOUD = "cloud"
-    const val CALCULATOR = "calculator"
-    const val NOTEBOOK = "notebook"
     const val GEOMETRIC = "geometric"
 
     private val aliases = linkedMapOf(
         DEFAULT to "uz.oilanazorati.parentcontrol.ui.LauncherDefaultAlias",
         CLOUD to "uz.oilanazorati.parentcontrol.ui.LauncherCloudAlias",
-        CALCULATOR to "uz.oilanazorati.parentcontrol.ui.LauncherCalculatorAlias",
-        NOTEBOOK to "uz.oilanazorati.parentcontrol.ui.LauncherNotebookAlias",
         GEOMETRIC to "uz.oilanazorati.parentcontrol.ui.LauncherGeometricAlias"
     )
 
