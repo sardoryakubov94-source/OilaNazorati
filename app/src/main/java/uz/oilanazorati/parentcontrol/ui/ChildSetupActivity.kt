@@ -77,8 +77,10 @@ class ChildSetupActivity : AppCompatActivity() {
     private val sosTimerPermissionLauncher = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
     ) { result ->
-        if (result[android.Manifest.permission.SEND_SMS] == true) startSosTimer(pendingSosDelayMinutes)
-        else android.widget.Toast.makeText(this, "Avtomatik SOS uchun SMS ruxsati kerak.", android.widget.Toast.LENGTH_LONG).show()
+        val smsGranted = result[android.Manifest.permission.SEND_SMS] == true
+        val notificationsGranted = result[android.Manifest.permission.POST_NOTIFICATIONS] != false
+        if (smsGranted && notificationsGranted) startSosTimer(pendingSosDelayMinutes)
+        else android.widget.Toast.makeText(this, "SOS taymerida tasdiqlash oynasi chiqishi uchun SMS va bildirishnoma ruxsatlarini bering.", android.widget.Toast.LENGTH_LONG).show()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -186,7 +188,7 @@ class ChildSetupActivity : AppCompatActivity() {
         }
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.SEND_SMS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             pendingSosDelayMinutes = minutes
-            sosTimerPermissionLauncher.launch(arrayOf(android.Manifest.permission.SEND_SMS, android.Manifest.permission.ACCESS_FINE_LOCATION))
+            sosTimerPermissionLauncher.launch(arrayOf(android.Manifest.permission.SEND_SMS, android.Manifest.permission.ACCESS_FINE_LOCATION, android.Manifest.permission.POST_NOTIFICATIONS))
             return
         }
         SosTimerManager.start(this, family, child, name, minutes) { _, message ->
