@@ -54,13 +54,18 @@ class SosComposeActivity : AppCompatActivity() {
             selectedLat = null
             selectedLng = null
             selectedLabel = null
+            binding.inputSosPlaceLabel.setText("")
             binding.sosSelectedLocation.text = "Yuborish vaqtida telefonning joriy GPS joylashuvi olinadi."
         }
         binding.btnSosChooseMapLocation.setOnClickListener {
             mapPicker.launch(Intent(this, SosLocationPickerActivity::class.java))
         }
         binding.btnSosSendNow.setOnClickListener {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+            val needsSms = ContextCompat.checkSelfPermission(this, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED
+            val needsLocation = selectedLat == null && selectedLng == null &&
+                placeLabel() == null &&
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+            if (needsSms || needsLocation) {
                 sendPermissions.launch(arrayOf(Manifest.permission.SEND_SMS, Manifest.permission.ACCESS_FINE_LOCATION))
             } else sendNow()
         }
