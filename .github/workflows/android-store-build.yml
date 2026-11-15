@@ -3,6 +3,7 @@ name: Android Store Build (AAB)
 on:
   push:
     branches:
+      - main
       - feature/ios-risk-alerts
     paths:
       - "app/**"
