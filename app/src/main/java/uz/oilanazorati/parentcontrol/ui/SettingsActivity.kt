@@ -46,6 +46,7 @@ class SettingsActivity : AppCompatActivity() {
         }
 
         findViewById<android.view.View>(R.id.rowSignOut).setOnClickListener { confirmSignOut() }
+        addSosNumbersRow()
     }
 
 
@@ -107,6 +108,83 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+
+    // ---------------- SOS raqamlari (bola uchun) ----------------
+    private fun addSosNumbersRow() {
+        val anchor = findViewById<android.view.View>(R.id.rowTheme)
+        val container = anchor.parent as? android.widget.LinearLayout ?: return
+        val row = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(dp(14), dp(14), dp(14), dp(14))
+            background = androidx.core.content.ContextCompat.getDrawable(this@SettingsActivity, R.drawable.bg_card_clickable_theme)
+            isClickable = true
+            isFocusable = true
+        }
+        row.addView(TextView(this).apply {
+            text = "SOS raqamlari (bola uchun)"
+            textSize = 14f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.color_text_primary))
+        })
+        row.addView(TextView(this).apply {
+            text = "Bola SOS tugmasini bossa, joylashuvi shu raqamlarga SMS qilinadi (2 tagacha)"
+            textSize = 12f
+            setTextColor(androidx.core.content.ContextCompat.getColor(this@SettingsActivity, R.color.color_text_secondary))
+        })
+        row.setOnClickListener { showSosNumbersDialog() }
+        container.addView(row, container.indexOfChild(anchor) + 1)
+    }
+
+    private fun showSosNumbersDialog() {
+        val code = FirebaseRepo.familyCode ?: getSharedPreferences(prefsName, Context.MODE_PRIVATE).getString("family_code", null)
+        val childId = FirebaseRepo.childId
+        if (code.isNullOrBlank() || childId.isNullOrBlank()) {
+            android.widget.Toast.makeText(this, "Avval panelda bolani tanlang.", android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        val ref = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            .collection("families").document(code).collection("children").document(childId)
+        fun field(hint: String) = EditText(this).apply {
+            this.hint = hint
+            inputType = android.text.InputType.TYPE_CLASS_PHONE
+        }
+        val first = field("1-raqam (masalan +998901234567)")
+        val second = field("2-raqam (ixtiyoriy)")
+        val layout = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setPadding(dp(20), dp(8), dp(20), 0)
+            addView(first)
+            addView(second)
+        }
+        ref.get().addOnSuccessListener { doc ->
+            val list = (doc.get("sosNumbers") as? List<*>)?.mapNotNull { it as? String }.orEmpty()
+            first.setText(list.getOrNull(0).orEmpty())
+            second.setText(list.getOrNull(1).orEmpty())
+        }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("SOS raqamlari")
+            .setMessage("Bola SOS tugmasini bossa, oxirgi joylashuvi shu raqamlarga SMS qilinadi, SMS ketmasa 1-raqamga qo'ng'iroq qilinadi.")
+            .setView(layout)
+            .setPositiveButton("Saqlash") { _, _ ->
+                val numbers = listOf(first.text.toString(), second.text.toString())
+                    .filter { it.isNotBlank() }
+                    .map { uz.oilanazorati.parentcontrol.util.SosHelper.normalize(it) }
+                if (numbers.any { it == null }) {
+                    android.widget.Toast.makeText(this, "Raqam noto'g'ri. Masalan: +998901234567", android.widget.Toast.LENGTH_LONG).show()
+                } else {
+                    ref.set(
+                        mapOf("sosNumbers" to numbers.filterNotNull(), "sosUpdatedAtMs" to System.currentTimeMillis()),
+                        com.google.firebase.firestore.SetOptions.merge()
+                    ).addOnSuccessListener {
+                        android.widget.Toast.makeText(this, "SOS raqamlari saqlandi.", android.widget.Toast.LENGTH_SHORT).show()
+                    }.addOnFailureListener {
+                        android.widget.Toast.makeText(this, "Saqlanmadi: ${it.localizedMessage}", android.widget.Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            .setNegativeButton("Bekor qilish", null)
+            .show()
+    }
 
     private fun confirmSignOut() {
         AlertDialog.Builder(this)

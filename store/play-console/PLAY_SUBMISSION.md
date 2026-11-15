@@ -65,3 +65,22 @@ ruxsatlarsiz versiya yuborib, to'liq versiyani saytda qoldiring.
 - Google'ga tushuntirish: ilova qimor xizmati **taklif qilmaydi**, aksincha voyaga yetmagan bolani himoya qilish uchun ogohlantiradi. Qimor siyosati (Real-Money Gambling) bunday ilovaga tegishli emas.
 - Eslatma: bu signallar ekran matnini o'qiydigan Accessibility xizmatiga ham bog'liq, shuning uchun u haqidagi xavf (1-bo'lim) bu yerga ham ta'sir qiladi.
 - Data Safety'da "ilova faoliyati" va "ekran matni" xavf tahlili uchun qayta ishlanishini yozing.
+
+## 9. SOS funksiyasi (SEND_SMS uchun asos)
+Google ro'yxatidagi istisno: "Physical safety / emergency alerts to send SMS" (ruxsat: SEND_SMS, Google tasdiqlaydi).
+Bu "Assistant handler" emas, deklaratsiyada aynan shu istisnoni tanlang.
+
+Ilovadagi haqiqiy funksiya (kodda: `SosHelper`, `ChildSetupActivity`, `SettingsActivity`):
+- Ota-ona panelida bola uchun 2 tagacha SOS raqami kiritiladi (Sozlamalar → "SOS raqamlari").
+- Bola panelida "SOS" tugmasi. Faqat bola tugmani bosib, tasdiqlagandagina ishlaydi, hech qachon avtomatik emas.
+- Tasdiqlansa: oxirgi joylashuv (Google Maps havolasi) belgilangan raqamlarga SMS qilinadi.
+- SMS hech biriga ketmasa, 1-raqamga qo'ng'iroq qilinadi (CALL_PHONE).
+- Himoya: 30 soniyada bir martadan ko'p yuborilmaydi; raqamlar internet bor paytda qurilmaga saqlanadi (oflayn ishlashi uchun).
+- Ma'lumot oynasi (prominent disclosure): tugma bosilganda "SMS operator tarifi bo'yicha pullik bo'lishi mumkin" xabari ko'rsatiladi.
+
+Deklaratsiya matni (inglizcha):
+> The app has a user-initiated emergency SOS button. When the child confirms, the device sends the last known
+> location by SMS to up to two emergency numbers set by the parent, and places a call to the first number if the SMS
+> cannot be sent. SEND_SMS is used only for this feature; the app does not send SMS in any other way.
+
+Muhim: bu faqat SEND_SMS (va CALL_PHONE) ni asoslaydi. READ_SMS, RECEIVE_SMS, READ_CALL_LOG hali ham standart SMS/Telefon ilovasi bo'lishni talab qiladi.

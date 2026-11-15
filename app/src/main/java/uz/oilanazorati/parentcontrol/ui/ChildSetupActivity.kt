@@ -22,6 +22,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.google.firebase.auth.FirebaseAuth
 import uz.oilanazorati.parentcontrol.R
+import uz.oilanazorati.parentcontrol.util.SosHelper
 import uz.oilanazorati.parentcontrol.databinding.ActivityChildSetupBinding
 import uz.oilanazorati.parentcontrol.repo.FirebaseRepo
 import uz.oilanazorati.parentcontrol.service.AppDeviceAdminReceiver
@@ -68,6 +69,10 @@ class ChildSetupActivity : AppCompatActivity() {
             }
     }
 
+    private val sosPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { runSos() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityChildSetupBinding.inflate(layoutInflater)
@@ -95,6 +100,34 @@ class ChildSetupActivity : AppCompatActivity() {
     }
 
     /** Ulangan bola qurilmasi haqida qisqa karta va "O'zgartirish" tugmasi. */
+    private fun confirmSos() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("SOS yuborilsinmi?")
+            .setMessage(
+                "Tasdiqlasangiz, oxirgi joylashuvingiz ota-onangiz belgilagan raqamlarga SMS qilinadi. " +
+                    "SMS ketmasa, birinchi raqamga qo'ng'iroq qilinadi. SMS operator tarifi bo'yicha pullik bo'lishi mumkin."
+            )
+            .setPositiveButton("Yuborish") { _, _ ->
+                sosPermissionLauncher.launch(
+                    arrayOf(
+                        android.Manifest.permission.SEND_SMS,
+                        android.Manifest.permission.CALL_PHONE,
+                        android.Manifest.permission.ACCESS_FINE_LOCATION
+                    )
+                )
+            }
+            .setNegativeButton("Bekor qilish", null)
+            .show()
+    }
+
+    private fun runSos() {
+        val name = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE).getString("child_name", null).orEmpty()
+        SosHelper.send(this, name) { message ->
+            runOnUiThread { android.widget.Toast.makeText(this, message, android.widget.Toast.LENGTH_LONG).show() }
+        }
+    }
+
+    /** Ulangan bola qurilmasi haqida qisqa karta, "O'zgartirish" va SOS tugmalari. */
     private fun showLinkedDeviceCard() {
         val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
         val code = prefs.getString("family_code", null)
@@ -129,6 +162,17 @@ class ChildSetupActivity : AppCompatActivity() {
         card.addView(label)
         card.addView(change)
         parentLayout.addView(card, 0)
+
+        val sosButton = android.widget.Button(this).apply {
+            text = "🆘 SOS — yordam so'rash"
+            setTextColor(android.graphics.Color.WHITE)
+            setBackgroundColor(android.graphics.Color.parseColor("#C62828"))
+            layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(16) }
+            setOnClickListener { confirmSos() }
+        }
+        parentLayout.addView(sosButton, 1)
+        val childId = prefs.getString("child_id", null) ?: FirebaseRepo.childId
+        if (!childId.isNullOrBlank()) SosHelper.refreshFromServer(this, code, childId)
     }
 
     private fun openAppSettings() {
