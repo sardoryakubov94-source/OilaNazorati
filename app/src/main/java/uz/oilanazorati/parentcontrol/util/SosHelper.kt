@@ -66,11 +66,21 @@ object SosHelper {
             }
     }
 
-    fun send(context: Context, childName: String, alertId: String? = null, onDone: (String) -> Unit) {
+    fun send(
+        context: Context,
+        childName: String,
+        alertId: String? = null,
+        note: String = "",
+        customLat: Double? = null,
+        customLng: Double? = null,
+        placeLabel: String? = null,
+        onDone: (String) -> Unit
+    ) {
         val app = context.applicationContext
+        logSosAlert(app, childName, alertId, note, customLat, customLng, placeLabel, "SOS yordam so'rovi yuborildi.")
         val numbers = cachedNumbers(app)
         if (numbers.isEmpty()) {
-            onDone("Ota-ona hali SOS raqamini kiritmagan.")
+            onDone("SOS so'rovi internet orqali ota-onaga yuborildi. SMS raqami sozlanmagan.")
             return
         }
         val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -84,22 +94,31 @@ object SosHelper {
             return
         }
         prefs.edit().putLong(PREF_LAST_SENT, now).apply()
-        fetchLocation(app) { location ->
-            val text = buildText(childName, location)
+        val selectedLocation = if (customLat != null && customLng != null) {
+            Location("sos_custom").apply {
+                latitude = customLat
+                longitude = customLng
+                time = System.currentTimeMillis()
+            }
+        } else null
+        val locationCallback: (Location?) -> Unit = { location ->
+            val text = buildText(childName, location, note, placeLabel)
             sendToAll(app, numbers, text) { okCount ->
                 if (okCount > 0) {
-                    logSosAlert(app, childName, alertId, "SOS SMS yuborish boshlandi.")
                     onDone("SOS SMS yuborildi.")
                 } else {
                     callFirst(app, numbers.first())
-                    logSosAlert(app, childName, alertId, "SMS yuborilmadi; birinchi raqamga qo'ng'iroq qilishga urinish bajarildi.")
                     onDone("SMS yuborilmadi, birinchi raqamga qo'ng'iroq qilinmoqda.")
                 }
             }
         }
+        if (selectedLocation != null) locationCallback(selectedLocation) else fetchLocation(app, locationCallback)
     }
 
-    private fun logSosAlert(context: Context, childName: String, alertId: String?, message: String) {
+    private fun logSosAlert(
+        context: Context, childName: String, alertId: String?, note: String,
+        latitude: Double?, longitude: Double?, placeLabel: String?, message: String
+    ) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val family = prefs.getString("family_code", null) ?: return
         val child = prefs.getString("child_id", null) ?: return
@@ -110,14 +129,19 @@ object SosHelper {
                 "scheduleId" to id,
                 "childId" to child,
                 "childName" to childName,
-                "message" to message,
+                "message" to note.ifBlank { message },
+                "note" to note,
+                "locationLabel" to placeLabel.orEmpty(),
+                "latitude" to latitude,
+                "longitude" to longitude,
+                "mapUrl" to if (latitude != null && longitude != null) "https://maps.google.com/?q=$latitude,$longitude" else "",
                 "createdAtMs" to System.currentTimeMillis(),
                 "status" to "active",
                 "source" to if (alertId == null) "manual" else "child_timer"
             ), com.google.firebase.firestore.SetOptions.merge())
     }
 
-    private fun buildText(childName: String, location: Location?): String {
+    private fun buildText(childName: String, location: Location?, note: String, placeLabel: String?): String {
         val name = childName.filter { it.code in 32..126 }.trim().take(20).ifBlank { "Bola" }
         val where = if (location != null) {
             val time = SimpleDateFormat("HH:mm", Locale.US).format(Date(location.time))
@@ -125,7 +149,9 @@ object SosHelper {
         } else {
             "joylashuv aniqlanmadi"
         }
-        return "SOS! $name yordam so'rayapti. Joylashuv: $where".take(160)
+        val custom = placeLabel?.takeIf { it.isNotBlank() }?.let { " Manzil: $it." }.orEmpty()
+        val detail = note.takeIf { it.isNotBlank() }?.let { " Izoh: ${it.take(65)}." }.orEmpty()
+        return ("SOS! $name yordam so'rayapti.$detail$custom Joylashuv: $where").take(500)
     }
 
     private fun hasLocationPermission(context: Context) =
