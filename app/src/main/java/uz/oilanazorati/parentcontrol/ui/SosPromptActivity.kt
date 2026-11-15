@@ -17,11 +17,13 @@ class SosPromptActivity : AppCompatActivity() {
             .setTitle("🆘 SOS yuboraymi?")
             .setMessage("Ota-onangizga yordam so'rovini yuboraymi? Javob bermasangiz, 1 daqiqadan so'ng SOS avtomatik yuboriladi.")
             .setPositiveButton("Ha, yuborish") { _, _ ->
+                SosTimerManager.cancelAutoSend(this, id)
                 SosTimerManager.markStatus(this, "child_confirmed")
                 SosHelper.send(this, SosTimerManager.savedChildName(this)) { }
                 finish()
             }
-            .setNegativeButton("Yo'q, bekor qilish") { _, _ ->
+             .setNegativeButton("Yo'q, bekor qilish") { _, _ ->
+                SosTimerManager.cancelAutoSend(this, id)
                 SosTimerManager.markStatus(this, "cancelled")
                 finish()
             }
