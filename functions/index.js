@@ -181,11 +181,9 @@ exports.notifyParentOnSosAlert = onDocumentCreated(
 
     const response = await getMessaging().sendEachForMulticast({
       tokens,
-      notification: {
-        title: "🆘 SOS — yordam so'rovi",
-        body: data.message || ((data.childName || "Farzandingiz") + " SOS xabarini yubordi. Tekshiring.")
-      },
       data: {
+        title: "🆘 SOS — yordam so'rovi",
+        body: data.message || ((data.childName || "Farzandingiz") + " SOS xabarini yubordi. Tekshiring."),
         type: "sos_alert",
         familyCode: event.params.familyCode,
         childId: event.params.childId,
