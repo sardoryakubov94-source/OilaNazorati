@@ -23,7 +23,7 @@ class SosPromptActivity : AppCompatActivity() {
                     return@setPositiveButton
                 }
                 SosTimerManager.markStatus(this, "child_confirmed")
-                SosHelper.send(this, SosTimerManager.savedChildName(this)) { }
+                SosHelper.send(this, SosTimerManager.savedChildName(this), id) { }
                 SosTimerManager.clearCurrent(this)
                 finish()
             }
