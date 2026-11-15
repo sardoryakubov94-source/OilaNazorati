@@ -44,3 +44,14 @@ is active. The child UI and iOS microphone indicator remain visible. The child c
 the current session or revoke consent at any time. iOS suspends ordinary apps in the
 background, so this implementation deliberately ends the audio session when the app
 leaves the active state; it does not claim silent background microphone access.
+
+
+## Scheduled SOS notifications
+
+The `processScheduledSos` function checks child SOS schedules every minute. If the child device is offline or powered off after the schedule was synced, the function creates a parent-visible SOS alert and sends an FCM push to registered parent devices. Deploy with:
+
+```sh
+firebase deploy --only functions:processScheduledSos --project oilanazorat-3c8de
+```
+
+Cloud Scheduler / Cloud Functions deployment requires the Firebase project to have billing enabled. Parent devices must have opened the updated app at least once while signed in so their FCM token can be registered. This server function sends an app push; it cannot send a carrier SMS or place a phone call without a separate SMS/voice provider.
