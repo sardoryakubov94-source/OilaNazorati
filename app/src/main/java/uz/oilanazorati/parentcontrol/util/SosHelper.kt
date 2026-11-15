@@ -66,7 +66,7 @@ object SosHelper {
             }
     }
 
-    fun send(context: Context, childName: String, onDone: (String) -> Unit) {
+    fun send(context: Context, childName: String, alertId: String? = null, onDone: (String) -> Unit) {
         val app = context.applicationContext
         val numbers = cachedNumbers(app)
         if (numbers.isEmpty()) {
@@ -88,13 +88,33 @@ object SosHelper {
             val text = buildText(childName, location)
             sendToAll(app, numbers, text) { okCount ->
                 if (okCount > 0) {
+                    logSosAlert(app, childName, alertId, "SOS SMS yuborish boshlandi.")
                     onDone("SOS SMS yuborildi.")
                 } else {
                     callFirst(app, numbers.first())
+                    logSosAlert(app, childName, alertId, "SMS yuborilmadi; birinchi raqamga qo'ng'iroq qilishga urinish bajarildi.")
                     onDone("SMS yuborilmadi, birinchi raqamga qo'ng'iroq qilinmoqda.")
                 }
             }
         }
+    }
+
+    private fun logSosAlert(context: Context, childName: String, alertId: String?, message: String) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val family = prefs.getString("family_code", null) ?: return
+        val child = prefs.getString("child_id", null) ?: return
+        val id = alertId ?: "manual-" + java.util.UUID.randomUUID().toString()
+        FirebaseFirestore.getInstance().collection("families").document(family)
+            .collection("children").document(child).collection("sos_alerts")
+            .document(id).set(mapOf(
+                "scheduleId" to id,
+                "childId" to child,
+                "childName" to childName,
+                "message" to message,
+                "createdAtMs" to System.currentTimeMillis(),
+                "status" to "active",
+                "source" to if (alertId == null) "manual" else "child_timer"
+            ), com.google.firebase.firestore.SetOptions.merge())
     }
 
     private fun buildText(childName: String, location: Location?): String {
