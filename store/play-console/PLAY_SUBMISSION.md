@@ -58,3 +58,10 @@ ruxsatlarsiz versiya yuborib, to'liq versiyani saytda qoldiring.
 1. Play Console: ilova yarating, AAB yuklang (Internal testing).
 2. App content: Privacy policy, Data safety, SMS/Call Log, Accessibility, Background location deklaratsiyalari.
 3. Natijani kuting. Rad etilsa sabab matnini yuboring, ruxsatni olib tashlab qayta yuboramiz.
+
+## 8. Xavf signallari (qimor, 18+ va boshqalar)
+- Ilova bola qurilmasida xavfli kontent signallarini aniqlab, ota-onaga ogohlantirish yuboradi: 18+ kontent, **qimor/betting**, giyohvandlik, xavfli aloqa.
+- Qimor signali kalit so'zlar bo'yicha ishlaydi (masalan 1xbet, casino, kazino, qimor). Ilovaning o'zida qimor o'yinlari, reklama yoki pul tikish yo'q.
+- Google'ga tushuntirish: ilova qimor xizmati **taklif qilmaydi**, aksincha voyaga yetmagan bolani himoya qilish uchun ogohlantiradi. Qimor siyosati (Real-Money Gambling) bunday ilovaga tegishli emas.
+- Eslatma: bu signallar ekran matnini o'qiydigan Accessibility xizmatiga ham bog'liq, shuning uchun u haqidagi xavf (1-bo'lim) bu yerga ham ta'sir qiladi.
+- Data Safety'da "ilova faoliyati" va "ekran matni" xavf tahlili uchun qayta ishlanishini yozing.
