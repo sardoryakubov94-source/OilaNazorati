@@ -236,15 +236,9 @@ class ChildSetupActivity : AppCompatActivity() {
             setTextColor(android.graphics.Color.WHITE)
             setBackgroundColor(android.graphics.Color.parseColor("#C62828"))
             layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(16) }
-            setOnClickListener { confirmSos() }
+            setOnClickListener { startActivity(Intent(this@ChildSetupActivity, SosCenterActivity::class.java)) }
         }
         parentLayout.addView(sosButton, 1)
-        val timerButton = android.widget.Button(this).apply {
-            text = "⏱ SOS taymerini yoqish"
-            layoutParams = android.widget.LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(16) }
-            setOnClickListener { showSosTimerDialog() }
-        }
-        parentLayout.addView(timerButton, 2)
         val childId = prefs.getString("child_id", null) ?: FirebaseRepo.childId
         if (!childId.isNullOrBlank()) SosHelper.refreshFromServer(this, code, childId)
     }
