@@ -8,7 +8,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Base64
-import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -25,7 +24,6 @@ class SettingsActivity : AppCompatActivity() {
     private var pendingShortcutFamilyCode: String? = null
     private var pendingShortcutChildId: String? = null
     private var pendingShortcutLabel: String? = null
-    private var pendingShortcutIconKey: String = "cloud"
 
     private val shortcutImagePicker = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri == null) return@registerForActivityResult
@@ -255,7 +253,6 @@ class SettingsActivity : AppCompatActivity() {
                 pendingShortcutFamilyCode = code
                 pendingShortcutChildId = child
                 pendingShortcutLabel = label
-                pendingShortcutIconKey = "photo"
                 shortcutImagePicker.launch("image/*")
             }
             .setNegativeButton("Bekor qilish", null)
