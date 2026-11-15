@@ -43,6 +43,9 @@
         <activity android:name=".ui.ParentFamilyLinkActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" />
         <activity android:name=".ui.ChildSetupActivity" android:exported="false" />
         <activity android:name=".ui.SosPromptActivity" android:exported="false" android:excludeFromRecents="true" />
+        <activity android:name=".ui.SosCenterActivity" android:exported="false" />
+        <activity android:name=".ui.SosComposeActivity" android:exported="false" />
+        <activity android:name=".ui.SosLocationPickerActivity" android:exported="false" />
         <activity android:name=".ui.ParentDashboardActivity" android:launchMode="singleTask" android:exported="false" />
         <activity android:name=".ui.AmbientListenActivity" android:exported="false" />
         <activity android:name=".ui.ScreenShareListenActivity" android:exported="false" />
