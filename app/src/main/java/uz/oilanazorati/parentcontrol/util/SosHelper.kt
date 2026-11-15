@@ -78,6 +78,13 @@ object SosHelper {
     ) {
         val app = context.applicationContext
         val numbers = cachedNumbers(app)
+        val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        if (now - prefs.getLong(PREF_LAST_SENT, 0L) < MIN_INTERVAL_MS) {
+            onDone("SOS yaqinda yuborilgan. Biroz kuting.")
+            return
+        }
+        prefs.edit().putLong(PREF_LAST_SENT, now).apply()
         val selectedLocation = if (customLat != null && customLng != null) {
             Location("sos_custom").apply {
                 latitude = customLat
@@ -91,22 +98,15 @@ object SosHelper {
                 "SOS yordam so'rovi yuborildi.")
             if (numbers.isEmpty()) {
                 onDone("SOS so'rovi internet orqali ota-onaga yuborildi. SMS raqami sozlanmagan.")
+            } else if (ContextCompat.checkSelfPermission(app, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+                onDone("SOS so'rovi internet orqali yuborildi, SMS ruxsati berilmagan.")
             } else {
-                val prefs = app.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                val now = System.currentTimeMillis()
-                if (now - prefs.getLong(PREF_LAST_SENT, 0L) < MIN_INTERVAL_MS) {
-                    onDone("SOS yaqinda yuborilgan. Biroz kuting.")
-                } else if (ContextCompat.checkSelfPermission(app, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
-                    onDone("SOS so'rovi internet orqali yuborildi, SMS ruxsati berilmagan.")
-                } else {
-                    prefs.edit().putLong(PREF_LAST_SENT, now).apply()
-                    val text = buildText(childName, location, note, placeLabel)
-                    sendToAll(app, numbers, text) { okCount ->
-                        if (okCount > 0) onDone("SOS SMS yuborildi.")
-                        else {
-                            callFirst(app, numbers.first())
-                            onDone("SMS yuborilmadi, birinchi raqamga qo'ng'iroq qilinmoqda.")
-                        }
+                val text = buildText(childName, location, note, placeLabel)
+                sendToAll(app, numbers, text) { okCount ->
+                    if (okCount > 0) onDone("SOS SMS yuborildi.")
+                    else {
+                        callFirst(app, numbers.first())
+                        onDone("SMS yuborilmadi, birinchi raqamga qo'ng'iroq qilinmoqda.")
                     }
                 }
             }
