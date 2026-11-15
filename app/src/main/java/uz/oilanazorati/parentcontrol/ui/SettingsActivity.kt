@@ -91,8 +91,10 @@ class SettingsActivity : AppCompatActivity() {
 
         findViewById<android.view.View>(R.id.rowSignOut).setOnClickListener { confirmSignOut() }
         addSosNumbersRow()
-        addChildAppearanceRow()
-        addChildShortcutRow()
+        if (!prefs.getBoolean("is_child_device", false)) {
+            addChildAppearanceRow()
+            addChildShortcutRow()
+        }
     }
 
 
