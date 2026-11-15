@@ -106,6 +106,18 @@ class ParentDashboardActivity : AppCompatActivity() {
     }
 
     private fun registerParentPushToken() {
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            AlertDialog.Builder(this)
+                .setTitle("SOS bildirishnomalari")
+                .setMessage("SOS xabarlarini ilova yopiq bo'lsa ham olish uchun bildirishnomalarga ruxsat bering.")
+                .setPositiveButton("Ruxsat berish") { _, _ ->
+                    ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 904)
+                }
+                .setNegativeButton("Keyinroq", null)
+                .show()
+        }
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         com.google.firebase.messaging.FirebaseMessaging.getInstance().token
             .addOnSuccessListener { token ->
@@ -143,8 +155,11 @@ class ParentDashboardActivity : AppCompatActivity() {
                 binding.sosAlertMessage.text = "$childName: $message\n$time"
                 binding.cardSosAlert.visibility = View.VISIBLE
                 binding.btnSosAlertSeen.setOnClickListener {
-                    alert.reference.update("parentSeenAtMs", System.currentTimeMillis())
-                    Toast.makeText(this, "SOS xabari ko'rilgan deb belgilandi.", Toast.LENGTH_SHORT).show()
+                    alert.reference.update(
+                        mapOf("status" to "dismissed", "parentSeenAtMs" to System.currentTimeMillis())
+                    )
+                    binding.cardSosAlert.visibility = View.GONE
+                    Toast.makeText(this, "SOS xabari yopildi.", Toast.LENGTH_SHORT).show()
                 }
             }
     }
