@@ -132,8 +132,12 @@ class MonitorForegroundService : Service() {
         val isChild = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
             .getBoolean("is_child_device", false)
         if (!isChild) return
-        val family = FirebaseRepo.familyCode ?: return
-        val child = FirebaseRepo.childId ?: com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+        val family = FirebaseRepo.familyCode ?: prefs.getString("family_code", null) ?: return
+        val child = FirebaseRepo.childId
+            ?: prefs.getString("child_id", null)
+            ?: com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+            ?: return
         val ref = com.google.firebase.firestore.FirebaseFirestore.getInstance()
             .collection("families").document(family).collection("children").document(child)
         childAppearanceListener = ref.addSnapshotListener { snap, error ->
