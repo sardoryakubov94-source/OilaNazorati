@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/color_bg" android:fillViewport="true">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="20dp">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Ota-onaga SOS xabari" android:textSize="21sp" android:textStyle="bold"
+            android:textColor="@color/color_text_primary" android:paddingBottom="8dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Nima bo‘lganini qisqacha yozing. Izoh yozmasangiz ham SOS yuborishingiz mumkin."
+            android:textSize="13sp" android:textColor="@color/color_text_secondary" android:paddingBottom="14dp"/>
+        <EditText android:id="@+id/inputSosNote" android:layout_width="match_parent"
+            android:layout_height="110dp" android:gravity="top|start" android:hint="Izoh: menga yordam kerak..."
+            android:inputType="textCapSentences|textMultiLine" android:maxLength="500"
+            android:padding="12dp" android:background="@drawable/bg_input_outline"/>
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Joylashuv" android:textStyle="bold" android:textColor="@color/color_text_primary"
+            android:paddingTop="18dp" android:paddingBottom="6dp"/>
+        <EditText android:id="@+id/inputSosPlaceLabel" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:hint="Manzil izohi (ixtiyoriy)"
+            android:inputType="textCapSentences" android:padding="12dp"
+            android:background="@drawable/bg_input_outline"/>
+        <TextView android:id="@+id/sosSelectedLocation" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="Joriy GPS joylashuvi yuboriladi"
+            android:textSize="12sp" android:textColor="@color/color_text_secondary"
+            android:paddingTop="8dp" android:paddingBottom="8dp"/>
+        <Button android:id="@+id/btnSosUseCurrentLocation" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="Joriy joylashuvimni ishlatish"
+            android:textAllCaps="false"/>
+        <Button android:id="@+id/btnSosChooseMapLocation" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="Xaritadan boshqa joyni belgilash"
+            android:textAllCaps="false"/>
+        <Button android:id="@+id/btnSosSendNow" android:layout_width="match_parent"
+            android:layout_height="56dp" android:layout_marginTop="18dp"
+            android:text="🆘  SOS XABARINI YUBORISH" android:textAllCaps="false"
+            android:textStyle="bold" android:backgroundTint="#C62828" android:textColor="#FFFFFF"/>
+        <Button android:id="@+id/btnSosSetTimer" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:text="SOS taymerini sozlash"
+            android:textAllCaps="false" android:layout_marginTop="8dp"/>
+        <TextView android:id="@+id/sosSendStatus" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:textColor="@color/color_text_secondary"
+            android:paddingTop="10dp"/>
+    </LinearLayout>
+</ScrollView>
