@@ -94,7 +94,7 @@ class ChildSetupActivity : AppCompatActivity() {
         binding.btnInstallationWizard.setOnClickListener { startActivity(Intent(this, InstallationWizardActivity::class.java)) }
         binding.btnPair.setOnClickListener { pairWithFamilyCode() }
         binding.btnGrantPermissions.setOnClickListener { requestOrOpenRuntimePermissions() }
-        binding.btnSosFromPermissions.setOnClickListener { showSosTimerDialog() }
+        binding.btnSosFromPermissions.setOnClickListener { startActivity(Intent(this, SosCenterActivity::class.java)) }
         binding.btnMicrophonePermission.setOnClickListener { requestMicrophonePermission() }
         binding.btnUsageAccess.setOnClickListener { requestUsageAccess() }
         binding.btnAccessibilityScreenshot.setOnClickListener { startActivity(Intent(this, InstallationWizardActivity::class.java)) }
