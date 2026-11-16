@@ -590,7 +590,6 @@ class ParentDashboardActivity : AppCompatActivity() {
             (binding.btnCallHistory.parent as View).parent as View,
             binding.smsTimelineList.parent as View,
             (binding.btnSavedContacts.parent as View).parent as View,
-            binding.notificationsCardHome,
             (binding.btnTrends.parent as View).parent as View,
             binding.cardStatScreenshot.parent as View
         )

@@ -9,5 +9,8 @@
         <item name="android:navigationBarColor">@color/color_surface</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="materialButtonStyle">@style/Widget.OilaNazorati.Button</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.OilaNazorati.AlertDialog</item>
+        <item name="android:alertDialogTheme">@style/ThemeOverlay.OilaNazorati.AlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.OilaNazorati.AlertDialog</item>
     </style>
 </resources>

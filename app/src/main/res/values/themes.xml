@@ -9,5 +9,28 @@
         <item name="android:navigationBarColor">@color/color_surface</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="materialButtonStyle">@style/Widget.OilaNazorati.Button</item>
+        <item name="alertDialogTheme">@style/ThemeOverlay.OilaNazorati.AlertDialog</item>
+        <item name="android:alertDialogTheme">@style/ThemeOverlay.OilaNazorati.AlertDialog</item>
+        <item name="materialAlertDialogTheme">@style/ThemeOverlay.OilaNazorati.AlertDialog</item>
+    </style>
+
+    <!-- Barcha AlertDialog.Builder(this) chaqiruvlari shu orqali ilova
+         ranglarida (karta foni, matn ranglari) chiqishi uchun — standart
+         Android/Material oq-kulrang oyna o'rniga. -->
+    <style name="ThemeOverlay.OilaNazorati.AlertDialog" parent="ThemeOverlay.MaterialComponents.Dialog.Alert">
+        <item name="colorPrimary">@color/color_primary</item>
+        <item name="colorSurface">@color/color_surface</item>
+        <item name="colorOnSurface">@color/color_text_primary</item>
+        <item name="colorOnBackground">@color/color_text_primary</item>
+        <item name="android:textColorPrimary">@color/color_text_primary</item>
+        <item name="android:textColorSecondary">@color/color_text_secondary</item>
+        <item name="android:background">@color/color_surface</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Widget.OilaNazorati.AlertDialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Widget.OilaNazorati.AlertDialogButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/Widget.OilaNazorati.AlertDialogButton</item>
+    </style>
+
+    <style name="Widget.OilaNazorati.AlertDialogButton" parent="Widget.MaterialComponents.Button.TextButton.Dialog">
+        <item name="android:textColor">@color/color_primary</item>
     </style>
 </resources>
