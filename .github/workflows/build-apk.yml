@@ -111,7 +111,25 @@ jobs:
           AGORA_APP_ID: ${{ secrets.AGORA_APP_ID }}
           AGORA_APP_CERT: ${{ secrets.AGORA_APP_CERT }}
         run: |
-          gradle --no-daemon clean assembleRelease
+          set +e
+          gradle --no-daemon clean assembleRelease --stacktrace 2>&1 | tee /tmp/gradle-build.log
+          status=${PIPESTATUS[0]}
+          exit $status
+
+      - name: TIME Build xatosini debug branch'ga yozib qo'yish
+        if: ${{ failure() }}
+        run: |
+          mkdir -p /tmp/logpush
+          tail -c 90000 /tmp/gradle-build.log > /tmp/logpush/gradle-build.log || true
+          cd /tmp/logpush
+          git init -q
+          git checkout -q -b ci-debug-log
+          git config user.email "debug@local"
+          git config user.name "debug-bot"
+          git add gradle-build.log
+          git commit -q -m "ci: capture build log $(date -u +%FT%TZ)"
+          git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git push -f origin ci-debug-log
 
       - name: APK nomini tayyorlash
         run: |
