@@ -40,6 +40,11 @@ import uz.oilanazorati.parentcontrol.util.AppPasswordUtil
  */
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        /** Qulflangan ekrandagi SOS yorlig'idan ota-ona panelini to'g'ridan-to'g'ri ochish uchun. */
+        const val EXTRA_OPEN_PARENT_SOS = "extra_open_parent_sos"
+    }
+
     private enum class PendingDestination { PARENT_DASHBOARD, SUPPORT }
     private var pendingDestination = PendingDestination.PARENT_DASHBOARD
 
