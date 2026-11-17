@@ -21,7 +21,13 @@ object RiskAnalysisEngine {
         val terms: List<String>,
         val sensitive: Boolean = false,
         /** "Zaif" so'zlar: bittasi yolg'iz o'zi signal BERMAYDI (kamida 2 ta yoki kuchli so'z bilan birga). */
-        val weakTerms: List<String> = emptyList()
+        val weakTerms: List<String> = emptyList(),
+        /**
+         * Aniq (ma'nosi noaniq bo'lmagan) o'zak so'zlar: oxiriga o'zbekcha qo'shimcha
+         * (-da, -lik, -lar, -ni ...) qo'shilsa ham mos tushadi. Masalan "1xbetda",
+         * "kazinoda", "giyohvandlik", "pornosayt". Faqat BOSHI so'z chegarasida bo'lishi shart.
+         */
+        val stemTerms: List<String> = emptyList()
     )
 
     /*
@@ -33,49 +39,61 @@ object RiskAnalysisEngine {
      */
     private val rules = listOf(
         Rule("ADULT_SEXUAL", 35, listOf(
-            "porn", "porno", "pornograf", "seks", "yalang'och", "yalangoch", "nude",
-            "nsfw", "erotic", "erotik", "adult content", "adult video", "adult photo",
-            "sex video", "sex photo", "голая", "порно", "секс",
+            "seks", "nude", "nsfw", "erotic", "adult content", "adult video", "adult photo",
+            "sex video", "sex photo", "голая", "секс", "🔞",
             "18+ video", "18+ rasm", "18+ foto", "18+ kino", "18+ film", "18+ видео",
-            "18+ контент", "18 plus video"
+            "18+ контент", "18 plus video", "18+ kontent", "18+ content",
+            "intim suhbat", "intim video", "intim rasm", "intim foto", "intim film", "intim yozishma"
         ), true, weakTerms = listOf(
             // "18+" kanal/ilova yorlig'ida, "sex" o'zbekchada "ishlab chiqarish sexi",
             // "intim" ko'plab oddiy so'zlarda uchraydi — yolg'iz o'zi signal emas.
             "18+", "18 plus", "sex", "nud", "intim", "intimate"
+        ), stemTerms = listOf(
+            "porno", "pornograf", "порно", "erotik", "yalang'och", "yalangoch",
+            "sex stiker", "sex sticker", "seks stiker", "18+ stiker", "18+ sticker",
+            "18+ sayt", "18+ sahifa"
         )),
         Rule("SEXUAL_IMAGE_REQUEST", 45, listOf(
-            "yalang'och rasmingni", "yalangoch rasmingni", "intim rasmingni",
-            "intim rasm yubor", "yalang'och foto", "yalangoch foto",
             "private photo", "nude pic", "nudes", "send nudes", "голые фото",
             "интим фото", "пришли интим"
-        ), true),
+        ), true, stemTerms = listOf(
+            "yalang'och rasming", "yalangoch rasming", "intim rasming",
+            "intim rasm yubor", "intim rasm tashla", "yalang'och foto", "yalangoch foto",
+            "kiyimsiz rasm", "kiyimsiz foto", "kiyimsiz video",
+            "kiyimingni yech", "kiyimlaringni yech", "yechinib rasm", "yechinib video",
+            "yechinib ko'rsat", "yalang'ochlanib", "yalangochlanib",
+            "yalang'och bo'l", "yalangoch bol"
+        )),
         // MUHIM: "send or" ataylab OLIB TASHLANDI — bu ikki oddiy ingliz
         // so'zi ("send or share", "send or don't" kabi) juda ko'p zararsiz
         // iborada uchraydi, tahdid bilan bog'liq bo'lmasligi mumkin.
         Rule("GROOMING_OR_COERCION", 50, listOf(
             "hech kimga aytma", "sir tut", "don't tell anyone", "keep it secret",
             "rasmni tarqataman", "photo tarqataman", "video tarqataman",
-            "if you don't send", "yubormasang", "shantaj",
+            "if you don't send", "yubormasang",
             "qo'rqitaman", "qorqitaman", "blackmail"
-        ), true),
+        ), true, stemTerms = listOf("shantaj")),
         // MUHIM: "bet", "stavka", "slot" ataylab OLIB TASHLANDI — bular
         // kundalik so'zlashuvda (ingliz tilida "I bet!", "vaqt sloti",
         // kredit "stavka"si kabi) juda tez-tez uchraydi va qimor bilan
-        // aloqasi bo'lmasligi mumkin. Qolgan so'zlar (1xbet, betting,
-        // casino, qimor va h.k.) allaqachon yetarlicha aniq va xavfsiz.
-        Rule("GAMBLING", 40, listOf(
-            "1xbet", "1x bet", "melbet", "betting", "casino", "kazino",
-            "qimor", "parimatch", "mostbet"
+        // aloqasi bo'lmasligi mumkin. Qolgan so'zlar aniq va xavfsiz;
+        // ular o'zbekcha qo'shimcha bilan ("1xbetda", "kazinoda") ham tutiladi.
+        Rule("GAMBLING", 40, listOf("betting"), stemTerms = listOf(
+            "1xbet", "1x bet", "melbet", "mostbet", "parimatch", "linebet", "1win",
+            "casino", "kazino", "qimor"
         )),
         Rule("SELF_HARM", 45, listOf(
+            "self harm", "suicide", "kill myself", "cut myself",
+            "самоубийство", "порезать себя"
+        ), stemTerms = listOf(
             "o'z joniga qasd", "oz joniga qasd", "jonimga qasd",
-            "o'zimni o'ldir", "ozimni oldir", "self harm", "suicide",
-            "kill myself", "cut myself", "самоубийство", "порезать себя"
+            "o'zimni o'ldir", "ozimni oldir"
         )),
-        Rule("DRUGS", 40, listOf(
-            "narkotik", "giyohvand", "marixuana", "marihuana", "kokain",
-            "geroin", "mdma", "наркотик"
-        ), weakTerms = listOf("meth", "drug")),
+        Rule("DRUGS", 40, listOf("geroin", "mdma"), weakTerms = listOf("meth", "drug"),
+            stemTerms = listOf(
+                "narkotik", "giyohvand", "marixuana", "marihuana", "kokain",
+                "наркотик", "героин", "кокаин"
+            )),
         // MUHIM: "kill" va "murder" ataylab OLIB TASHLANDI — bular
         // o'yinlarda (masalan juda mashhur "Among Us" o'yinida "murder",
         // ko'plab otishma o'yinlarida "kill/nice kill") kundalik atama
@@ -94,13 +112,34 @@ object RiskAnalysisEngine {
     )
 
     /**
+     * Matnni solishtirish uchun bir xil ko'rinishga keltiradi: kichik harf va BARCHA
+     * apostrof turlari (‘ ’ ʻ ʼ ` ´ ′) oddiy ' ga almashtiriladi. Telefon klaviaturalari
+     * o'zbekcha "o‘", "g‘" ni ko'pincha shunday yozadi — shuning uchun "yalang‘och" yoki
+     * "o‘z joniga qasd" ilgari tutilmasdi. Belgi-belgiga almashtiriladi (uzunlik o'zgarmaydi),
+     * shu sabab indekslar asl matn bilan mos qoladi.
+     */
+    fun normalize(raw: String): String {
+        val sb = StringBuilder(raw.length)
+        for (ch in raw) {
+            sb.append(
+                when (ch) {
+                    '\u2018', '\u2019', '\u02BB', '\u02BC', '\u02B9', '\u2032', '`', '\u00B4' -> '\''
+                    else -> ch.lowercaseChar()
+                }
+            )
+        }
+        return sb.toString()
+    }
+
+    /**
      * Uzun ekran matnidan faqat aniqlangan so'z atrofidagi QISQA parchani qaytaradi
      * (ota-ona butun ekran matnini emas, aynan nima sabab bo'lganini ko'rsin).
      */
     fun snippet(text: String, terms: List<String>, radius: Int = 70): String {
         val clean = text.replace(Regex("\\s+"), " ").trim()
         if (clean.length <= radius * 2 + 20) return clean
-        val idx = terms.map { clean.indexOf(it, ignoreCase = true) }.filter { it >= 0 }.minOrNull()
+        val norm = normalize(clean)
+        val idx = terms.map { norm.indexOf(normalize(it)) }.filter { it >= 0 }.minOrNull()
             ?: return clean.take(radius * 2).trimEnd() + "…"
         val start = (idx - radius).coerceAtLeast(0)
         val end = (idx + radius).coerceAtMost(clean.length)
@@ -131,11 +170,12 @@ object RiskAnalysisEngine {
     }
 
     fun analyze(vararg rawParts: String): RiskAnalysis? {
-        val text = rawParts.filter { it.isNotBlank() }.joinToString(" ").lowercase(Locale.ROOT)
+        val text = normalize(rawParts.filter { it.isNotBlank() }.joinToString(" "))
         if (text.isBlank()) return null
 
         val matches = rules.mapNotNull { rule ->
-            val strong = rule.terms.filter { term -> containsWholeTerm(text, term) }
+            val strong = rule.terms.filter { term -> containsWholeTerm(text, term) } +
+                rule.stemTerms.filter { stem -> containsStem(text, stem) }
             val weak = rule.weakTerms.filter { term -> containsWholeTerm(text, term) }
             // Bitta zaif so'z ("18+", "sex" va h.k.) yolg'iz o'zi yolg'on signal beradi — talab qilinadi:
             // kamida bitta kuchli so'z YOKI kamida ikkita zaif so'z.
@@ -212,11 +252,41 @@ object RiskAnalysisEngine {
         return false
     }
 
+    /**
+     * "stem" o'zak so'zi matnda SO'Z BOSHIDA uchraydimi (oxiriga o'zbekcha qo'shimcha
+     * qo'shilishi mumkin: "1xbet" -> "1xbetda"). Boshidan oldingi belgi harf/raqam
+     * bo'lmasligi shart — "x1xbet" kabi bo'lak mos kelmaydi.
+     */
+    private fun containsStem(text: String, stem: String): Boolean {
+        if (stem.isBlank()) return false
+        var idx = text.indexOf(stem)
+        while (idx >= 0) {
+            val before = if (idx > 0) text[idx - 1] else null
+            if (before == null || !before.isLetterOrDigit()) return true
+            idx = text.indexOf(stem, idx + 1)
+        }
+        return false
+    }
+
+    // Rasm/video/stiker so'zlarining o'zbekcha shakllari ("rasmingni", "rasmga", "videolar"...).
+    // Aniq ro'yxat — "rasmiy" (rasmiy hujjat) kabi boshqa so'zlarga tegmaslik uchun.
+    private val VIDEO_MARKERS = listOf(
+        "video", "videoni", "videoga", "videolar", "videolarni", "videosi", "videosini",
+        "videongni", "movie", "ролик", "видео"
+    )
+    private val IMAGE_MARKERS = listOf(
+        "rasm", "rasmi", "rasmim", "rasmimni", "rasmini", "rasmingni", "rasmni", "rasmga",
+        "rasmlar", "rasmlarni", "rasmlarini", "rasmlarimni", "surat", "suratni", "suratga",
+        "suratingni", "foto", "fotoni", "fotoga", "fotolar", "fotongni", "fotosini",
+        "photo", "image", "picture", "stiker", "stikerlar", "stikerni", "stikerlari",
+        "sticker", "stickers", "стикер", "📷", "🖼", "фото", "изображение"
+    )
+
     fun detectMediaMarker(rawParts: List<String>): String {
-        val text = rawParts.joinToString(" ").lowercase(Locale.ROOT)
+        val text = normalize(rawParts.joinToString(" "))
         return when {
-            listOf("video", "videoni", "videoga", "movie", "ролик", "видео").any { containsWholeTerm(text, it) } -> "VIDEO"
-            listOf("rasm", "rasmini", "foto", "photo", "image", "picture", "📷", "🖼", "фото", "изображение").any { containsWholeTerm(text, it) } -> "IMAGE"
+            VIDEO_MARKERS.any { containsWholeTerm(text, it) } -> "VIDEO"
+            IMAGE_MARKERS.any { containsWholeTerm(text, it) } -> "IMAGE"
             else -> ""
         }
     }

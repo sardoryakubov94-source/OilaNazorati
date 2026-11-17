@@ -804,12 +804,14 @@ class AccessibilityScreenshotService : AccessibilityService() {
         //     tasvir topsagina qo'llaniladi — matn "sensitive" deb
         //     belgilanganidan qat'iy nazar.
         //
-        // Screenshot O'ZI qachon olinadi: odatdagi (sensitive bo'lmagan)
-        // holatda har doim; "sensitive" matn holatida esa faqat suhbatda
-        // rasm/video ham aniqlangan bo'lsa (mediaType bo'sh emas) — toki
-        // haqiqatan tasvir bo'lsa, MediaRiskAnalyzer uni tekshira olsin.
+        // Screenshot O'ZI qachon olinadi: xavf signali yetarlicha ishonchli bo'lsa
+        // (shouldCaptureEvidence) HAR DOIM — "sensitive" (intim) matn holatida ham.
+        // Ilgari intim matn uchun screenshot faqat suhbatda "rasm/video" so'zi bo'lsa
+        // olinardi; natijada "kiyimingni yech" kabi so'rovlarda ota-onaga dalil
+        // screenshoti bormasdi. Endi screenshot har doim olinadi; suhbatda haqiqiy
+        // tasvir bo'lsa, MediaRiskAnalyzer (processCapturedBitmap ichida) uning
+        // piksellarini tekshiradi va ANIQ intim tasvir bo'lsagina xiralashtiradi.
         val shouldCapture = analysis.shouldCaptureEvidence &&
-            (!analysis.sensitive || mediaType.isNotBlank()) &&
             isScreenInteractive() && !captureRunning
         if (shouldCapture) {
             captureAndUpload(
