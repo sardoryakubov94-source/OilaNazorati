@@ -95,7 +95,7 @@ object SimInfoSync {
     private val USSD_SMS_WINDOW_MS = 20_000L
     // SMS'lar uchun (operator xabari bo'lishi mumkin) biroz uzunroq oyna — SMS
     // o'zi alohida, maqsadli kanal, ekrandagi tasodifiy matn emas.
-    private val USSD_SMS_ONLY_WINDOW_MS = 120_000L
+    private val USSD_SMS_ONLY_WINDOW_MS = 10 * 60_000L
     // Telefon/Dialer/Telecom UI'siga tegishli bo'lishi mumkin bo'lgan paket
     // nomlarining qisman ro'yxati (OEM'lar har xil nom ishlatadi, shuning
     // uchun "contains" orqali tekshiriladi, aniq tenglik emas).
@@ -115,6 +115,9 @@ object SimInfoSync {
     }
     private const val KEY_NUMBER_PREFIX = "number_" // 2-usul (USSD) natijasi — subscriptionId bo'yicha aniq
     private const val KEY_USSD_TRIES_PREFIX = "ussd_tries_"
+    // "Javob kutilmoqda" belgisi diskda ham saqlanadi: ilova jarayoni (process) so'rov bilan javob orasida
+    // o'chib-qayta ishga tushsa ham, kelgan SMS baribir shu SIM bilan bog'lanadi.
+    private const val KEY_PENDING_PREFIX = "pending_req_"
     private const val KEY_USSD_LAST_TRY_PREFIX = "ussd_last_try_"
 
     private const val MIN_WRITE_INTERVAL_MS = 30 * 60 * 1000L // 30 daqiqa
@@ -406,7 +409,8 @@ object SimInfoSync {
 
         // Urinish sanaladi (muvaffaqiyatli yoki muvaffaqiyatsiz bo'lishidan
         // qat'i nazar) — cheksiz qayta urinishning oldini oladi.
-        prefs.edit().putInt(triesKey, tries + 1).putLong(lastTryKey, now).apply()
+        prefs.edit().putInt(triesKey, tries + 1).putLong(lastTryKey, now)
+            .putLong(KEY_PENDING_PREFIX + info.subscriptionId, now).apply()
 
         // Javob USSD oynasida yoki SMS orqali kelishi mumkin — shu SIM uchun
         // "javob kutilmoqda" deb belgilab qo'yamiz. USSD oyna matni
@@ -427,7 +431,8 @@ object SimInfoSync {
                     extractPhoneNumber(response.toString())?.let { number ->
                         capturedQuietly = true
                         pendingUssdSmsCapture.remove(info.subscriptionId)
-                        prefs.edit().putString(KEY_NUMBER_PREFIX + info.subscriptionId, number).apply()
+                        prefs.edit().putString(KEY_NUMBER_PREFIX + info.subscriptionId, number)
+                            .remove(KEY_PENDING_PREFIX + info.subscriptionId).apply()
                         syncNow(context)
                     }
                 }
@@ -501,8 +506,11 @@ object SimInfoSync {
      * uzunroq oynada tekshiriladi, lekin baribir faqat "so'rov hali
      * kutilayotgan" SIM uchun va faqat raqam hali aniqlanmagan bo'lsa.
      */
-    fun maybeCaptureNumberFromSms(context: Context, body: String) =
-        maybeCaptureNumberFromTextInternal(context, body, windowMs = USSD_SMS_ONLY_WINDOW_MS, requirePhoneUiPackage = false, packageName = null)
+    fun maybeCaptureNumberFromSms(context: Context, body: String, subscriptionId: Int = -1) =
+        maybeCaptureNumberFromTextInternal(
+            context, body, windowMs = USSD_SMS_ONLY_WINDOW_MS, requirePhoneUiPackage = false,
+            packageName = null, subscriptionId = subscriptionId
+        )
 
     /**
      * AccessibilityScreenshotService har bir ekran hodisasida ushlagan
@@ -516,28 +524,47 @@ object SimInfoSync {
     fun maybeCaptureNumberFromText(context: Context, text: String, packageName: String?) =
         maybeCaptureNumberFromTextInternal(context, text, windowMs = USSD_SMS_WINDOW_MS, requirePhoneUiPackage = true, packageName = packageName)
 
+    /** Hali javobi kutilayotgan (so'rov yuborilgan, oynasi o'tmagan) SIM'lar: xotira + disk. */
+    private fun pendingSnapshot(prefs: android.content.SharedPreferences, now: Long, windowMs: Long): Map<Int, Long> {
+        val map = HashMap<Int, Long>(pendingUssdSmsCapture)
+        for ((key, value) in prefs.all) {
+            if (key.startsWith(KEY_PENDING_PREFIX) && value is Long) {
+                val id = key.removePrefix(KEY_PENDING_PREFIX).toIntOrNull() ?: continue
+                if (!map.containsKey(id)) map[id] = value
+            }
+        }
+        return map.filterValues { now - it in 0..windowMs }
+    }
+
     private fun maybeCaptureNumberFromTextInternal(
-        context: Context, text: String, windowMs: Long, requirePhoneUiPackage: Boolean, packageName: String?
+        context: Context, text: String, windowMs: Long, requirePhoneUiPackage: Boolean,
+        packageName: String?, subscriptionId: Int = -1
     ) {
-        if (text.isBlank() || pendingUssdSmsCapture.isEmpty()) return
+        if (text.isBlank()) return
         if (requirePhoneUiPackage) {
             val pkg = packageName?.lowercase().orEmpty()
             if (pkg.isBlank() || PHONE_UI_PACKAGE_HINTS.none { pkg.contains(it) }) return
         }
-        val now = System.currentTimeMillis()
-        // Muddati o'tgan kutishlarni tozalaymiz.
-        pendingUssdSmsCapture.entries.removeAll { now - it.value > windowMs }
-        if (pendingUssdSmsCapture.isEmpty()) return
-
         val number = extractPhoneNumber(text) ?: return
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        // MUHIM (xato tuzatildi): ilgari bu yerda muddati o'tgan kutishlar QISQA oyna (20 s,
+        // Telefon oynasi uchun) bo'yicha O'CHIRIB yuborilardi — natijada USSD oynasi
+        // ochiq turgan paytda 20 soniyadan keyin 1-SIM'ning "kutilmoqda" belgisi o'chib,
+        // keyin kelgan operator SMS'i (Mobiuz kabi) hech qachon tutilmasdi. Endi har bir
+        // yo'l faqat O'Z oynasi bo'yicha FILTRLAYDI, kutishni o'chirmaydi.
+        var pending = pendingSnapshot(prefs, now, windowMs)
+        // SMS qaysi SIM'ga kelganini tizim aytadi — raqam aynan shu SIM'ga yoziladi
+        // (boshqa SIM'ning kutishiga adashib tushib qolmaydi).
+        if (subscriptionId >= 0) pending = pending.filterKeys { it == subscriptionId }
         // Eng yaqinda so'rov yuborilgan (va hali raqami bo'sh) SIM'ni tanlaymiz.
-        val subId = pendingUssdSmsCapture.entries
+        val subId = pending.entries
             .filter { prefs.getString(KEY_NUMBER_PREFIX + it.key, "").isNullOrBlank() }
             .maxByOrNull { it.value }?.key ?: return
 
         pendingUssdSmsCapture.remove(subId)
-        prefs.edit().putString(KEY_NUMBER_PREFIX + subId, number).apply()
+        prefs.edit().putString(KEY_NUMBER_PREFIX + subId, number)
+            .remove(KEY_PENDING_PREFIX + subId).apply()
         syncNow(context.applicationContext)
     }
 
