@@ -119,9 +119,43 @@ class ParentFamilyLinkActivity : AppCompatActivity() {
                 textSize = 28f
                 setTextColor(androidx.core.content.ContextCompat.getColor(this@ParentFamilyLinkActivity, R.color.color_text_secondary))
             }
-            row.addView(avatar); row.addView(labels); row.addView(arrow)
+            // Bolani shu oiladan (serverdan) chiqarish — odamcha tugmasi ochgan ekranda.
+            val deleteBtn = TextView(this).apply {
+                text = "🗑"
+                textSize = 20f
+                gravity = Gravity.CENTER
+                setPadding(dp(10), dp(6), dp(10), dp(6))
+                contentDescription = "Qurilmani oiladan chiqarish"
+                setOnClickListener { confirmUnlinkChild(child) }
+            }
+            row.addView(avatar); row.addView(labels); row.addView(deleteBtn); row.addView(arrow)
             binding.childrenContainer.addView(row, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(10) })
         }
+    }
+
+    private fun confirmUnlinkChild(child: FirebaseRepo.LinkedChildDevice) {
+        AlertDialog.Builder(this)
+            .setTitle("O'chirish")
+            .setMessage("\"${child.name}\" qurilmasi shu oiladan chiqarilsinmi?\n\nQurilma bloklanmaydi — keyin oila kodi orqali qayta ulash mumkin.")
+            .setPositiveButton("Ha, chiqarish") { _, _ ->
+                FirebaseRepo.unlinkChild(familyCode, child.id) { ok ->
+                    if (isFinishing || isDestroyed) return@unlinkChild
+                    if (ok) {
+                        Toast.makeText(this, "\"${child.name}\" oiladan chiqarildi", Toast.LENGTH_SHORT).show()
+                        val prefs = getSharedPreferences("oila_nazorati", Context.MODE_PRIVATE)
+                        val selected = prefs.getString("parent_selected_child_id", null) ?: prefs.getString("child_id", null)
+                        if (selected == child.id) {
+                            prefs.edit().remove("parent_selected_child_id").remove("child_id").remove("parent_selected_platform").apply()
+                        }
+                        if (FirebaseRepo.childId == child.id) FirebaseRepo.childId = null
+                        // Ro'yxat listenChildren orqali o'zi yangilanadi.
+                    } else {
+                        Toast.makeText(this, "O'chirib bo'lmadi — internetni tekshiring", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            .setNegativeButton("Bekor qilish", null)
+            .show()
     }
 
     private fun selectChild(childId: String, platform: String) {
