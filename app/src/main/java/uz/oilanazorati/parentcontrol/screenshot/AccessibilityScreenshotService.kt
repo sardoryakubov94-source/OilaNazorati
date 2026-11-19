@@ -72,8 +72,13 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private val autoWatchRunnable: Runnable = object : Runnable {
         override fun run() {
             autoWatchScheduled = false
-            evaluateAndQueue()
-            if (settings.enabled && autoCaptureActive) scheduleAutoWatch()
+            // Batareya: ekran o'chiq bo'lsa tekshiruv ham, qayta rejalashtirish ham kerak emas —
+            // ekran yonib, birinchi accessibility hodisasi kelgan zahoti onAccessibilityEvent
+            // scheduleAutoWatch()'ni qayta ishga tushiradi.
+            if (isScreenInteractive()) {
+                evaluateAndQueue()
+                if (settings.enabled && autoCaptureActive) scheduleAutoWatch()
+            }
         }
     }
 

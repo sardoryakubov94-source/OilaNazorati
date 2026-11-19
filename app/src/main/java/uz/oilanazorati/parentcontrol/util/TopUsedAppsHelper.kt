@@ -32,10 +32,15 @@ object TopUsedAppsHelper {
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
         val now = System.currentTimeMillis()
+        // Batareya: "Top-3" juda sekin o'zgaradi, aggregatsiya esa butun kunlik hodisalarni o'qiydi.
+        // Shu sabab natija 5 daqiqa keshlanadi (avto-skrinshot tekshiruvi har daqiqa so'raydi).
+        cached?.let { c ->
+            if (c.limit == limit && c.startOfDay == startOfDay && now - c.at < CACHE_TTL_MS) return c.value
+        }
         val stats = usm.queryAndAggregateUsageStats(startOfDay, now)
         val pm = context.packageManager
 
-        return stats.filter { (pkg, usage) ->
+        val result = stats.filter { (pkg, usage) ->
             pkg != context.packageName &&
                 usage.totalTimeInForeground > 0 &&
                 (safeApplicationInfo(pm, pkg)?.flags?.and(ApplicationInfo.FLAG_SYSTEM) ?: 0) == 0
@@ -44,7 +49,13 @@ object TopUsedAppsHelper {
             .take(limit)
             .map { it.key }
             .toSet()
+        cached = Cached(limit, startOfDay, now, result)
+        return result
     }
+
+    private const val CACHE_TTL_MS = 5 * 60_000L
+    private class Cached(val limit: Int, val startOfDay: Long, val at: Long, val value: Set<String>)
+    @Volatile private var cached: Cached? = null
 
     private fun safeApplicationInfo(pm: android.content.pm.PackageManager, pkg: String) =
         try { pm.getApplicationInfo(pkg, 0) } catch (_: Exception) { null }
