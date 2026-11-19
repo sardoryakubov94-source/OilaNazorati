@@ -227,33 +227,35 @@ header{background:rgba(255,255,255,.94);border-bottom:1px solid var(--site-line)
 <a class="ios-panel-link secondary-panel" href="ios.html">Hozircha iOS ota-ona panelidan foydalanish →</a>
 </article></div>
 </div></section>
-<section id="qurilmalararo" class="section" style="padding:64px 0;background:#fff">
+<section id="qurilmalararo" class="section" style="padding:54px 0;background:#fff">
 <div class="wrap">
-  <div class="heading"><div><label>4 TA QURILMA KOMBINATSIYASI</label><h2>Ota-ona va bola telefonlari qanday ishlaydi?</h2></div><p>Oila Nazorati ota-ona va bola qurilmasining turini aniqlaydi. Shunga qarab mos boshqaruv paneli va mavjud funksiyalar ko‘rsatiladi.</p></div>
+  <div class="heading"><div><label>QURILMALAR MOSLIGI</label><h2>Android va iOS o‘zaro ishlashi</h2></div><p>Ota-ona va bola telefonlari turlicha bo‘lsa ham, mos funksiyalar ishlaydi.</p></div>
   <style>
-  .cross-matrix{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid #dfe6f0;border-radius:18px;overflow:hidden;box-shadow:0 12px 34px rgba(20,35,60,.05)}
-  .cross-matrix th,.cross-matrix td{padding:17px 18px;text-align:left;vertical-align:top;border-bottom:1px solid #e9eef5;font-size:13px;line-height:1.65}
-  .cross-matrix th{background:#f2f5fa;color:#263b61;font-size:12px;font-weight:900}
+  .cross-matrix-wrap{overflow-x:auto;border:1px solid #b98a3d;border-radius:15px;box-shadow:0 8px 24px rgba(75,48,15,.07);background:#fff}
+  .cross-matrix{width:100%;min-width:610px;border-collapse:collapse}
+  .cross-matrix th{padding:13px 16px;background:#f5eee2;color:#63451e;text-align:left;font-size:12px;font-weight:900;letter-spacing:.02em;border-bottom:2px solid #b98a3d}
+  .cross-matrix td{padding:14px 16px;border-bottom:1px solid #d8c29c;color:#344054;font-size:13px;line-height:1.5;vertical-align:middle}
   .cross-matrix tr:last-child td{border-bottom:0}
-  .cross-matrix td:first-child{font-weight:850;color:#17243a;min-width:155px}
-  .cross-matrix .matrix-platform{display:inline-flex;align-items:center;gap:6px;font-weight:850;white-space:nowrap}
-  .cross-matrix .matrix-android{color:#25845c}.cross-matrix .matrix-ios{color:#455b83}
-  .cross-matrix .matrix-tag{display:inline-block;margin:0 0 7px;padding:4px 8px;border-radius:7px;background:#edf5ff;color:#315a91;font-size:10px;font-weight:900}
-  .cross-matrix-note{margin-top:14px;padding:14px 16px;border-radius:13px;background:#f5f7fb;color:#65738a;font-size:12px;line-height:1.7}
-  @media(max-width:700px){.cross-matrix thead{display:none}.cross-matrix,.cross-matrix tbody,.cross-matrix tr,.cross-matrix td{display:block;width:100%}.cross-matrix tr{padding:10px 14px;border-bottom:1px solid #e4eaf2}.cross-matrix tr:last-child{border-bottom:0}.cross-matrix td{padding:7px 0;border:0;min-width:0!important}.cross-matrix td:first-child{padding-bottom:2px}.cross-matrix td:nth-child(2)::before{content:"Bola qurilmasi: ";font-weight:900;color:#53657f}.cross-matrix td:nth-child(3)::before{content:"Ishlaydigan imkoniyatlar: ";font-weight:900;color:#53657f}.cross-matrix td:nth-child(4)::before{content:"Ota-ona interfeysi: ";font-weight:900;color:#53657f}}
+  .cross-matrix tbody tr:nth-child(even){background:#fcfaf6}
+  .cross-matrix .device{font-weight:850;white-space:nowrap;color:#26354b}
+  .cross-matrix .android{color:#26835d}.cross-matrix .ios{color:#526487}
+  .cross-matrix .features{font-weight:600}
+  .cross-matrix .panel{color:#72501f;font-size:12px;font-weight:800}
+  .cross-matrix-note{margin-top:11px;color:#737b89;font-size:11px;line-height:1.5}
+  @media(max-width:700px){.cross-matrix th,.cross-matrix td{padding:11px 12px;font-size:12px}.cross-matrix{min-width:570px}}
   </style>
-  <div style="overflow-x:auto">
+  <div class="cross-matrix-wrap">
     <table class="cross-matrix" aria-label="Ota-ona va bola Android iOS qurilmalari mosligi">
-      <thead><tr><th>Ota-ona qurilmasi</th><th>Bola qurilmasi</th><th>Ishlaydigan imkoniyatlar</th><th>Ota-ona interfeysi</th></tr></thead>
+      <thead><tr><th>Ota-ona qurilmasi / panel</th><th>Bola qurilmasi</th><th>Ishlaydigan imkoniyatlar</th></tr></thead>
       <tbody>
-        <tr><td><span class="matrix-platform matrix-android">● Android</span></td><td><span class="matrix-platform matrix-android">● Android</span></td><td><span class="matrix-tag">Android imkoniyatlari</span><br>Android uchun mavjud nazorat funksiyalari: joylashuv, qo‘ng‘iroqlar, SMS, kontaktlar, SIM ma’lumotlari, ilovalar faolligi, bildirishnomalar, ekran tasvirlari, xavf signallari va boshqa ruxsat etilgan modullar.</td><td>Android ota-ona paneli. Android qurilmasiga mo‘ljallangan to‘liq boshqaruv imkoniyatlari.</td></tr>
-        <tr><td><span class="matrix-platform matrix-ios">● iPhone (iOS)</span></td><td><span class="matrix-platform matrix-ios">● iPhone (iOS)</span></td><td><span class="matrix-tag">iOS imkoniyatlari</span><br>Joylashuv, ekran vaqti, ilova va toifalar bo‘yicha hisobotlar, foydalanish limitlari, maktab/uyqu jadvali, veb-sayt cheklovlari va Focus boshqaruvi. iOS 16+ hamda Apple ruxsatlariga bog‘liq.</td><td>iOS ota-ona paneli. iPhone uchun moslashtirilgan boshqaruv interfeysi.</td></tr>
-        <tr><td><span class="matrix-platform matrix-ios">● iPhone (iOS)</span></td><td><span class="matrix-platform matrix-android">● Android</span></td><td><span class="matrix-tag">Android bola funksiyalari</span><br>Android bolada mavjud va iOS ota-ona paneli qo‘llab-quvvatlaydigan funksiyalar: joylashuv, ilovalar faolligi, qo‘ng‘iroq va SMS ma’lumotlari, kontaktlar, bildirishnomalar, screenshot, SIM ma’lumotlari, trendlar va ruxsatga bog‘liq audio imkoniyati.</td><td>iOS ota-ona paneli. Android bolaning ma’lumotlari shu panelda ko‘rsatiladi.</td></tr>
-        <tr><td><span class="matrix-platform matrix-android">● Android</span></td><td><span class="matrix-platform matrix-ios">● iPhone (iOS)</span></td><td><span class="matrix-tag">Apple ruxsat bergan iOS funksiyalari</span><br>Joylashuv, Focus rejimi, ekran vaqti cheklovlari, jadval asosidagi cheklovlar, veb-sayt cheklovlari va rozilik asosidagi audio imkoniyati. iOS 16+ va Apple ruxsatlariga bog‘liq. Android’ga xos SMS, qo‘ng‘iroqlar tarixi, SIM va bildirishnoma monitoringi mavjud emas.</td><td>Android ota-ona paneli, lekin iPhone bola uchun faqat iOS qo‘llab-quvvatlaydigan bo‘limlar ochiladi.</td></tr>
+        <tr><td class="device"><span class="android">● Android</span><br><span class="panel">Android paneli</span></td><td class="device"><span class="android">● Android</span></td><td class="features">Android uchun mavjud to‘liq nazorat funksiyalari</td></tr>
+        <tr><td class="device"><span class="ios">● iPhone (iOS)</span><br><span class="panel">iOS paneli</span></td><td class="device"><span class="ios">● iPhone (iOS)</span></td><td class="features">iOS ruxsat bergan funksiyalar: joylashuv, ekran vaqti, limitlar va sayt cheklovlari</td></tr>
+        <tr><td class="device"><span class="ios">● iPhone (iOS)</span><br><span class="panel">iOS paneli</span></td><td class="device"><span class="android">● Android</span></td><td class="features">Android bolaning mavjud funksiyalari iOS ota-ona panelida ko‘rsatiladi</td></tr>
+        <tr><td class="device"><span class="android">● Android</span><br><span class="panel">Android paneli</span></td><td class="device"><span class="ios">● iPhone (iOS)</span></td><td class="features">Faqat iOS ruxsat bergan funksiyalar; panel mos ravishda ochiladi</td></tr>
       </tbody>
     </table>
   </div>
-  <div class="cross-matrix-note"><b>Eslatma:</b> Ota-ona paneli ota-onaning qurilmasiga mos ko‘rinishda ochiladi. Bola qurilmasi iOS bo‘lsa, Apple cheklovlari sabab Android’dagi barcha kuzatuv funksiyalari ishlamaydi. Funksiyalar bolaning iOS versiyasi, berilgan ruxsatlar, rozilik va ilova holatiga qarab ko‘rsatiladi. Android qurilmasida ham tegishli ruxsatlar yoqilgan bo‘lishi kerak.</div>
+  <div class="cross-matrix-note">* iPhone’dagi imkoniyatlar Apple ruxsatlari va iOS versiyasiga bog‘liq.</div>
 </div>
 </section>
 <section id="qanday" class="section dark-section"><div class="wrap"><div class="heading light"><div><label>TO'LIQ QO'LLANMA</label><h2>Ilovani o‘rnatish va foydalanish yo‘riqnomasi</h2></div><p style="color:#aeb8c7">Farzand qurilmasiga ilovani ulash uchun quyidagi qadamlarni ketma-ket bajaring.</p></div><div class="guide-list">
