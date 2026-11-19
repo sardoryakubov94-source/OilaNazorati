@@ -121,6 +121,31 @@ class AccessibilityScreenshotService : AccessibilityService() {
     private var lastScanPackage: String? = null
     private var lastScanHash = 0
 
+    // --- Batareya tejash (aniqlash sifatiga ta'sir qilmaydi, faqat ortiqcha tekshiruvlarni siyraklashtiradi) ---
+    // Ketma-ket "hech narsa topilmagan / o'zgarmagan" skanerlar soni: ko'paygan sari skaner oralig'i
+    // 3 soniyadan 8 soniyagacha cho'ziladi. Yangi oyna/ilova ochilganda yoki xavf topilganda qayta 3 soniya.
+    private var idleScanStreak = 0
+    private var streakPackage: String? = null
+    private val lastImageCheckHash = HashMap<String, Int>()
+    private var cachedPowerFactor = 1L
+    private var cachedPowerFactorAt = 0L
+
+    /** Quvvat tejash rejimi yoqilgan yoki zaryad <=15% (zaryadlanmayotgan) bo'lsa — tekshiruvlar 2 baravar siyrak. */
+    private fun powerFactor(): Long {
+        val now = android.os.SystemClock.uptimeMillis()
+        if (now - cachedPowerFactorAt < 30_000L) return cachedPowerFactor
+        cachedPowerFactorAt = now
+        cachedPowerFactor = runCatching {
+            val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
+            val bm = getSystemService(Context.BATTERY_SERVICE) as? android.os.BatteryManager
+            val saver = pm?.isPowerSaveMode == true
+            val level = bm?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: 100
+            val low = level in 1..15 && bm?.isCharging != true
+            if (saver || low) 2L else 1L
+        }.getOrDefault(1L)
+        return cachedPowerFactor
+    }
+
     private fun queueRemoteCapture(requestId: String, attempt: Int = 0): Unit {
         if (!settings.enabled) return
         if (attempt == 0) {
@@ -697,7 +722,10 @@ class AccessibilityScreenshotService : AccessibilityService() {
         // aylanib chiqish asosiy oqimni band qilib, screenshot so'rovlarini sekinlashtirardi.
         val uptime = android.os.SystemClock.uptimeMillis()
         if (uptime < manualCaptureUntil) return
-        val minGap = if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) RISK_SCAN_WINDOW_CHANGE_MS else RISK_SCAN_MIN_INTERVAL_MS
+        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) idleScanStreak = 0
+        val baseGap = if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) RISK_SCAN_WINDOW_CHANGE_MS
+            else RISK_SCAN_MIN_INTERVAL_MS + 1_000L * (idleScanStreak / 4).coerceAtMost(5)
+        val minGap = (baseGap * powerFactor()).coerceAtMost(12_000L)
         if (uptime - lastRiskScanAt < minGap) return
         lastRiskScanAt = uptime
         // Ekran o'chiq bo'lsa ekranda ko'rinadigan matn yo'q — tahlil kerak emas (bildirishnomalar
@@ -706,6 +734,7 @@ class AccessibilityScreenshotService : AccessibilityService() {
         val packageName = event.packageName?.toString()?.takeIf { it.isNotBlank() } ?: return
         if (packageName == applicationContext.packageName) return
         if (RiskAnalysisEngine.isIgnoredPackage(packageName)) return
+        if (packageName != streakPackage) { streakPackage = packageName; idleScanStreak = 0 }
         val parts = ArrayList<String>()
         event.text?.forEach { if (!it.isNullOrBlank()) parts.add(it.toString()) }
         event.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
@@ -740,8 +769,16 @@ class AccessibilityScreenshotService : AccessibilityService() {
         val shouldCheckImage = imageFlag[0] || packageName in MESSENGER_PACKAGES_FOR_IMAGE_CHECK
         if (shouldCheckImage) {
             val lastAt = lastImageCheckAt[packageName] ?: 0L
-            if (uptime - lastAt >= IMAGE_CHECK_COOLDOWN_MS) {
+            // Davriy (aniq rasm topilmagan) tekshiruvlar: ijtimoiy tarmoq lentalarida (Instagram, TikTok...)
+            // sekinroq, va ekran matni umuman o'zgarmagan bo'lsa — takrorlanmaydi (yangi stiker/rasm
+            // kelsa matn/tavsif o'zgaradi). Aniq katta rasm topilganda esa avvalgidek tez tekshiriladi.
+            val periodicOnly = !imageFlag[0]
+            val baseCooldown = if (periodicOnly && packageName in SOCIAL_FEED_PACKAGES_SLOW_CHECK) IMAGE_CHECK_SLOW_COOLDOWN_MS else IMAGE_CHECK_COOLDOWN_MS
+            val curHash = parts.joinToString("\u0001").hashCode()
+            val changed = !periodicOnly || lastImageCheckHash[packageName] != curHash
+            if (changed && uptime - lastAt >= baseCooldown * powerFactor()) {
                 lastImageCheckAt[packageName] = uptime
+                lastImageCheckHash[packageName] = curHash
                 runImageFrameCheck(packageName)
             }
         }
@@ -756,10 +793,11 @@ class AccessibilityScreenshotService : AccessibilityService() {
 
         // Mazmun oldingi o'qishdagi bilan bir xil bo'lsa — qayta tahlil qilishning ma'nosi yo'q.
         val contentHash = parts.joinToString("\u0001").hashCode()
-        if (packageName == lastScanPackage && contentHash == lastScanHash) return
+        if (packageName == lastScanPackage && contentHash == lastScanHash) { idleScanStreak++; return }
         lastScanPackage = packageName
         lastScanHash = contentHash
-        val analysis = RiskAnalysisEngine.analyze(*parts.toTypedArray()) ?: return
+        val analysis = RiskAnalysisEngine.analyze(*parts.toTypedArray()) ?: run { idleScanStreak++; return }
+        idleScanStreak = 0
         val mediaType = RiskAnalysisEngine.detectMediaMarker(parts)
         val now = System.currentTimeMillis()
         val dedupeKey = "${analysis.category}|${analysis.summary}"
@@ -842,6 +880,13 @@ class AccessibilityScreenshotService : AccessibilityService() {
     // Telegram va shunga o'xshash ilovalarda stiker/rasm standart ImageView
     // orqali chizilmasligi mumkin (maxsus View bilan) — shu sabab bu
     // ilovalarda ImageView topilmasa ham, davriy tekshiruv ishlaydi.
+    // Lenta (feed) ko'rinishidagi ilovalar: soatlab ochiq turishi mumkin, shuning uchun davriy kadr
+    // tekshiruvi bu yerda 12 soniyada bir (chat messenjerlarida avvalgidek 6 soniya).
+    private val IMAGE_CHECK_SLOW_COOLDOWN_MS = 12_000L
+    private val SOCIAL_FEED_PACKAGES_SLOW_CHECK = setOf(
+        "com.instagram.android", "com.facebook.katana", "com.snapchat.android",
+        "com.zhiliaoapp.musically", "com.ss.android.ugc.trill"
+    )
     private val MESSENGER_PACKAGES_FOR_IMAGE_CHECK = setOf(
         "org.telegram.messenger", "org.telegram.messenger.web", "org.telegram.plus",
         "nekox.messenger", "com.whatsapp", "com.whatsapp.w4b",
