@@ -10,6 +10,9 @@ self.addEventListener('fetch',e=>{
   // xuddi tugma bosilmagandek tuyuladi. Shu sabab .apk va .sha256
   // fayllariga service worker umuman aralashmaydi — brauzer to'g'ridan
   // to'g'ri, o'zining odatiy tarzida yuklaydi.
+  if(reqUrl.pathname.endsWith('.mp4')){
+    return; // video (Range so'rovlari) — service worker aralashmaydi
+  }
   if(reqUrl.pathname.endsWith('.apk')||reqUrl.pathname.endsWith('.apk.sha256')){
     return;
   }
