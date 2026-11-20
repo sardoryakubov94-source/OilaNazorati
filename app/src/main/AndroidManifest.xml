@@ -30,6 +30,8 @@
         <meta-data android:name="isMonitoringTool" android:value="child_monitoring" />
         <activity android:name=".ui.OnboardingActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" />
         <activity android:name=".ui.SetupGuideActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" />
+        <activity android:name=".ui.VideoGuideActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" />
+        <activity android:name=".ui.VideoPlayerActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" android:configChanges="orientation|screenSize|keyboardHidden|screenLayout" />
         <activity android:name=".ui.UpdateRequiredActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" />
         <activity android:name=".ui.MainActivity" android:exported="true" android:launchMode="singleTop" />
         <activity android:name=".ui.ChildShortcutApprovalActivity" android:exported="false" android:theme="@style/Theme.OilaNazorati" />
