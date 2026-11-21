@@ -19,6 +19,7 @@ on:
       - 'manifest.webmanifest'
       - 'sw.js'
       - 'icons/**'
+      - 'videos/**'
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
   # MUHIM: "Build Release APK" workflow yangi APK'ni downloads/ papkasiga
@@ -69,6 +70,7 @@ jobs:
           mkdir -p _site
           cp index.html ios.html site.css notice.css privacy.html terms.html panel.html screenshot-request.js sim-panel.js agora-rtc.js ios-panel.css manifest.json manifest.webmanifest sw.js _site/
           if [ -d icons ]; then cp -R icons _site/icons; fi
+          if [ -d videos ]; then cp -R videos _site/videos; fi
           touch _site/.nojekyll
 
       - name: Upload Pages artifact
