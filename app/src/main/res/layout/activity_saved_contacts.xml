@@ -16,20 +16,30 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <!-- Kalendar filtri: ixcham tugma yuqori o'ng burchakda -->
+            <!-- Faol kontaktlar sarlavhasi va ixcham kalendar tugmasi -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="end"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
                 android:layout_marginBottom="8dp">
 
                 <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="Faol kontaktlar"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/color_text_primary"/>
+
+                <TextView
                     android:id="@+id/btnPickDate"
-                    android:layout_width="46dp"
-                    android:layout_height="46dp"
+                    android:layout_width="42dp"
+                    android:layout_height="42dp"
                     android:gravity="center"
                     android:text="📅"
-                    android:textSize="22sp"
+                    android:textSize="21sp"
                     android:contentDescription="Sana tanlash"
                     android:background="@drawable/bg_card_theme"
                     android:clickable="true"
