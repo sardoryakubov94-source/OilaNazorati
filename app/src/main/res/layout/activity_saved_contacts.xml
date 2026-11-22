@@ -5,26 +5,133 @@
     android:orientation="vertical"
     android:background="@color/color_bg">
 
-    <LinearLayout
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:padding="20dp">
+        android:layout_weight="1">
 
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Bu ro'yxat faqat bola qurilmasida ISM BILAN saqlangan kontaktlarni ko'rsatadi (masalan oila a'zolari). Saqlanmagan raqamlar bu yerga tushmaydi va boshqa joyda ham faqat rang bilan, ismsiz/raqamsiz ko'rinadi."
-            android:textSize="13sp"
-            android:layout_marginBottom="16dp"/>
+            android:orientation="vertical"
+            android:padding="20dp">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/savedContactsList"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bugun faol kontaktlar"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/color_text_primary"/>
 
-    </LinearLayout>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bosh sahifadagi &quot;Kontaktlar&quot; soni bilan bir xil ro'yxat — raqam ko'rinmaydi, faqat rang va (saqlangan bo'lsa) ism. Birortasiga bosing — oxirgi 30 kunlik umumiy sonini ko'rasiz."
+                android:textSize="12sp"
+                android:textColor="@color/color_text_secondary"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="14dp"/>
+
+            <TextView
+                android:id="@+id/todayEmptyText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bugun hali hech kim bilan gaplashilmagan."
+                android:textSize="13sp"
+                android:textColor="@color/color_text_secondary"
+                android:visibility="gone"
+                android:layout_marginBottom="8dp"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/todayContactsList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"/>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/color_border"
+                android:layout_marginTop="22dp"
+                android:layout_marginBottom="18dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Kalendar bo'yicha qidirish"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/color_text_primary"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Istalgan sanani tanlang — shu kunda nechta kontakt bilan gaplashilgani chiqadi. Shulardan birini bossangiz, oy boshidan shu sanagacha FAQAT o'sha kontakt bilan qaysi kunlari necha marta gaplashilgani ko'rinadi."
+                android:textSize="12sp"
+                android:textColor="@color/color_text_secondary"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="14dp"/>
+
+            <TextView
+                android:id="@+id/btnPickDate"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:gravity="center"
+                android:text="📅  Sana tanlash"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                android:textSize="15sp"
+                android:background="@drawable/bg_button_primary"
+                android:clickable="true"
+                android:focusable="true"/>
+
+            <LinearLayout
+                android:id="@+id/dayResultCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card_theme"
+                android:padding="16dp"
+                android:layout_marginTop="16dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/selectedDateLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="13sp"
+                    android:textColor="@color/color_text_secondary"/>
+
+                <TextView
+                    android:id="@+id/dayCountLabel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/color_text_primary"
+                    android:layout_marginTop="2dp"
+                    android:layout_marginBottom="12dp"/>
+
+                <TextView
+                    android:id="@+id/dayEmptyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Bu kunda hech kim bilan gaplashilmagan."
+                    android:textSize="13sp"
+                    android:textColor="@color/color_text_secondary"
+                    android:visibility="gone"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/dayContactsList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"/>
+
+            </LinearLayout>
+
+        </LinearLayout>
+    </ScrollView>
 
     <include layout="@layout/layout_bottom_nav"/>
 
