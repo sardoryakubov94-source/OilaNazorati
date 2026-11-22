@@ -182,6 +182,46 @@ class SetupGuideActivity : AppCompatActivity() {
         instructionCard.addView(bodyText)
         content.addView(instructionCard)
 
+
+        // Video yo'riqnoma endi alohida bosh menyuda emas,
+        // "Qanday o'rnatiladi?" yo'riqnomasi ichida joylashadi.
+        val videoGuideCard = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = rounded(Color.parseColor("#202D43"), dp(18).toFloat(), Color.parseColor("#536987"))
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                startActivity(Intent(this@SetupGuideActivity, VideoPlayerActivity::class.java).apply {
+                    putExtra(VideoPlayerActivity.EXTRA_URL, "https://oilanazorati.uz/videos/sozlash-nazoratni-boshlash.mp4")
+                    putExtra(VideoPlayerActivity.EXTRA_TITLE, "Bola telefoniga ruxsatlarni berish va nazoratni boshlash")
+                })
+            }
+        }
+        videoGuideCard.addView(TextView(this).apply {
+            text = "🎬  VIDEO YO'RIQNOMA"
+            setTextColor(Color.parseColor("#BCA3FF"))
+            textSize = 11f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            letterSpacing = 0.08f
+        })
+        videoGuideCard.addView(TextView(this).apply {
+            text = "Bola telefoniga ruxsatlarni berish va nazoratni boshlash"
+            setTextColor(Color.WHITE)
+            textSize = 15f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setPadding(0, dp(7), 0, dp(5))
+        })
+        videoGuideCard.addView(TextView(this).apply {
+            text = "Oila kodini kiritish, kerakli ruxsatlarni yoqish va nazoratni ishga tushirish videosini ko'rish  →"
+            setTextColor(Color.parseColor("#C5D2E4"))
+            textSize = 12.5f
+            setLineSpacing(dp(3).toFloat(), 1f)
+        })
+        content.addView(videoGuideCard, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { topMargin = dp(18) })
+
         val spacerBottom = View(this)
         content.addView(spacerBottom, LinearLayout.LayoutParams(0, dp(24)))
 
