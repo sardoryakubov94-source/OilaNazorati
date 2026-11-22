@@ -22,6 +22,7 @@ class ContactStatClickableAdapter(
 
     private var stats: List<ContactStat> = emptyList()
     private var names: Map<String, String> = emptyMap()
+    private var isPremium: Boolean = false
 
     fun setStats(newStats: List<ContactStat>) {
         stats = newStats
@@ -31,6 +32,19 @@ class ContactStatClickableAdapter(
     fun setNames(newNames: Map<String, String>) {
         names = newNames
         notifyDataSetChanged()
+    }
+
+    /** PREMIUM CHEKLOVI: saqlanmagan raqamning o'zini ko'rsatish faqat Premium uchun — CallHistoryAdapter'dagi bilan bir xil qoida. */
+    fun setPremium(premium: Boolean) {
+        isPremium = premium
+        notifyDataSetChanged()
+    }
+
+    fun labelFor(hash: String, raqam: String): String = when {
+        hash == "noma_lum" -> "Noma'lum raqam"
+        names.containsKey(hash) -> "👤 ${names[hash]}"
+        isPremium && raqam.isNotBlank() -> raqam
+        else -> "Saqlanmagan kontakt"
     }
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
@@ -49,6 +63,7 @@ class ContactStatClickableAdapter(
         holder.label.text = when {
             s.kontaktHash == "noma_lum" -> "🔒 Noma'lum raqam"
             names.containsKey(s.kontaktHash) -> "👤 ${names[s.kontaktHash]}"
+            isPremium && s.raqam.isNotBlank() -> "👤 ${s.raqam}"
             else -> "👤 Saqlanmagan kontakt"
         }
         holder.meta.text = "${s.qongiroqSoni} marta"

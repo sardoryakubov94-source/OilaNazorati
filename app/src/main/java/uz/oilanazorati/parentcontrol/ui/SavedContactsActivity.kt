@@ -73,6 +73,14 @@ class SavedContactsActivity : AppCompatActivity() {
             allContactsAdapter.setContacts(contacts)
         }
 
+        // PREMIUM CHEKLOVI: CallHistoryAdapter'dagi bilan bir xil qoida — saqlanmagan
+        // raqamning o'zi FAQAT Premium foydalanuvchilar uchun ko'rinadi; oddiy
+        // foydalanuvchiga faqat rang (va, agar saqlangan bo'lsa, ism) ko'rinadi.
+        FirebaseRepo.checkIsPremium { premium ->
+            todayAdapter.setPremium(premium)
+            dayAdapter.setPremium(premium)
+        }
+
         val todayStart = startOfDay(System.currentTimeMillis())
         todayCallsListener = FirebaseRepo.listenCallsForDay(todayStart, todayStart + DAY_MS) { calls ->
             if (isFinishing || isDestroyed) return@listenCallsForDay
@@ -137,7 +145,7 @@ class SavedContactsActivity : AppCompatActivity() {
             val mine = calls.filter { it.kontaktHash.ifBlank { "noma_lum" } == stat.kontaktHash }
             val minutes = mine.sumOf { it.davomiylikSoniya } / 60
             AlertDialog.Builder(this)
-                .setTitle(labelFor(stat.kontaktHash))
+                .setTitle(todayAdapter.labelFor(stat.kontaktHash, stat.raqam))
                 .setMessage("Oxirgi 30 kunda: ${mine.size} marta qo'ng'iroq, jami $minutes daqiqa.")
                 .setPositiveButton("Yopish", null)
                 .show()
@@ -181,17 +189,11 @@ class SavedContactsActivity : AppCompatActivity() {
             }
             scroll.addView(box)
             AlertDialog.Builder(this)
-                .setTitle(labelFor(stat.kontaktHash))
+                .setTitle(dayAdapter.labelFor(stat.kontaktHash, stat.raqam))
                 .setView(scroll)
                 .setPositiveButton("Yopish", null)
                 .show()
         }
-    }
-
-    private fun labelFor(hash: String): String = when {
-        hash == "noma_lum" -> "Noma'lum raqam"
-        names.containsKey(hash) -> names[hash]!!
-        else -> "Saqlanmagan kontakt"
     }
 
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
