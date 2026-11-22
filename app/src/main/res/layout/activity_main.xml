@@ -208,23 +208,6 @@
             android:paddingStart="16dp"
             android:paddingEnd="16dp"/>
 
-        <TextView
-            android:id="@+id/btnVideoGuide"
-            android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/bg_setup_guide_button"
-            android:gravity="center"
-            android:text="🎬  Video yo'riqnomalar"
-            android:textColor="#EAF3FF"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.01"
-            android:clickable="true"
-            android:focusable="true"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"/>
-
     </LinearLayout>
 
     <!-- ========== 3-BOSQICH: faqat Ota-ona paneli uchun Google ==========
