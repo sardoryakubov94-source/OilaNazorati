@@ -16,75 +16,31 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <TextView
+            <!-- Kalendar filtri: ixcham tugma yuqori o'ng burchakda -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Bugun faol kontaktlar"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/color_text_primary"/>
+                android:gravity="end"
+                android:layout_marginBottom="8dp">
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Bosh sahifadagi &quot;Kontaktlar&quot; soni bilan bir xil ro'yxat — raqam ko'rinmaydi, faqat rang va (saqlangan bo'lsa) ism. Birortasiga bosing — oxirgi 30 kunlik umumiy sonini ko'rasiz."
-                android:textSize="12sp"
-                android:textColor="@color/color_text_secondary"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="14dp"/>
-
-            <TextView
-                android:id="@+id/todayEmptyText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Bugun hali hech kim bilan gaplashilmagan."
-                android:textSize="13sp"
-                android:textColor="@color/color_text_secondary"
-                android:visibility="gone"
-                android:layout_marginBottom="8dp"/>
+                <TextView
+                    android:id="@+id/btnPickDate"
+                    android:layout_width="46dp"
+                    android:layout_height="46dp"
+                    android:gravity="center"
+                    android:text="📅"
+                    android:textSize="22sp"
+                    android:contentDescription="Sana tanlash"
+                    android:background="@drawable/bg_card_theme"
+                    android:clickable="true"
+                    android:focusable="true"/>
+            </LinearLayout>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/todayContactsList"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:nestedScrollingEnabled="false"/>
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/color_border"
-                android:layout_marginTop="22dp"
-                android:layout_marginBottom="18dp"/>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Kalendar bo'yicha qidirish"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/color_text_primary"/>
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Istalgan sanani tanlang — shu kunda nechta kontakt bilan gaplashilgani chiqadi. Shulardan birini bossangiz, oy boshidan shu sanagacha FAQAT o'sha kontakt bilan qaysi kunlari necha marta gaplashilgani ko'rinadi."
-                android:textSize="12sp"
-                android:textColor="@color/color_text_secondary"
-                android:layout_marginTop="4dp"
-                android:layout_marginBottom="14dp"/>
-
-            <TextView
-                android:id="@+id/btnPickDate"
-                android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:gravity="center"
-                android:text="📅  Sana tanlash"
-                android:textColor="#FFFFFF"
-                android:textStyle="bold"
-                android:textSize="15sp"
-                android:background="@drawable/bg_button_primary"
-                android:clickable="true"
-                android:focusable="true"/>
 
             <LinearLayout
                 android:id="@+id/dayResultCard"
