@@ -130,6 +130,36 @@
 
             </LinearLayout>
 
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/color_border"
+                android:layout_marginTop="22dp"
+                android:layout_marginBottom="18dp"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Barcha saqlangan kontaktlar"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/color_text_primary"/>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Bu ro'yxat faqat bola qurilmasida ISM BILAN saqlangan kontaktlarni ko'rsatadi (masalan oila a'zolari). Saqlanmagan raqamlar bu yerga tushmaydi va boshqa joyda ham faqat rang bilan, ismsiz/raqamsiz ko'rinadi."
+                android:textSize="12sp"
+                android:textColor="@color/color_text_secondary"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="14dp"/>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/savedContactsList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"/>
+
         </LinearLayout>
     </ScrollView>
 

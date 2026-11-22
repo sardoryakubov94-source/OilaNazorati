@@ -38,6 +38,7 @@ class SavedContactsActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySavedContactsBinding
     private val todayAdapter = ContactStatClickableAdapter { showThirtyDaySummary(it) }
     private val dayAdapter = ContactStatClickableAdapter { showMonthBreakdown(it, selectedDayStart) }
+    private val allContactsAdapter = SavedContactsAdapter()
 
     private var names: Map<String, String> = emptyMap()
     private var contactsListener: com.google.firebase.firestore.ListenerRegistration? = null
@@ -62,11 +63,14 @@ class SavedContactsActivity : AppCompatActivity() {
         binding.todayContactsList.adapter = todayAdapter
         binding.dayContactsList.layoutManager = LinearLayoutManager(this)
         binding.dayContactsList.adapter = dayAdapter
+        binding.savedContactsList.layoutManager = LinearLayoutManager(this)
+        binding.savedContactsList.adapter = allContactsAdapter
 
         contactsListener = FirebaseRepo.listenSavedContacts { contacts ->
             names = contacts.associate { it.kontaktHash to it.nomi }
             todayAdapter.setNames(names)
             dayAdapter.setNames(names)
+            allContactsAdapter.setContacts(contacts)
         }
 
         val todayStart = startOfDay(System.currentTimeMillis())
