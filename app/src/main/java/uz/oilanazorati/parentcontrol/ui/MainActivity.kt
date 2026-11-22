@@ -155,9 +155,6 @@ class MainActivity : AppCompatActivity() {
         binding.btnSetupGuide.setOnClickListener {
             startActivity(Intent(this, SetupGuideActivity::class.java))
         }
-        binding.btnVideoGuide.setOnClickListener {
-            startActivity(Intent(this, VideoGuideActivity::class.java))
-        }
         binding.btnSupport.setOnClickListener {
             if (FirebaseAuth.getInstance().currentUser?.isAnonymous == false) {
                 startActivity(Intent(this, SupportActivity::class.java))
