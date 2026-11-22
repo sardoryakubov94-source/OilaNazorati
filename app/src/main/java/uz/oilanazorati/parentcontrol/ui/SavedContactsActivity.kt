@@ -86,7 +86,6 @@ class SavedContactsActivity : AppCompatActivity() {
             if (isFinishing || isDestroyed) return@listenCallsForDay
             val stats = buildContactStats(calls)
             todayAdapter.setStats(stats)
-            binding.todayEmptyText.visibility = if (stats.isEmpty()) View.VISIBLE else View.GONE
             binding.todayContactsList.visibility = if (stats.isEmpty()) View.GONE else View.VISIBLE
         }
 
