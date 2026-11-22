@@ -14,12 +14,10 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 
 /**
- * "Video yo'riqnomalar" — uchta video, har biri alohida rangli bo'limda:
- * 1) Dasturdan foydalanish va uning imkoniyatlari (2:02)
- * 2) Dasturni yuklab olish va o'rnatish yo'riqnomasi (1:12)
- * 3) Dasturni sozlash va nazoratni boshlash (1:05)
+ * "Video yo'riqnomalar" — bola telefonida ilovani sozlash bo'yicha bitta video.
+ * Unda kerakli ruxsatlarni berish va nazoratni boshlash ko'rsatiladi.
  *
- * Videolar saytdan (https://oilanazorati.uz/videos/) oqim (stream) qilib ko'rsatiladi —
+ * Video saytdan (https://oilanazorati.uz/videos/) oqim (stream) qilib ko'rsatiladi —
  * shu sabab ilova hajmi oshmaydi. Ko'rish uchun internet kerak.
  */
 class VideoGuideActivity : AppCompatActivity() {
@@ -31,17 +29,7 @@ class VideoGuideActivity : AppCompatActivity() {
 
     private val guides = listOf(
         Guide(
-            "Dasturdan foydalanish va uning imkoniyatlari",
-            "Ilova ikonkasi, parolsiz SOS, SIM paneli, kontrol rejim, joylashuv, SMS, qo'ng'iroqlar, xavf signallari va boshqa barcha imkoniyatlar — bitta videoda.",
-            "2:02", "dastur-imkoniyatlari", "#1F3D73", "#162B52", "#7DB2FF"
-        ),
-        Guide(
-            "Dasturni yuklab olish va o'rnatish yo'riqnomasi",
-            "Saytdan APK faylni yuklab olish, Play Protect to'sig'ini vaqtincha o'chirish va ilovani telefonga o'rnatish — qadam-baqadam.",
-            "1:12", "yuklab-olish-ornatish", "#145540", "#0E3D2D", "#52E3A5"
-        ),
-        Guide(
-            "Dasturni sozlash va nazoratni boshlash",
+            "Bola telefoniga ruxsatlarni berish va nazoratni boshlash",
             "Bola telefonida oila kodini kiritish, kerakli ruxsatlarni berish va nazoratni ishga tushirish.",
             "1:05", "sozlash-nazoratni-boshlash", "#46337E", "#31245A", "#BCA3FF"
         )
@@ -85,7 +73,7 @@ class VideoGuideActivity : AppCompatActivity() {
         })
         content.addView(topRow)
         content.addView(TextView(this).apply {
-            text = "Qisqa videolarda dasturdan foydalanishni, o'rnatishni va sozlashni ko'rib o'rganing. Ko'rish uchun internet kerak."
+            text = "Bola telefonida kerakli ruxsatlarni berish va nazoratni boshlash bo'yicha videoqo'llanma. Ko'rish uchun internet kerak."
             setTextColor(Color.parseColor("#9FB3CE"))
             textSize = 13f
             setLineSpacing(dp(3).toFloat(), 1f)
